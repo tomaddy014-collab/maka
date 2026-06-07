@@ -7,12 +7,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Rajdhani:wght@500;600;700&family=Orbitron:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
 :root{
-  --navy:#0a0e1a;
-  --navy2:#121830;
-  --orange:#ff6b2b;
-  --yellow:#ffd600;
-  --cyan:#00e5ff;
-  --text-secondary:#b9c6e8;
+  --navy:#0b0c1b;
+  --navy2:#161a33;
+  --orange:#8b5cf6;
+  --yellow:#f5a524;
+  --cyan:#2dd4bf;
+  --text-secondary:#aab2d6;
+  --glass-bg: rgba(22,26,51,.45);
+  --glass-border: rgba(255,255,255,.08);
   /* Motion tokens — spring-like easing, enter slower than exit (Apple HIG / MD motion) */
   --ease-spring: cubic-bezier(.34,1.56,.64,1);
   --ease-out: cubic-bezier(.16,1,.3,1);
@@ -51,13 +53,21 @@ html,body{
 #bg-mesh{
   position:fixed;inset:0;z-index:0;pointer-events:none;
   background:
-    radial-gradient(circle at 15% 20%, rgba(255,107,43,.16), transparent 38%),
-    radial-gradient(circle at 85% 15%, rgba(0,229,255,.16), transparent 40%),
-    radial-gradient(circle at 50% 85%, rgba(255,214,0,.12), transparent 45%),
+    radial-gradient(circle at 15% 20%, rgba(139,92,246,.18), transparent 38%),
+    radial-gradient(circle at 85% 15%, rgba(45,212,191,.16), transparent 40%),
+    radial-gradient(circle at 50% 85%, rgba(245,165,36,.10), transparent 45%),
     var(--navy);
   background-size:200% 200%;
-  animation:meshDrift 26s ease-in-out infinite;
+  animation:meshDrift 30s ease-in-out infinite;
 }
+.ambient-orb{
+  position:fixed;border-radius:50%;pointer-events:none;z-index:0;
+  filter:blur(120px);opacity:.35;mix-blend-mode:screen;
+  animation:driftGlow linear infinite alternate;
+}
+.ambient-orb.o1{width:520px;height:520px;background:var(--orange);top:-160px;left:-120px;animation-duration:34s;}
+.ambient-orb.o2{width:600px;height:600px;background:var(--cyan);bottom:-220px;right:-160px;animation-duration:40s;animation-delay:-8s;}
+.ambient-orb.o3{width:420px;height:420px;background:var(--yellow);top:50%;left:55%;animation-duration:36s;animation-delay:-18s;opacity:.22;}
 @keyframes meshDrift{
   0%{background-position:0% 0%, 100% 0%, 50% 100%;}
   50%{background-position:60% 40%, 30% 60%, 70% 30%;}
@@ -109,8 +119,9 @@ html,body{
 .breadcrumb .sep{color:#445;text-shadow:none;}
 
 .back-btn{
-  background:linear-gradient(135deg,var(--navy2),#1c2647);
-  border:3px solid var(--cyan);
+  background:var(--glass-bg);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1.5px solid var(--glass-border);
   color:#fff;
   border-radius:14px;
   padding:16px 34px;
@@ -167,8 +178,9 @@ h2{
 }
 .card{
   position:relative;
-  background:linear-gradient(160deg,#141b38,#1c2750 60%,#222d5c);
-  border:4px solid var(--cyan);
+  background:var(--glass-bg);
+  backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+  border:1.5px solid var(--glass-border);
   border-radius:26px;
   padding:34px;
   min-height:300px;
@@ -196,26 +208,20 @@ h2{
   transition:transform 90ms var(--ease-out);
 }
 .card::before{
-  content:'';position:absolute;inset:0;border-radius:22px;
-  border:4px solid transparent;pointer-events:none;
-  animation:borderPulse 3.2s ease-in-out infinite;
-}
-@keyframes borderPulse{
-  0%{box-shadow:inset 0 0 28px rgba(255,107,43,.45),0 0 18px rgba(255,107,43,.35);}
-  33%{box-shadow:inset 0 0 28px rgba(0,229,255,.45),0 0 18px rgba(0,229,255,.35);}
-  66%{box-shadow:inset 0 0 28px rgba(255,214,0,.45),0 0 18px rgba(255,214,0,.35);}
-  100%{box-shadow:inset 0 0 28px rgba(255,107,43,.45),0 0 18px rgba(255,107,43,.35);}
+  content:'';position:absolute;inset:0;border-radius:26px;
+  background:linear-gradient(160deg, rgba(255,255,255,.08), transparent 40%);
+  pointer-events:none;
 }
 .card .icon{
   font-size:120px;line-height:1;margin-bottom:20px;
-  filter:drop-shadow(0 0 18px rgba(0,229,255,.6));
+  filter:drop-shadow(0 0 18px rgba(45,212,191,.5));
   align-self:flex-start;
 }
-.card .sub{font-size:26px;font-weight:600;color:var(--cyan);margin-top:10px;text-shadow:0 0 8px rgba(0,229,255,.5);}
+.card .sub{font-size:26px;font-weight:600;color:var(--cyan);margin-top:10px;text-shadow:0 0 8px rgba(45,212,191,.4);}
 .card:hover{
-  transform:translateY(-14px) scale(1.06);
-  border-color:var(--yellow);
-  box-shadow:0 0 70px 12px rgba(255,214,0,.65), 0 20px 50px rgba(0,0,0,.6);
+  transform:translateY(-12px) scale(1.04);
+  border-color:rgba(255,255,255,.22);
+  box-shadow:0 0 60px 6px rgba(139,92,246,.35), 0 24px 60px rgba(0,0,0,.5);
   z-index:5;
 }
 .card.add{
@@ -239,15 +245,16 @@ h2{
 /* Lesson view sections */
 .lesson-tabs{display:flex;gap:24px;margin-bottom:26px;}
 .lesson-tab{
-  background:linear-gradient(160deg,var(--navy2),#1c2750);
-  border:3px solid #334;
+  background:var(--glass-bg);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1.5px solid var(--glass-border);
   border-radius:16px;padding:18px 36px;font-size:28px;font-weight:700;
-  cursor:pointer;min-height:60px;transition:.2s;
+  cursor:pointer;min-height:60px;transition:.25s var(--ease-out);
   font-family:'Rajdhani',sans-serif;letter-spacing:.5px;
 }
 .lesson-tab.active{
   border-color:var(--orange);color:var(--orange);
-  box-shadow:0 0 28px rgba(255,107,43,.55);
+  box-shadow:0 0 28px rgba(139,92,246,.45);
   transform:translateY(-3px);
 }
 .lesson-tab:hover{border-color:var(--cyan);color:var(--cyan);}
@@ -419,11 +426,13 @@ h2{
 }
 .modal-overlay.active{display:flex;}
 .modal{
-  background:linear-gradient(165deg,#141b38,#1c2750);border-radius:28px;padding:44px;
+  background:var(--glass-bg);
+  backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
+  border-radius:28px;padding:44px;
   width:min(900px,92vw);max-height:88vh;overflow-y:auto;
-  border:3px solid var(--cyan);
-  box-shadow:0 0 80px rgba(0,229,255,.35), 0 30px 80px rgba(0,0,0,.6);
-  animation:modalPop .35s cubic-bezier(.2,.8,.25,1.2);
+  border:1.5px solid var(--glass-border);
+  box-shadow:0 0 90px rgba(45,212,191,.18), 0 30px 90px rgba(0,0,0,.6);
+  animation:modalPop .4s var(--ease-spring);
 }
 @keyframes modalPop{
   from{opacity:0;transform:scale(.9) translateY(30px);}
@@ -524,6 +533,9 @@ h2{
 </head>
 <body>
 <div id="bg-mesh"></div>
+<div class="ambient-orb o1"></div>
+<div class="ambient-orb o2"></div>
+<div class="ambient-orb o3"></div>
 <div id="bg-stars"></div>
 <div id="app">
 
