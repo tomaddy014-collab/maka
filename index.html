@@ -12,6 +12,28 @@
   --orange:#ff6b2b;
   --yellow:#ffd600;
   --cyan:#00e5ff;
+  --text-secondary:#b9c6e8;
+  /* Motion tokens — spring-like easing, enter slower than exit (Apple HIG / MD motion) */
+  --ease-spring: cubic-bezier(.34,1.56,.64,1);
+  --ease-out: cubic-bezier(.16,1,.3,1);
+  --ease-in: cubic-bezier(.7,0,.84,0);
+  --dur-micro: 180ms;
+  --dur-enter: 360ms;
+  --dur-exit: 220ms;
+}
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+    scroll-behavior:auto !important;
+  }
+}
+:focus-visible{
+  outline:3px solid var(--cyan);
+  outline-offset:3px;
+  border-radius:8px;
+  box-shadow:0 0 0 6px rgba(0,229,255,.25);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{
@@ -65,10 +87,15 @@ html,body{
   z-index:1;
 }
 .screen.active{display:flex;}
-.screen.enter{animation:levelIn .5s cubic-bezier(.2,.7,.3,1.1) forwards;}
+.screen.enter{animation:levelIn var(--dur-enter) var(--ease-out) forwards;}
 @keyframes levelIn{
-  from{opacity:0;transform:translateX(80px) scale(.97);filter:blur(6px);}
+  from{opacity:0;transform:translateX(70px) scale(.97);filter:blur(6px);}
   to{opacity:1;transform:translateX(0) scale(1);filter:blur(0);}
+}
+.screen.leave{animation:levelOut var(--dur-exit) var(--ease-in) forwards;}
+@keyframes levelOut{
+  from{opacity:1;transform:translateX(0) scale(1);filter:blur(0);}
+  to{opacity:0;transform:translateX(-40px) scale(.98);filter:blur(4px);}
 }
 
 /* Breadcrumb */
@@ -147,19 +174,26 @@ h2{
   min-height:300px;
   display:flex;flex-direction:column;justify-content:flex-end;
   cursor:pointer;
-  transition:transform .25s cubic-bezier(.2,.7,.3,1.2), box-shadow .25s, border-color .25s;
+  touch-action:manipulation;
+  transition:transform var(--dur-micro) var(--ease-spring), box-shadow var(--dur-enter) var(--ease-out), border-color var(--dur-micro) ease;
   font-family:'Rajdhani',sans-serif;
   font-size:60px;font-weight:700;
   box-shadow:0 10px 34px rgba(0,0,0,.5);
   overflow:hidden;
   opacity:0;transform:translateY(50px) scale(.9);
-  animation:cardPop .55s cubic-bezier(.2,.8,.25,1.15) forwards;
-  animation-delay:calc(var(--i,0) * 70ms);
+  animation:cardPop var(--dur-enter) var(--ease-spring) forwards;
+  animation-delay:calc(var(--i,0) * 45ms);
+  will-change:transform;
 }
 @keyframes cardPop{
   0%{opacity:0;transform:translateY(60px) scale(.85);}
   60%{opacity:1;transform:translateY(-8px) scale(1.04);}
   100%{opacity:1;transform:translateY(0) scale(1);}
+}
+/* scale-feedback: subtle press response (HIG/MD) — bounds stay stable, no layout shift */
+.card:active{
+  transform:scale(.97);
+  transition:transform 90ms var(--ease-out);
 }
 .card::before{
   content:'';position:absolute;inset:0;border-radius:22px;
@@ -178,7 +212,7 @@ h2{
   align-self:flex-start;
 }
 .card .sub{font-size:26px;font-weight:600;color:var(--cyan);margin-top:10px;text-shadow:0 0 8px rgba(0,229,255,.5);}
-.card:hover, .card:focus-visible{
+.card:hover{
   transform:translateY(-14px) scale(1.06);
   border-color:var(--yellow);
   box-shadow:0 0 70px 12px rgba(255,214,0,.65), 0 20px 50px rgba(0,0,0,.6);
@@ -421,7 +455,7 @@ h2{
   animation:floatIcon 2.4s ease-in-out infinite;}
 @keyframes floatIcon{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
 .upload-zone .up-title{font-size:28px;font-weight:800;color:var(--cyan);text-shadow:0 0 10px rgba(0,229,255,.5);}
-.upload-zone .up-sub{font-size:20px;color:#9fb0d0;margin-top:6px;}
+.upload-zone .up-sub{font-size:20px;color:var(--text-secondary);margin-top:6px;}
 .upload-status{
   display:flex;align-items:center;gap:14px;font-size:22px;font-weight:700;margin:10px 0 4px;
   color:var(--yellow);min-height:30px;
@@ -454,6 +488,11 @@ h2{
 
 ::-webkit-scrollbar{width:12px;}
 ::-webkit-scrollbar-thumb{background:#334;border-radius:6px;}
+
+.back-btn:active,.lesson-tab:active,.exit-fullscreen:active,.timer-btn:active,.tap-btn:active,.gear-btn:active{
+  transform:scale(.95);
+  transition:transform 90ms cubic-bezier(.16,1,.3,1);
+}
 </style>
 </head>
 <body>
@@ -661,13 +700,20 @@ function findChapter(book,id){ return book.chapters.find(c=>c.id===id); }
 function findLesson(chapter,id){ return chapter.lessons.find(l=>l.id===id); }
 
 function showScreen(id){
-  document.querySelectorAll('.screen').forEach(s=>{
-    s.classList.remove('active','enter');
-  });
-  const s = document.getElementById(id);
-  s.classList.add('active');
-  void s.offsetWidth;
-  s.classList.add('enter');
+  const current = document.querySelector('.screen.active');
+  const next = document.getElementById(id);
+  if(current && current !== next){
+    current.classList.remove('enter');
+    current.classList.add('leave');
+    setTimeout(()=>{
+      current.classList.remove('active','leave');
+    }, 220); // matches --dur-exit; exit shorter than enter (MD motion)
+  }
+  next.classList.add('active');
+  next.classList.remove('leave');
+  void next.offsetWidth;
+  next.classList.add('enter');
+  setTimeout(()=> next.classList.remove('enter'), 400);
 }
 
 /* ============================ RENDER: HOME ============================ */
@@ -679,7 +725,7 @@ function renderHome(){
     card.className='card';
     card.style.setProperty('--i', i);
     card.innerHTML = `<div class="icon">${pickIcon(BOOK_ICONS,i)}</div><div>Book ${book.name}</div><div class="sub">${book.chapters.length} chapter(s)</div>`;
-    card.onclick = ()=>{ nav.bookId=book.id; nav.chapterId=null; nav.lessonId=null; renderChapters(); showScreen('screen-chapters'); };
+    card.onclick = ()=>{ playTapSound(); nav.bookId=book.id; nav.chapterId=null; nav.lessonId=null; renderChapters(); showScreen('screen-chapters'); };
     grid.appendChild(card);
   });
 }
@@ -693,14 +739,14 @@ function renderChapters(){
   const grid = document.getElementById('chapters-grid');
   grid.innerHTML = '';
   if(book.chapters.length===0){
-    grid.innerHTML = `<div style="color:#9fb0d0;font-size:24px;">No chapters yet. Add some via the admin panel (gear icon, bottom right).</div>`;
+    grid.innerHTML = `<div style="color:var(--text-secondary);font-size:24px;">No chapters yet. Add some via the admin panel (gear icon, bottom right).</div>`;
   }
   book.chapters.forEach((ch,i)=>{
     const card = document.createElement('div');
     card.className='card';
     card.style.setProperty('--i', i);
     card.innerHTML = `<div class="icon">${pickIcon(CHAPTER_ICONS,i)}</div><div>${ch.name}</div><div class="sub">${ch.lessons.length} lesson(s)</div>`;
-    card.onclick = ()=>{ nav.chapterId=ch.id; nav.lessonId=null; renderLessons(); showScreen('screen-lessons'); };
+    card.onclick = ()=>{ playTapSound(); nav.chapterId=ch.id; nav.lessonId=null; renderLessons(); showScreen('screen-lessons'); };
     grid.appendChild(card);
   });
   bindCrumbNav('crumb-chapters');
@@ -718,14 +764,14 @@ function renderLessons(){
   const grid = document.getElementById('lessons-grid');
   grid.innerHTML = '';
   if(ch.lessons.length===0){
-    grid.innerHTML = `<div style="color:#9fb0d0;font-size:24px;">No lessons yet. Add one via the admin panel.</div>`;
+    grid.innerHTML = `<div style="color:var(--text-secondary);font-size:24px;">No lessons yet. Add one via the admin panel.</div>`;
   }
   ch.lessons.forEach((l,i)=>{
     const card = document.createElement('div');
     card.className='card';
     card.style.setProperty('--i', i);
     card.innerHTML = `<div class="icon">${pickIcon(LESSON_ICONS,i)}</div><div>Lesson ${l.number}</div><div class="sub">${l.title}</div>`;
-    card.onclick = ()=>{ nav.lessonId=l.id; renderLesson(); showScreen('screen-lesson'); };
+    card.onclick = ()=>{ playTapSound(); nav.lessonId=l.id; renderLesson(); showScreen('screen-lesson'); };
     grid.appendChild(card);
   });
   bindCrumbNav('crumb-lessons');
@@ -919,7 +965,7 @@ function setupPractice(lesson){
       if(practiceIndex>=total){
         btn.disabled = true;
         btn.textContent = 'All questions revealed ✓';
-        burstParticles(btn);
+        celebrationBurst();
         document.getElementById('lesson-progress-fill').style.width = '100%';
       }
     }
@@ -950,6 +996,47 @@ function playChime(){
       osc.stop(now + 0.7 + i*0.05);
     });
   }catch(e){}
+}
+// Soft tap/navigation click — quick, low-volume, conveys "registered" (motion-meaning)
+function playTapSound(){
+  try{
+    audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(520, now);
+    osc.frequency.exponentialRampToValueAtTime(300, now+0.09);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.10, now+0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now+0.13);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(now); osc.stop(now+0.15);
+  }catch(e){}
+}
+// Big celebratory burst for "lesson/section complete" reward moments
+function celebrationBurst(){
+  const colors = ['#ff6b2b','#ffd600','#00e5ff','#ffffff'];
+  const cx = window.innerWidth/2, cy = window.innerHeight/2;
+  for(let i=0;i<60;i++){
+    const p = document.createElement('div');
+    p.className='particle';
+    const size = 8+Math.random()*12;
+    p.style.width = size+'px'; p.style.height = size+'px';
+    p.style.left = cx+'px'; p.style.top = cy+'px';
+    p.style.background = colors[i%colors.length];
+    p.style.boxShadow = `0 0 14px ${colors[i%colors.length]}`;
+    document.body.appendChild(p);
+    const angle = Math.random()*Math.PI*2;
+    const dist = 220+Math.random()*420;
+    const dx = Math.cos(angle)*dist, dy = Math.sin(angle)*dist;
+    p.animate([
+      { transform:'translate(0,0) scale(1) rotate(0deg)', opacity:1 },
+      { transform:`translate(${dx}px, ${dy}px) scale(0) rotate(${360+Math.random()*360}deg)`, opacity:0 }
+    ], { duration: 900+Math.random()*600, easing:'cubic-bezier(.16,1,.3,1)' });
+    setTimeout(()=>p.remove(), 1600);
+  }
+  playChime();
 }
 
 /* ============================ PARTICLE BURST ============================ */
@@ -1230,41 +1317,153 @@ function openChangePinForm(){
 }
 
 /* ============================ PDF AUTO-FILL ============================ */
-let pdfJsLoadPromise = null;
-function loadPdfJs(){
-  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
-  if(pdfJsLoadPromise) return pdfJsLoadPromise;
-  pdfJsLoadPromise = new Promise((resolve,reject)=>{
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    s.onload = ()=>{
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      resolve(window.pdfjsLib);
-    };
-    s.onerror = ()=> reject(new Error('Could not load PDF reader (no internet connection?)'));
-    document.head.appendChild(s);
-  });
-  return pdfJsLoadPromise;
+/* Self-contained PDF text extraction — no external libraries / CDN required,
+   so it keeps working fully offline on the classroom TV.
+   Approach: locate stream...endstream blocks, inflate FlateDecode streams using
+   the browser's native DecompressionStream, then scan content streams for
+   text-showing operators (Tj / TJ / ' / ") and pull out the literal/hex strings. */
+
+async function inflateBytes(bytes){
+  const tryFormat = async (format)=>{
+    const ds = new DecompressionStream(format);
+    const stream = new Blob([bytes]).stream().pipeThrough(ds);
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  };
+  try{ return await tryFormat('deflate'); }
+  catch(e){ return await tryFormat('deflate-raw'); }
+}
+
+function bytesToLatin1(bytes){
+  let s = '';
+  const CHUNK = 0x8000;
+  for(let i=0;i<bytes.length;i+=CHUNK){
+    s += String.fromCharCode.apply(null, bytes.subarray(i, i+CHUNK));
+  }
+  return s;
+}
+
+// Decode a PDF literal string "(...)" body, handling escapes
+function decodeLiteralString(body){
+  let out = '';
+  for(let i=0;i<body.length;i++){
+    const c = body[i];
+    if(c === '\\'){
+      const n = body[i+1];
+      if(n === 'n'){ out += '\n'; i++; }
+      else if(n === 'r'){ out += '\n'; i++; }
+      else if(n === 't'){ out += ' '; i++; }
+      else if(n === '(' || n === ')' || n === '\\'){ out += n; i++; }
+      else if(/[0-7]/.test(n)){
+        let oct = n;
+        for(let k=1;k<3 && /[0-7]/.test(body[i+1+k]||'');k++) oct += body[i+1+k];
+        out += String.fromCharCode(parseInt(oct,8));
+        i += oct.length;
+      } else { out += n; i++; }
+    } else out += c;
+  }
+  return out;
+}
+function decodeHexString(body){
+  const hex = body.replace(/\s/g,'');
+  let out = '';
+  for(let i=0;i<hex.length;i+=2){
+    out += String.fromCharCode(parseInt(hex.substr(i,2),16) || 0);
+  }
+  return out;
+}
+
+// Extract readable text from a (decompressed) page content stream
+function textFromContentStream(content){
+  let out = '';
+  const len = content.length;
+  let i = 0;
+  while(i < len){
+    const c = content[i];
+    if(c === '('){
+      // literal string — find matching close paren, respecting escapes/nesting
+      let depth = 1, j = i+1, buf = '';
+      while(j < len && depth > 0){
+        const cj = content[j];
+        if(cj === '\\'){ buf += cj + (content[j+1]||''); j += 2; continue; }
+        if(cj === '(') depth++;
+        if(cj === ')'){ depth--; if(depth===0) break; }
+        buf += cj; j++;
+      }
+      // look ahead for the operator (Tj, TJ, ', ")
+      let k = j+1;
+      while(k<len && /[\s\]]/.test(content[k])) k++;
+      if(content.substr(k,2)==='Tj' || content[k]==="'" || content[k]==='"' || content.substr(k-1,2)===']T' || content.substr(k,2)==='TJ'){
+        out += decodeLiteralString(buf);
+      }
+      i = j+1;
+    } else if(c === '<' && content[i+1] !== '<'){
+      let j = content.indexOf('>', i+1);
+      if(j === -1) j = len;
+      const body = content.slice(i+1, j);
+      let k = j+1;
+      while(k<len && /[\s\]]/.test(content[k])) k++;
+      if(content.substr(k,2)==='Tj' || content.substr(k,2)==='TJ'){
+        out += decodeHexString(body);
+      }
+      i = j+1;
+    } else if(content.substr(i,2)==='TJ' || content.substr(i,2)==='Tj'){
+      out += ' ';
+      i += 2;
+    } else if(content.substr(i,2)==='T*' || content[i]==='T' && (content[i+1]==='d'||content[i+1]==='D')){
+      out += '\n';
+      i += 2;
+    } else {
+      i++;
+    }
+  }
+  return out;
 }
 
 async function extractPdfText(file){
-  const pdfjsLib = await loadPdfJs();
-  const buf = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-  let fullText = '';
-  for(let i=1;i<=pdf.numPages;i++){
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    let lastY = null, line = '';
-    content.items.forEach(item=>{
-      if(lastY!==null && Math.abs(item.transform[5]-lastY) > 4){
-        fullText += line.trim() + '\n';
-        line = '';
+  const buf = new Uint8Array(await file.arrayBuffer());
+  const raw = bytesToLatin1(buf);
+
+  // Find every "stream ... endstream" block together with its dictionary header
+  const streamRe = /<<([^>]*?)>>\s*stream\r?\n/g;
+  let match, fullText = '', foundAny = false;
+
+  while((match = streamRe.exec(raw)) !== null){
+    const dict = match[1];
+    const start = match.index + match[0].length;
+    const end = raw.indexOf('endstream', start);
+    if(end === -1) continue;
+    // Trim trailing EOL before "endstream"
+    let streamEnd = end;
+    while(streamEnd>start && (raw[streamEnd-1]==='\n' || raw[streamEnd-1]==='\r')) streamEnd--;
+
+    const slice = buf.subarray(start, streamEnd);
+    let text = '';
+    try{
+      if(/\/FlateDecode/.test(dict)){
+        const inflated = await inflateBytes(slice);
+        text = bytesToLatin1(inflated);
+      } else if(!/\/Filter/.test(dict)){
+        text = bytesToLatin1(slice);
+      } else {
+        // Unsupported filter (DCT/JPX images etc) — skip
+        streamRe.lastIndex = end + 9;
+        continue;
       }
-      line += item.str + ' ';
-      lastY = item.transform[5];
-    });
-    fullText += line.trim() + '\n\n';
+    }catch(e){
+      streamRe.lastIndex = end + 9;
+      continue;
+    }
+
+    // Only treat as a content stream if it looks like one (contains text operators)
+    if(/\bTj\b|\bTJ\b|\bBT\b/.test(text)){
+      fullText += textFromContentStream(text) + '\n\n';
+      foundAny = true;
+    }
+    streamRe.lastIndex = end + 9;
+  }
+
+  if(!foundAny){
+    throw new Error('No readable text found in this PDF (it may be a scanned image).');
   }
   return fullText;
 }
@@ -1333,7 +1532,7 @@ function openLessonForm(book, chapter, lesson){
     <div class="upload-zone" id="pdf-drop">
       <span class="up-icon">📄✨</span>
       <div class="up-title">Upload a PDF — auto-fill this lesson</div>
-      <div class="up-sub">Tap to choose a Maths No Problem PDF page. We'll read it and fill in the fields below for you to check.</div>
+      <div class="up-sub">Tap to choose a Maths No Problem PDF page (works fully offline). We'll read it and fill in the fields below for you to check. Best with text-based PDFs — scanned image pages can't be read.</div>
       <input type="file" id="pdf-input" accept="application/pdf" style="display:none;">
     </div>
     <div class="upload-status" id="pdf-status"></div>
