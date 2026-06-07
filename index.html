@@ -258,45 +258,72 @@ h2{
 /* Explore Task immersive */
 .explore-fullscreen{
   position:fixed;top:0;left:0;width:100vw;height:100vh;
-  background:
-    radial-gradient(circle at 30% 20%, rgba(0,229,255,.12), transparent 45%),
-    radial-gradient(circle at 75% 80%, rgba(255,107,43,.12), transparent 45%),
-    var(--navy);
+  background:var(--navy);
   z-index:500;
   display:none;flex-direction:column;align-items:center;justify-content:center;
   padding:60px;overflow-y:auto;
 }
-.explore-fullscreen.active{display:flex;animation:levelIn .5s ease;}
+.explore-fullscreen.active{display:flex;}
+/* Immersive ambient glow orbs that drift slowly behind the content */
+.immersive-glow{
+  position:absolute;border-radius:50%;filter:blur(90px);
+  pointer-events:none;opacity:.55;
+  animation:driftGlow 22s ease-in-out infinite;
+}
+.immersive-glow.g1{width:560px;height:560px;background:var(--orange);top:-180px;left:-120px;animation-duration:26s;}
+.immersive-glow.g2{width:620px;height:620px;background:var(--cyan);bottom:-220px;right:-160px;animation-duration:32s;animation-delay:-6s;}
+.immersive-glow.g3{width:420px;height:420px;background:var(--yellow);top:40%;left:60%;animation-duration:28s;animation-delay:-14s;opacity:.32;}
+@keyframes driftGlow{
+  0%,100%{transform:translate(0,0) scale(1);}
+  33%{transform:translate(60px,-40px) scale(1.12);}
+  66%{transform:translate(-50px,50px) scale(.92);}
+}
+.explore-fullscreen.active{animation:immersiveIn .6s var(--ease-out);}
+@keyframes immersiveIn{
+  from{opacity:0;transform:scale(1.04);filter:blur(14px);}
+  to{opacity:1;transform:scale(1);filter:blur(0);}
+}
 .exit-fullscreen{
-  position:absolute;top:34px;right:34px;
-  background:var(--navy2);border:3px solid var(--orange);
+  position:absolute;top:34px;right:34px;z-index:2;
+  background:rgba(18,24,48,.55);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:2px solid rgba(255,107,43,.55);
   color:#fff;border-radius:14px;padding:16px 32px;font-size:24px;font-weight:700;
-  cursor:pointer;min-height:60px;box-shadow:0 0 18px rgba(255,107,43,.4);
+  cursor:pointer;min-height:60px;box-shadow:0 0 18px rgba(255,107,43,.35);
   transition:.2s;
 }
 .exit-fullscreen:hover{background:var(--orange);color:var(--navy);box-shadow:0 0 32px rgba(255,107,43,.8);}
 .explore-text{
   font-size:56px;line-height:1.45;max-width:1500px;text-align:center;
   margin:34px 0;font-weight:700;font-family:'Rajdhani',sans-serif;
-  text-shadow:0 0 22px rgba(255,255,255,.25);
+  text-shadow:0 0 28px rgba(255,255,255,.3);
+  position:relative;z-index:2;
+  opacity:0;transform:translateY(26px);
+  animation:textReveal .7s var(--ease-out) .15s forwards;
 }
+@keyframes textReveal{ to{opacity:1;transform:translateY(0);} }
 .explore-visual{
   width:100%;max-width:920px;height:340px;
-  background:linear-gradient(160deg,var(--navy2),#1c2750);
+  background:rgba(20,27,56,.45);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
   border-radius:28px;
   display:flex;align-items:center;justify-content:center;
-  margin-bottom:20px;border:3px solid var(--cyan);
-  box-shadow:0 0 40px rgba(0,229,255,.25);
+  margin-bottom:20px;border:1px solid rgba(0,229,255,.4);
+  box-shadow:0 0 50px rgba(0,229,255,.18), inset 0 0 60px rgba(0,229,255,.05);
+  position:relative;z-index:2;
+  opacity:0;transform:scale(.94);
+  animation:panelReveal .7s var(--ease-spring) forwards;
 }
-.timer-row{display:flex;gap:24px;align-items:center;margin-top:16px;}
+@keyframes panelReveal{ to{opacity:1;transform:scale(1);} }
+.timer-row{display:flex;gap:24px;align-items:center;margin-top:16px;position:relative;z-index:2;}
 .timer-btn{
-  background:linear-gradient(160deg,var(--navy2),#1c2750);border:3px solid var(--yellow);color:var(--yellow);
+  background:rgba(20,27,56,.5);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:2px solid var(--yellow);color:var(--yellow);
   border-radius:16px;padding:18px 34px;font-size:28px;font-weight:700;
   cursor:pointer;min-height:60px;transition:.2s;box-shadow:0 0 16px rgba(255,214,0,.3);
-  font-family:'Rajdhani',sans-serif;
+  font-family:'Rajdhani',sans-serif;touch-action:manipulation;
 }
 .timer-btn:hover{background:var(--yellow);color:var(--navy);box-shadow:0 0 34px rgba(255,214,0,.8);transform:translateY(-2px);}
-.timer-display{font-size:54px;font-weight:800;color:var(--yellow);min-width:170px;text-align:center;font-family:'Orbitron',sans-serif;text-shadow:0 0 18px rgba(255,214,0,.6);}
+.timer-display{font-size:54px;font-weight:800;color:var(--yellow);min-width:170px;text-align:center;font-family:'Orbitron',sans-serif;text-shadow:0 0 18px rgba(255,214,0,.6);font-variant-numeric:tabular-nums;}
 
 /* Master steps */
 .master-step{
@@ -553,6 +580,9 @@ h2{
 
   <!-- Explore fullscreen overlay -->
   <div class="explore-fullscreen" id="explore-overlay">
+    <div class="immersive-glow g1"></div>
+    <div class="immersive-glow g2"></div>
+    <div class="immersive-glow g3"></div>
     <button class="exit-fullscreen" id="btn-exit-explore">✕ Exit full screen</button>
     <h2 id="explore-overlay-title" style="margin-top:10px;"></h2>
     <div class="explore-visual" id="explore-visual"></div>
@@ -1423,16 +1453,46 @@ async function extractPdfText(file){
   const buf = new Uint8Array(await file.arrayBuffer());
   const raw = bytesToLatin1(buf);
 
-  // Find every "stream ... endstream" block together with its dictionary header
-  const streamRe = /<<([^>]*?)>>\s*stream\r?\n/g;
-  let match, fullText = '', foundAny = false;
+  // Find every "stream ... endstream" block together with its dictionary header.
+  // Dictionaries can contain NESTED << >> pairs (e.g. /Group << ... >>, /Resources << ... >>)
+  // which a naive non-greedy regex cannot handle — so we balance brackets manually.
+  let fullText = '', foundAny = false;
+  let searchFrom = 0;
 
-  while((match = streamRe.exec(raw)) !== null){
-    const dict = match[1];
-    const start = match.index + match[0].length;
+  while(true){
+    const streamKw = raw.indexOf('stream', searchFrom);
+    if(streamKw === -1) break;
+
+    // Walk backwards from "stream" over whitespace to find the ">>" that closes its dictionary
+    let p = streamKw;
+    while(p>0 && /\s/.test(raw[p-1])) p--;
+    if(raw.slice(p-2, p) !== '>>'){
+      searchFrom = streamKw + 6;
+      continue;
+    }
+    const dictEnd = p; // position right after the closing '>>'
+    // Now scan backward balancing >> / << to find the matching opening '<<'
+    let depth = 0, q = dictEnd;
+    while(q > 1){
+      if(raw[q-2]==='>' && raw[q-1]==='>'){ depth++; q -= 2; continue; }
+      if(raw[q-2]==='<' && raw[q-1]==='<'){
+        depth--;
+        q -= 2;
+        if(depth===0) break;
+        continue;
+      }
+      q--;
+    }
+    const dictStart = q;
+    const dict = raw.slice(dictStart, dictEnd);
+
+    // Content starts right after "stream" + EOL
+    let start = streamKw + 6;
+    if(raw[start]==='\r') start++;
+    if(raw[start]==='\n') start++;
+
     const end = raw.indexOf('endstream', start);
-    if(end === -1) continue;
-    // Trim trailing EOL before "endstream"
+    if(end === -1){ searchFrom = streamKw + 6; continue; }
     let streamEnd = end;
     while(streamEnd>start && (raw[streamEnd-1]==='\n' || raw[streamEnd-1]==='\r')) streamEnd--;
 
@@ -1446,11 +1506,11 @@ async function extractPdfText(file){
         text = bytesToLatin1(slice);
       } else {
         // Unsupported filter (DCT/JPX images etc) — skip
-        streamRe.lastIndex = end + 9;
+        searchFrom = end + 9;
         continue;
       }
     }catch(e){
-      streamRe.lastIndex = end + 9;
+      searchFrom = end + 9;
       continue;
     }
 
@@ -1459,7 +1519,7 @@ async function extractPdfText(file){
       fullText += textFromContentStream(text) + '\n\n';
       foundAny = true;
     }
-    streamRe.lastIndex = end + 9;
+    searchFrom = end + 9;
   }
 
   if(!foundAny){
