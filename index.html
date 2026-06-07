@@ -340,11 +340,16 @@ h2{
 .gear-btn{
   position:fixed;bottom:18px;right:18px;
   width:50px;height:50px;border-radius:50%;
-  background:rgba(255,255,255,.05);border:1px solid #334;
-  color:#667;font-size:24px;cursor:pointer;z-index:600;
+  background:rgba(255,255,255,.04);border:1px solid #334;
+  color:#556;font-size:24px;cursor:pointer;z-index:600;
   display:flex;align-items:center;justify-content:center;
+  transition:.3s;
 }
-.gear-btn:hover{color:var(--cyan);border-color:var(--cyan);}
+.gear-btn:hover{
+  color:var(--cyan);border-color:var(--cyan);
+  box-shadow:0 0 22px rgba(0,229,255,.6);
+  transform:rotate(90deg);
+}
 
 .modal-overlay{
   position:fixed;top:0;left:0;width:100vw;height:100vh;
@@ -353,32 +358,88 @@ h2{
 }
 .modal-overlay.active{display:flex;}
 .modal{
-  background:var(--navy2);border-radius:24px;padding:40px;
+  background:linear-gradient(165deg,#141b38,#1c2750);border-radius:28px;padding:44px;
   width:min(900px,92vw);max-height:88vh;overflow-y:auto;
-  border:2px solid #334;
+  border:3px solid var(--cyan);
+  box-shadow:0 0 80px rgba(0,229,255,.35), 0 30px 80px rgba(0,0,0,.6);
+  animation:modalPop .35s cubic-bezier(.2,.8,.25,1.2);
+}
+@keyframes modalPop{
+  from{opacity:0;transform:scale(.9) translateY(30px);}
+  to{opacity:1;transform:scale(1) translateY(0);}
 }
 .modal h2{margin-bottom:24px;}
-.modal label{display:block;font-size:20px;color:#9fb0d0;margin:14px 0 6px;}
+.modal label{display:block;font-size:22px;color:var(--cyan);margin:16px 0 8px;font-weight:700;letter-spacing:.5px;text-shadow:0 0 8px rgba(0,229,255,.35);}
 .modal input,.modal select,.modal textarea{
-  width:100%;background:#0d1326;border:2px solid #334;color:#fff;
-  border-radius:10px;padding:14px;font-size:20px;font-family:inherit;
+  width:100%;background:#0a0f22;border:2px solid #2a3760;color:#fff;
+  border-radius:12px;padding:16px;font-size:22px;font-family:'Rajdhani',sans-serif;font-weight:600;
+  transition:.2s;
+}
+.modal input:focus,.modal select:focus,.modal textarea:focus{
+  outline:none;border-color:var(--cyan);box-shadow:0 0 18px rgba(0,229,255,.4);
 }
 .modal textarea{min-height:120px;resize:vertical;}
-.modal-actions{display:flex;gap:16px;margin-top:26px;justify-content:flex-end;}
+.modal-actions{display:flex;gap:18px;margin-top:30px;justify-content:flex-end;}
 .btn{
-  border:none;border-radius:12px;padding:16px 32px;font-size:20px;font-weight:700;
-  cursor:pointer;min-height:60px;
+  border:none;border-radius:14px;padding:18px 38px;font-size:22px;font-weight:800;
+  cursor:pointer;min-height:60px;font-family:'Rajdhani',sans-serif;letter-spacing:.5px;
+  transition:.2s;position:relative;overflow:hidden;
 }
-.btn-primary{background:var(--orange);color:#0a0e1a;}
-.btn-secondary{background:#334;color:#fff;}
-.btn-danger{background:#ff3b3b;color:#fff;}
-.pin-display{font-size:48px;letter-spacing:20px;text-align:center;margin:20px 0;color:var(--yellow);}
-.pin-keys{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.btn::after{
+  content:'';position:absolute;top:0;left:-120%;width:60%;height:100%;
+  background:linear-gradient(120deg,transparent,rgba(255,255,255,.4),transparent);
+  transform:skewX(-20deg);transition:.5s;
+}
+.btn:hover::after{left:140%;}
+.btn-primary{background:linear-gradient(135deg,var(--orange),#ffb066);color:#0a0e1a;box-shadow:0 0 22px rgba(255,107,43,.5);}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 0 36px rgba(255,107,43,.85);}
+.btn-secondary{background:linear-gradient(135deg,#2a3760,#3a4a80);color:#fff;}
+.btn-secondary:hover{transform:translateY(-2px);}
+.btn-danger{background:linear-gradient(135deg,#ff3b3b,#ff7676);color:#fff;box-shadow:0 0 18px rgba(255,59,59,.4);}
+.pin-display{font-size:54px;letter-spacing:22px;text-align:center;margin:24px 0;color:var(--yellow);font-family:'Orbitron',sans-serif;text-shadow:0 0 22px rgba(255,214,0,.6);}
+.pin-keys{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
 .pin-keys button{
-  font-size:28px;padding:20px;border-radius:14px;border:2px solid #334;
-  background:#0d1326;color:#fff;cursor:pointer;min-height:60px;
+  font-size:30px;padding:22px;border-radius:16px;border:2px solid #2a3760;
+  background:#0a0f22;color:#fff;cursor:pointer;min-height:60px;font-family:'Rajdhani',sans-serif;font-weight:700;
+  transition:.15s;
 }
-.pin-keys button:hover{border-color:var(--cyan);}
+.pin-keys button:hover{border-color:var(--cyan);box-shadow:0 0 16px rgba(0,229,255,.5);transform:translateY(-2px);}
+
+/* PDF upload zone */
+.upload-zone{
+  border:3px dashed var(--cyan);border-radius:20px;
+  background:linear-gradient(160deg,rgba(0,229,255,.06),rgba(255,107,43,.04));
+  padding:36px;text-align:center;cursor:pointer;margin:18px 0 26px;
+  transition:.25s;position:relative;overflow:hidden;
+}
+.upload-zone:hover{
+  border-color:var(--yellow);box-shadow:0 0 40px rgba(255,214,0,.35);
+  transform:translateY(-2px);
+}
+.upload-zone .up-icon{font-size:64px;display:block;margin-bottom:10px;
+  filter:drop-shadow(0 0 16px rgba(0,229,255,.6));
+  animation:floatIcon 2.4s ease-in-out infinite;}
+@keyframes floatIcon{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+.upload-zone .up-title{font-size:28px;font-weight:800;color:var(--cyan);text-shadow:0 0 10px rgba(0,229,255,.5);}
+.upload-zone .up-sub{font-size:20px;color:#9fb0d0;margin-top:6px;}
+.upload-status{
+  display:flex;align-items:center;gap:14px;font-size:22px;font-weight:700;margin:10px 0 4px;
+  color:var(--yellow);min-height:30px;
+}
+.spinner{
+  width:26px;height:26px;border-radius:50%;
+  border:4px solid rgba(255,214,0,.25);border-top-color:var(--yellow);
+  animation:spin .8s linear infinite;display:none;
+}
+.spinner.active{display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.upload-status.success{color:var(--cyan);}
+.upload-status.error{color:#ff6b6b;}
+.divider-or{
+  display:flex;align-items:center;gap:16px;color:#5a6a96;font-weight:700;font-size:20px;
+  margin:8px 0 20px;letter-spacing:2px;
+}
+.divider-or::before,.divider-or::after{content:'';flex:1;height:2px;background:#2a3760;}
 
 .admin-list-row{
   display:flex;justify-content:space-between;align-items:center;
@@ -1168,10 +1229,115 @@ function openChangePinForm(){
   });
 }
 
+/* ============================ PDF AUTO-FILL ============================ */
+let pdfJsLoadPromise = null;
+function loadPdfJs(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if(pdfJsLoadPromise) return pdfJsLoadPromise;
+  pdfJsLoadPromise = new Promise((resolve,reject)=>{
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload = ()=>{
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      resolve(window.pdfjsLib);
+    };
+    s.onerror = ()=> reject(new Error('Could not load PDF reader (no internet connection?)'));
+    document.head.appendChild(s);
+  });
+  return pdfJsLoadPromise;
+}
+
+async function extractPdfText(file){
+  const pdfjsLib = await loadPdfJs();
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  let fullText = '';
+  for(let i=1;i<=pdf.numPages;i++){
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    let lastY = null, line = '';
+    content.items.forEach(item=>{
+      if(lastY!==null && Math.abs(item.transform[5]-lastY) > 4){
+        fullText += line.trim() + '\n';
+        line = '';
+      }
+      line += item.str + ' ';
+      lastY = item.transform[5];
+    });
+    fullText += line.trim() + '\n\n';
+  }
+  return fullText;
+}
+
+// Heuristic parsing of MNP-style lesson text into structured fields
+function parseLessonFromText(text){
+  const lines = text.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+  const result = { title:'', exploreText:'', masterSteps:[], practiceQ:[], practiceA:[] };
+
+  const SECTION_PATTERNS = {
+    explore: /^(explore|explore\s*task|let'?s\s*explore)/i,
+    master:  /^(master|let'?s\s*learn|learn|worked\s*example)/i,
+    practice:/^(guided\s*practice|practice|questions?)/i,
+    answers: /^(answers?|solutions?)/i
+  };
+
+  let section = null;
+  const buckets = { explore:[], master:[], practice:[], answers:[] };
+
+  // Try to find a title from the first short heading-like line
+  for(const l of lines.slice(0,6)){
+    if(l.length < 80 && !SECTION_PATTERNS.explore.test(l) && /[a-zA-Z]/.test(l)){
+      result.title = l.replace(/^lesson\s*\d+[:.\-]?\s*/i,'').trim();
+      break;
+    }
+  }
+
+  lines.forEach(line=>{
+    if(SECTION_PATTERNS.answers.test(line)){ section='answers'; return; }
+    if(SECTION_PATTERNS.practice.test(line)){ section='practice'; return; }
+    if(SECTION_PATTERNS.master.test(line)){ section='master'; return; }
+    if(SECTION_PATTERNS.explore.test(line)){ section='explore'; return; }
+    if(section) buckets[section].push(line);
+  });
+
+  result.exploreText = buckets.explore.join(' ').trim();
+  result.masterSteps = buckets.master.filter(l=>l.length>1);
+
+  // Practice: split into Q/A pairs — lines starting with a number or "Q"
+  const qLines = buckets.practice.filter(l=>l.length>1);
+  const qaSplit = qLines.length ? qLines : [];
+  result.practiceQ = qaSplit.filter(l=>/^(q\.?\s*\d+|\d+[\).:]|question)/i.test(l)) ;
+  if(result.practiceQ.length===0) result.practiceQ = qaSplit;
+
+  result.practiceA = buckets.answers.filter(l=>l.length>0)
+    .filter(l=>/^(a\.?\s*\d+|\d+[\).:]|answer)/i.test(l) || buckets.answers.length);
+
+  // Clean leading numbering like "1." or "Q1:" from each
+  const stripNum = s => s.replace(/^(q\.?\s*\d+[:.\-]?|a\.?\s*\d+[:.\-]?|\d+[\).:]|question\s*\d*[:.\-]?|answer\s*\d*[:.\-]?)\s*/i,'').trim();
+  result.practiceQ = result.practiceQ.map(stripNum).filter(s=>s.length>0);
+  result.practiceA = result.practiceA.map(stripNum).filter(s=>s.length>0);
+
+  return result;
+}
+
+function setUploadStatus(el, msg, mode){
+  el.className = 'upload-status' + (mode ? ' '+mode : '');
+  const spinner = el.querySelector('.spinner');
+  el.innerHTML = (mode==='loading' ? '<div class="spinner active"></div>' : '') + `<span>${msg}</span>`;
+}
+
 function openLessonForm(book, chapter, lesson){
   const isEdit = !!lesson;
   const l = lesson || { number: chapter.lessons.length+1, title:'', exploreText:'', manipulative:'none', masterSteps:[], practiceQ:[], practiceA:[] };
   openForm(isEdit ? `Edit Lesson` : `Add Lesson to ${chapter.name}`, `
+    <div class="upload-zone" id="pdf-drop">
+      <span class="up-icon">📄✨</span>
+      <div class="up-title">Upload a PDF — auto-fill this lesson</div>
+      <div class="up-sub">Tap to choose a Maths No Problem PDF page. We'll read it and fill in the fields below for you to check.</div>
+      <input type="file" id="pdf-input" accept="application/pdf" style="display:none;">
+    </div>
+    <div class="upload-status" id="pdf-status"></div>
+    <div class="divider-or">OR FILL IN MANUALLY / EDIT BELOW</div>
     <label>Lesson number</label>
     <input id="f-l-number" type="number" min="1" value="${l.number}">
     <label>Lesson title</label>
@@ -1208,6 +1374,31 @@ function openLessonForm(book, chapter, lesson){
     saveData(DATA);
     renderAdminBody();
   });
+
+  // Wire up PDF upload zone
+  const dropZone = document.getElementById('pdf-drop');
+  const fileInput = document.getElementById('pdf-input');
+  const statusEl = document.getElementById('pdf-status');
+  dropZone.onclick = ()=> fileInput.click();
+  fileInput.onchange = async ()=>{
+    const file = fileInput.files[0];
+    if(!file) return;
+    setUploadStatus(statusEl, `Reading "${file.name}"…`, 'loading');
+    try{
+      const text = await extractPdfText(file);
+      setUploadStatus(statusEl, 'Analysing lesson content…', 'loading');
+      const parsed = parseLessonFromText(text);
+      if(parsed.title) document.getElementById('f-l-title').value = parsed.title;
+      if(parsed.exploreText) document.getElementById('f-l-explore').value = parsed.exploreText;
+      if(parsed.masterSteps.length) document.getElementById('f-l-master').value = parsed.masterSteps.join('\n');
+      if(parsed.practiceQ.length) document.getElementById('f-l-pq').value = parsed.practiceQ.join('\n');
+      if(parsed.practiceA.length) document.getElementById('f-l-pa').value = parsed.practiceA.join('\n');
+      setUploadStatus(statusEl, '✓ Filled in! Please check each field below before saving.', 'success');
+      burstParticles(dropZone);
+    }catch(err){
+      setUploadStatus(statusEl, '✗ ' + (err.message || 'Could not read this PDF — please fill in manually.'), 'error');
+    }
+  };
 }
 
 /* ============================ INIT ============================ */
