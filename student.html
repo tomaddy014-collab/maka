@@ -26,7 +26,8 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg3);color:
 .stats-grid .stat-box:nth-child(3){animation-delay:.13s}.stats-grid .stat-box:nth-child(4){animation-delay:.18s}
 
 /* NAV */
-nav{background:rgba(245,240,232,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 1.5rem;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+nav{background:rgba(245,240,232,0.72);backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);border-bottom:1px solid rgba(15,14,12,0.06);padding:0 1.5rem;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;transition:box-shadow .3s var(--ease),background .3s var(--ease)}
+nav.scrolled{box-shadow:0 8px 30px -12px rgba(15,14,12,0.12)}
 .logo{font-family:'Fraunces',serif;font-size:20px;font-weight:800;color:#0f0e0c;text-decoration:none;letter-spacing:-.02em}
 .logo span{color:var(--green)}
 .nav-back{font-size:13px;color:var(--text2);text-decoration:none}
@@ -594,6 +595,7 @@ function initSupabase(){
   }catch(e){showErr('Failed to initialise: '+e.message)}
 }
 initSupabase();
+(function(){var nv=document.querySelector('nav');if(!nv)return;window.addEventListener('scroll',function(){nv.classList.toggle('scrolled',window.scrollY>4)},{passive:true})})();
 </script>
 </body>
 </html>
