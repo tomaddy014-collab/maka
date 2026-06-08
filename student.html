@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Markr — Student Hub</title>
+<title>Māka — Student Hub</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -134,8 +134,8 @@ textarea{resize:vertical;min-height:60px;line-height:1.5}
 <body>
 
 <nav>
-  <a href="index.html" class="logo">mark<span>r</span></a>
-  <a href="tool.html" class="nav-back">← Back to Markr</a>
+  <a href="index.html" class="logo">mā<span>ka</span></a>
+  <a href="tool.html" class="nav-back">← Back to Māka</a>
 </nav>
 
 <!-- Page renders immediately — check sessionStorage before Supabase even loads -->
@@ -157,7 +157,7 @@ var _TEACHER_ID=_params.get('tid')||'';
 // Immediately replace spinner if params missing
 (function(){
   if(!STUDENT_ID||!_TEACHER_ID){
-    document.getElementById('main').innerHTML='<div style="max-width:860px;margin:2rem auto;padding:0 1rem"><div class="card" style="text-align:center;padding:2rem"><p style="color:var(--text2);margin-bottom:1rem">Please open the student hub from the Class tab in Markr.</p><a href="tool.html" class="btn btn-p">← Back to Markr</a></div></div>';
+    document.getElementById('main').innerHTML='<div style="max-width:860px;margin:2rem auto;padding:0 1rem"><div class="card" style="text-align:center;padding:2rem"><p style="color:var(--text2);margin-bottom:1rem">Please open the student hub from the Class tab in Māka.</p><a href="tool.html" class="btn btn-p">← Back to Māka</a></div></div>';
   }
 })();
 </script>
@@ -194,7 +194,7 @@ function fmtDate(d){return new Date(d).toLocaleDateString('en-NZ',{day:'numeric'
 function pillCls(pct){return pct>=75?'ph':pct>=50?'pm':'pl'}
 function dots(sc){var h='';for(var i=1;i<=5;i++)h+='<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:2px;background:'+(i<=sc?'#2d5a27':'#d8d5cf')+'"></span>';return h}
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
-function showErr(msg){document.getElementById('main').innerHTML='<div class="card" style="max-width:860px;margin:2rem auto;padding:0 1rem"><div class="err">'+esc(msg)+'</div><div style="margin-top:1rem"><a href="tool.html" class="btn">← Back to Markr</a></div></div>'}
+function showErr(msg){document.getElementById('main').innerHTML='<div class="card" style="max-width:860px;margin:2rem auto;padding:0 1rem"><div class="err">'+esc(msg)+'</div><div style="margin-top:1rem"><a href="tool.html" class="btn">← Back to Māka</a></div></div>'}
 function closeModal(){document.getElementById('edit-modal').classList.remove('open')}
 
 // initSupabase is called by the Supabase script onload (defined below after all functions)
@@ -211,7 +211,7 @@ async function loadAll(){
   try{sr=await sb.from('students').select('*').eq('id',STUDENT_ID).eq('teacher_id',USER.id).maybeSingle()}catch(e){sr={data:null}}
   if(!sr||!sr.data){showErr('Student not found. They may have been deleted.');return}
   STUDENT=sr.data;
-  document.title='Markr — '+STUDENT.name;
+  document.title='Māka — '+STUDENT.name;
 
   // Load all marking results for this student (match file_name to first name)
   var firstName=STUDENT.name.split(' ')[0];
@@ -587,7 +587,7 @@ function initSupabase(){
   try{
     sb=supabase.createClient(SURL,SKEY);
     if(!_TEACHER_ID||!STUDENT_ID){
-      document.getElementById('main').innerHTML='<div style="max-width:860px;margin:2rem auto;padding:0 1rem"><div class="card" style="text-align:center;padding:2rem"><p style="color:var(--text2);margin-bottom:1rem">Please open the student hub from the Class tab in Markr.</p><a href="tool.html" class="btn btn-p">← Back to Markr</a></div></div>';
+      document.getElementById('main').innerHTML='<div style="max-width:860px;margin:2rem auto;padding:0 1rem"><div class="card" style="text-align:center;padding:2rem"><p style="color:var(--text2);margin-bottom:1rem">Please open the student hub from the Class tab in Māka.</p><a href="tool.html" class="btn btn-p">← Back to Māka</a></div></div>';
       return;
     }
     USER={id:_TEACHER_ID};
