@@ -199,25 +199,27 @@ nav.scrolled{border-color:var(--border)}
   position:relative;z-index:1;
 }
 #intro-overlay .word .accent{color:var(--green)}
-#intro-overlay .word{letter-spacing:0}
-#intro-overlay .word .mac{position:relative;display:inline-block;text-align:center}
-#intro-overlay .word .mac::after{
-  content:'';position:absolute;top:-0.52em;left:50%;transform:translateX(-50%);
-  width:.5em;height:.06em;background:currentColor;border-radius:1px;
+#intro-overlay .word{letter-spacing:0;position:relative}
+#intro-overlay .word .mac{position:relative}
+#intro-overlay #mac-bar{
+  position:absolute;height:.06em;background:var(--ink);border-radius:1px;
+  opacity:0;transition:opacity .3s var(--ease);
 }
+#intro-overlay #mac-bar.show{opacity:1}
 #intro-overlay .feather-wrap{position:relative;z-index:1;width:min(86vw,260px);height:auto;aspect-ratio:220/90}
 #intro-overlay .feather-wrap svg{width:100%;height:100%;overflow:visible}
 #intro-overlay .f-outline{
   fill:none;stroke:var(--gold,#c8840a);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;
 }
 #intro-overlay .f-quill{
-  fill:none;stroke:var(--ink);stroke-width:1.4;stroke-linecap:round;opacity:.55;
+  fill:none;stroke:var(--ink);stroke-width:1;stroke-linecap:round;opacity:.4;
 }
+#intro-overlay .f-quill-main{stroke-width:1.8;opacity:.6}
 #intro-overlay .f-band{
   display:none;
 }
 #intro-overlay .f-fill{
-  fill:var(--gold,#c8840a);opacity:0;
+  opacity:0;
 }
 @keyframes introWord{from{opacity:0;transform:scale(.9) translateY(6px)}to{opacity:1;transform:scale(1) translateY(0)}}
 @keyframes introGlow{0%{opacity:0}35%{opacity:1}75%{opacity:1}100%{opacity:0}}
@@ -231,15 +233,15 @@ nav.scrolled{border-color:var(--border)}
     stroke-dasharray:90;stroke-dashoffset:90;
     animation:drawQuill 1s var(--ease) forwards;
   }
-  #intro-overlay .f-quill:nth-of-type(4){animation-delay:3.3s}
-  #intro-overlay .f-quill:nth-of-type(5){animation-delay:3.45s}
-  #intro-overlay .f-quill:nth-of-type(6){animation-delay:3.6s}
-  #intro-overlay .f-quill:nth-of-type(7){animation-delay:3.6s}
-  #intro-overlay .f-quill:nth-of-type(8){animation-delay:3.75s}
-  #intro-overlay .f-quill:nth-of-type(9){animation-delay:3.75s}
-  #intro-overlay .f-quill:nth-of-type(10){animation-delay:3.9s}
-  #intro-overlay .f-quill:nth-of-type(11){animation-delay:3.9s}
-  #intro-overlay .f-quill:nth-of-type(3){animation-delay:3.15s}
+  #intro-overlay .f-quill-main{animation-delay:3.1s!important}
+  #intro-overlay .f-quill:nth-of-type(n+4){animation-delay:calc(3.3s + (var(--bi, 0) * 0.09s))}
+  #intro-overlay .f-quill:nth-of-type(4){--bi:0}#intro-overlay .f-quill:nth-of-type(5){--bi:1}
+  #intro-overlay .f-quill:nth-of-type(6){--bi:2}#intro-overlay .f-quill:nth-of-type(7){--bi:3}
+  #intro-overlay .f-quill:nth-of-type(8){--bi:4}#intro-overlay .f-quill:nth-of-type(9){--bi:5}
+  #intro-overlay .f-quill:nth-of-type(10){--bi:6}#intro-overlay .f-quill:nth-of-type(11){--bi:7}
+  #intro-overlay .f-quill:nth-of-type(12){--bi:8}#intro-overlay .f-quill:nth-of-type(13){--bi:9}
+  #intro-overlay .f-quill:nth-of-type(14){--bi:10}#intro-overlay .f-quill:nth-of-type(15){--bi:11}
+  #intro-overlay .f-quill:nth-of-type(16){--bi:12}#intro-overlay .f-quill:nth-of-type(17){--bi:13}
   #intro-overlay .feather-wrap{
     animation:featherSettle 1s 5.5s var(--ease-spring) forwards;
   }
@@ -556,24 +558,36 @@ footer{
 <body>
 
 <div id="intro-overlay" aria-hidden="true">
-  <div class="word">M<span class="mac">a</span><span class="accent">ka</span></div>
+  <div class="word">M<span class="mac">a</span><span class="accent">ka</span><span id="mac-bar"></span></div>
   <div class="feather-wrap">
-  <svg viewBox="0 0 220 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <!-- soft fill silhouette, lying horizontally, tip to the right -->
-    <path class="f-fill" d="M14 45 C 34 25, 70 12, 112 12 C 150 12, 184 24, 206 45 C 184 66, 150 78, 112 78 C 70 78, 34 65, 14 45 Z" />
-    <!-- outer outline (drawn on first) -->
-    <path class="f-outline" d="M14 45 C 34 25, 70 12, 112 12 C 150 12, 184 24, 206 45 C 184 66, 150 78, 112 78 C 70 78, 34 65, 14 45 Z" />
-    <!-- central quill -->
-    <path class="f-quill" d="M18 45 L 202 45" />
-    <!-- barb strokes radiating from quill -->
-    <path class="f-quill" d="M48 45 C 50 36, 56 28, 66 22" />
-    <path class="f-quill" d="M48 45 C 50 54, 56 62, 66 68" />
-    <path class="f-quill" d="M88 45 C 90 33, 98 23, 110 17" />
-    <path class="f-quill" d="M88 45 C 90 57, 98 67, 110 73" />
-    <path class="f-quill" d="M130 45 C 132 35, 140 26, 152 21" />
-    <path class="f-quill" d="M130 45 C 132 55, 140 64, 152 69" />
-    <path class="f-quill" d="M168 45 C 170 38, 176 31, 184 27" />
-    <path class="f-quill" d="M168 45 C 170 52, 176 59, 184 63" />
+  <svg viewBox="0 0 240 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="featherGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="var(--ink)" stop-opacity=".75"/>
+        <stop offset="55%" stop-color="var(--gold,#c8840a)"/>
+        <stop offset="100%" stop-color="var(--gold,#c8840a)" stop-opacity=".5"/>
+      </linearGradient>
+    </defs>
+    <!-- vane silhouette: narrower upper lobe, fuller lower lobe, tapering to a point -->
+    <path class="f-fill" fill="url(#featherGrad)" d="M10 50 C 28 34, 60 22, 108 18 C 152 15, 196 22, 230 47 C 198 60, 158 70, 112 71 C 66 72, 32 64, 10 50 Z" />
+    <path class="f-outline" d="M10 50 C 28 34, 60 22, 108 18 C 152 15, 196 22, 230 47 C 198 60, 158 70, 112 71 C 66 72, 32 64, 10 50 Z" />
+    <!-- tapering quill, slightly curved -->
+    <path class="f-quill f-quill-main" d="M14 49 C 70 43, 160 43, 226 47" />
+    <!-- fine angled barbs along the vane, denser near the base -->
+    <path class="f-quill" d="M40 47 C 44 38, 52 30, 64 25" />
+    <path class="f-quill" d="M40 49 C 44 56, 50 63, 60 68" />
+    <path class="f-quill" d="M64 45 C 68 36, 76 28, 90 23" />
+    <path class="f-quill" d="M64 48 C 68 56, 76 63, 88 68" />
+    <path class="f-quill" d="M90 44 C 94 35, 104 28, 118 23" />
+    <path class="f-quill" d="M90 48 C 94 57, 102 64, 116 69" />
+    <path class="f-quill" d="M118 43 C 122 35, 132 29, 146 25" />
+    <path class="f-quill" d="M118 48 C 122 56, 130 63, 144 68" />
+    <path class="f-quill" d="M146 44 C 150 37, 158 31, 170 27" />
+    <path class="f-quill" d="M146 48 C 150 55, 156 61, 168 65" />
+    <path class="f-quill" d="M172 45 C 175 39, 182 34, 192 30" />
+    <path class="f-quill" d="M172 48 C 175 53, 181 58, 190 62" />
+    <path class="f-quill" d="M196 46 C 199 42, 204 38, 211 35" />
+    <path class="f-quill" d="M196 48 C 199 51, 204 55, 210 58" />
   </svg>
   </div>
 </div>
@@ -761,6 +775,24 @@ footer{
 </footer>
 
 <script>
+// Position macron bar exactly above the "a"
+(function(){
+  var word=document.querySelector('#intro-overlay .word');
+  var mac=document.querySelector('#intro-overlay .mac');
+  var bar=document.getElementById('mac-bar');
+  if(!word||!mac||!bar)return;
+  function place(){
+    var wr=word.getBoundingClientRect(),mr=mac.getBoundingClientRect();
+    bar.style.width=(mr.width*0.85)+'px';
+    bar.style.left=(mr.left-wr.left+mr.width*0.075)+'px';
+    bar.style.top=(mr.top-wr.top-mr.height*0.42)+'px';
+    bar.classList.add('show');
+  }
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(place);
+  setTimeout(place,50);
+  setTimeout(place,400);
+})();
+
 // Intro logo animation (once per session)
 (function(){
   var ov=document.getElementById('intro-overlay');
