@@ -199,6 +199,12 @@ nav.scrolled{border-color:var(--border)}
   position:relative;z-index:1;
 }
 #intro-overlay .word .accent{color:var(--green)}
+#intro-overlay .word{letter-spacing:0}
+#intro-overlay .word .mac{position:relative;display:inline-block;text-align:center}
+#intro-overlay .word .mac::after{
+  content:'';position:absolute;top:-0.52em;left:50%;transform:translateX(-50%);
+  width:.5em;height:.06em;background:currentColor;border-radius:1px;
+}
 #intro-overlay .feather-wrap{position:relative;z-index:1;width:min(86vw,260px);height:auto;aspect-ratio:220/90}
 #intro-overlay .feather-wrap svg{width:100%;height:100%;overflow:visible}
 #intro-overlay .f-outline{
@@ -550,7 +556,7 @@ footer{
 <body>
 
 <div id="intro-overlay" aria-hidden="true">
-  <div class="word">Mā<span class="accent">ka</span></div>
+  <div class="word">M<span class="mac">a</span><span class="accent">ka</span></div>
   <div class="feather-wrap">
   <svg viewBox="0 0 220 90" fill="none" xmlns="http://www.w3.org/2000/svg">
     <!-- soft fill silhouette, lying horizontally, tip to the right -->
