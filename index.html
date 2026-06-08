@@ -785,7 +785,7 @@ footer{
     var wr=word.getBoundingClientRect(),mr=mac.getBoundingClientRect();
     bar.style.width=(mr.width*0.85)+'px';
     bar.style.left=(mr.left-wr.left+mr.width*0.075)+'px';
-    bar.style.top=(mr.top-wr.top-mr.height*0.06)+'px';
+    bar.style.top=(mr.top-wr.top-mr.height*-0.04)+'px';
     bar.classList.add('show');
   }
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(place);
