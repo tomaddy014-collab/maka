@@ -167,9 +167,45 @@ nav.scrolled{border-color:var(--border)}
   transition:background .3s var(--ease),transform .3s var(--ease-spring),box-shadow .3s var(--ease);
   box-shadow:0 4px 20px rgba(45,90,39,0.25);
   will-change:transform;
+  position:relative;overflow:hidden;
 }
-.btn-primary:hover{background:var(--green-mid);transform:translateY(-3px) scale(1.02);box-shadow:0 12px 36px rgba(45,90,39,0.32)}
-.btn-primary:active{transform:translateY(-1px) scale(.99)}
+.btn-primary::before{
+  content:'';position:absolute;top:0;left:-75%;width:50%;height:100%;
+  background:linear-gradient(115deg,transparent,rgba(255,255,255,0.35),transparent);
+  transform:skewX(-20deg);transition:left .65s var(--ease);
+}
+.btn-primary:hover::before{left:125%}
+.btn-primary:hover{background:var(--green-mid);transform:translateY(-3px) scale(1.02);box-shadow:0 12px 36px rgba(45,90,39,0.32),0 0 0 6px rgba(200,132,10,0.12)}
+.btn-primary:active{transform:translateY(-1px) scale(.97)}
+
+#intro-overlay{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--paper);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  transition:opacity .6s var(--ease),visibility .6s;
+}
+#intro-overlay.hide{opacity:0;visibility:hidden;pointer-events:none}
+#intro-overlay .word{
+  font-family:'Fraunces',serif;font-weight:800;letter-spacing:-.02em;
+  font-size:clamp(40px,9vw,72px);color:var(--ink);
+  opacity:0;transform:scale(.92);
+  animation:introWord .7s .1s var(--ease-spring) forwards;
+}
+#intro-overlay .word span{color:var(--green)}
+#intro-overlay .feather-path{
+  fill:none;stroke:var(--gold,#c8840a);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;
+}
+@keyframes introWord{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+@media (prefers-reduced-motion: no-preference){
+  #intro-overlay .feather-path{
+    stroke-dasharray:340;stroke-dashoffset:340;
+    animation:drawFeather 1s .55s var(--ease) forwards;
+  }
+  @keyframes drawFeather{to{stroke-dashoffset:0}}
+}
+@media (prefers-reduced-motion: reduce){
+  #intro-overlay{display:none}
+}
 .btn-secondary{
   display:inline-flex;align-items:center;gap:8px;
   background:transparent;color:var(--ink);
@@ -474,6 +510,13 @@ footer{
 </head>
 <body>
 
+<div id="intro-overlay" aria-hidden="true">
+  <div class="word">mark<span>r</span></div>
+  <svg width="120" height="48" viewBox="0 0 120 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path class="feather-path" d="M6 40 C 18 18, 38 6, 60 6 C 88 6, 108 18, 114 36 C 96 30, 78 28, 60 30 C 42 32, 24 34, 6 40 Z M60 6 L 58 38" />
+  </svg>
+</div>
+
 <nav id="nav">
   <a href="#" class="nav-logo">mark<span>r</span></a>
   <div class="nav-links">
@@ -657,6 +700,20 @@ footer{
 </footer>
 
 <script>
+// Intro logo animation (once per session)
+(function(){
+  var ov=document.getElementById('intro-overlay');
+  if(!ov)return;
+  var seen=sessionStorage.getItem('maka_intro_seen');
+  var reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(seen||reduced){ov.remove();return}
+  sessionStorage.setItem('maka_intro_seen','1');
+  setTimeout(function(){
+    ov.classList.add('hide');
+    setTimeout(function(){ov.remove()},650);
+  },1900);
+})();
+
 // Nav scroll state
 var nav=document.getElementById('nav');
 window.addEventListener('scroll',function(){nav.classList.toggle('scrolled',window.scrollY>40)},{passive:true});
