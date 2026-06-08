@@ -15,6 +15,7 @@
   --warn-bg:#faeeda;--warn-text:#854f0b;
   --danger-bg:#fcebeb;--danger-text:#a32d2d;
   --info-bg:#e6f1fb;--info-text:#185fa5;
+  --gold:#c8840a;--gold-soft:rgba(200,132,10,0.12);
   --r:10px;--rs:6px;
 }
 body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg3);color:var(--text);min-height:100vh}
@@ -26,12 +27,23 @@ nav{background:rgba(245,240,232,0.72);backdrop-filter:blur(20px) saturate(1.6);-
 nav.scrolled{box-shadow:0 8px 30px -12px rgba(15,14,12,0.12)}
 .logo{font-family:'Fraunces',serif;font-size:20px;font-weight:800;color:#0f0e0c;text-decoration:none;letter-spacing:-.02em;flex-shrink:0}
 .logo span{color:var(--green)}
-.nav-tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1;justify-content:center}
+.nav-tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;justify-content:center;position:relative;background:var(--bg2);border-radius:100px;padding:4px}
 .nav-tabs::-webkit-scrollbar{display:none}
-.ntab{padding:7px 10px;border-radius:7px;border:none;background:none;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;flex-shrink:0;transition:background .25s var(--ease),color .25s var(--ease),transform .15s var(--ease)}
-.ntab:hover:not(.active){background:var(--bg2);color:var(--text)}
-.ntab.active{background:var(--text);color:#fff}
-.ntab:active{transform:scale(.95)}
+.nav-ind{position:absolute;top:4px;bottom:4px;left:0;width:0;border-radius:100px;background:var(--text);box-shadow:0 2px 8px rgba(0,0,0,0.18);transition:transform .25s var(--ease),width .25s var(--ease);z-index:0}
+.ntab{position:relative;z-index:1;padding:7px 14px;border-radius:100px;border:none;background:none;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;flex-shrink:0;transition:color .25s var(--ease),transform .12s var(--ease)}
+.ntab .tl{display:inline}.ntab .ti{display:none}
+.ntab:hover:not(.active){color:var(--text)}
+.ntab.active{color:#fff}
+.ntab:active{transform:scale(.94)}
+/* Mobile: bottom tab bar */
+@media(max-width:768px){
+  .nav-tabs{position:fixed;left:0;right:0;bottom:0;top:auto;justify-content:space-around;gap:0;background:rgba(245,240,232,0.88);backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);border-top:1px solid var(--border);border-radius:0;padding:6px 2px;padding-bottom:calc(6px + env(safe-area-inset-bottom));z-index:50;overflow:visible}
+  .nav-ind{display:none}
+  .ntab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10px;font-weight:500;padding:5px 4px;min-width:48px;min-height:46px;border-radius:12px;color:var(--text2)}
+  .ntab .ti{display:block;font-size:18px;line-height:1}
+  .ntab.active{color:var(--green)}
+  .main{padding-bottom:84px}
+}
 .nav-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .avatar{width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:transform .25s var(--ease-spring),box-shadow .25s var(--ease)}
 .avatar:hover{transform:scale(1.08);box-shadow:0 4px 14px rgba(45,90,39,0.35)}
@@ -45,7 +57,8 @@ nav.scrolled{box-shadow:0 8px 30px -12px rgba(15,14,12,0.12)}
 .dd-btn:hover{background:var(--bg2);padding-left:16px}
 .main{max-width:880px;margin:0 auto;padding:1.5rem 1rem}
 .panel{display:none}
-.panel.active{display:block;animation:riseIn .4s var(--ease-spring)}
+.panel.active{display:block;animation:panelSwap .25s var(--ease)}
+@keyframes panelSwap{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .card{background:var(--bg);border:.5px solid var(--border);border-radius:var(--r);padding:1.5rem;margin-bottom:1.25rem;transition:box-shadow .3s var(--ease),transform .3s var(--ease)}
 .card-title{font-weight:600;font-size:15px;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .step-row{display:flex;align-items:center;gap:8px;margin-bottom:14px}
@@ -57,13 +70,15 @@ nav.scrolled{box-shadow:0 8px 30px -12px rgba(15,14,12,0.12)}
 .hint{font-size:12px;color:var(--text2);margin-top:5px;line-height:1.5}
 .hint a{color:var(--info-text)}
 input[type=text],input[type=password],input[type=email],select,textarea{width:100%;font-size:14px;padding:9px 11px;border-radius:var(--rs);border:.5px solid var(--border2);background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;transition:border-color .2s var(--ease),box-shadow .2s var(--ease),transform .15s var(--ease)}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 4px rgba(45,90,39,0.1)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-soft)}
 textarea{resize:vertical;min-height:80px;line-height:1.5}
 .key-row{display:flex;gap:8px}.key-row input{flex:1;font-family:monospace;font-size:13px}
 .eye-btn{padding:9px 11px;border:.5px solid var(--border2);border-radius:var(--rs);background:var(--bg2);cursor:pointer;font-size:13px;flex-shrink:0;transition:background .2s var(--ease),transform .15s var(--ease)}
 .eye-btn:hover{background:var(--border);transform:scale(1.05)}
-.upload-box{border:2px dashed var(--border2);border-radius:var(--r);padding:2rem 1rem;text-align:center;transition:border-color .25s var(--ease),background .25s var(--ease),transform .25s var(--ease)}
-.upload-box.dragover{border-color:var(--green);background:var(--green-bg);transform:scale(1.015)}
+.upload-box{border:2px dashed var(--border2);border-radius:var(--r);padding:2rem 1rem;text-align:center;transition:border-color .25s var(--ease),background .25s var(--ease),transform .25s var(--ease),box-shadow .25s var(--ease)}
+.upload-box.empty-pulse{animation:uploadPulse 2.4s var(--ease) infinite}
+@keyframes uploadPulse{0%,100%{border-color:var(--border2)}50%{border-color:rgba(200,132,10,0.5)}}
+.upload-box.dragover{border-style:solid;border-color:var(--gold);background:rgba(200,132,10,0.07);transform:scale(1.015);box-shadow:0 8px 30px -10px rgba(200,132,10,0.35);animation:none}
 .btn{display:inline-flex;align-items:center;gap:5px;padding:9px 16px;border-radius:var(--rs);border:.5px solid var(--border2);background:var(--bg);color:var(--text);font-size:13px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;transition:background .2s var(--ease),transform .2s var(--ease-spring),box-shadow .2s var(--ease)}
 .btn:hover{background:var(--bg2);transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,0.07)}.btn:active{transform:scale(.97)}.btn:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
 .btn-p{background:#1a1a1a;color:#fff;border-color:#1a1a1a}.btn-p:hover{background:#333}
@@ -147,6 +162,22 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 @media print{nav,.main>*:not(#print-out){display:none!important}#print-out{display:block!important}body{background:#fff}}
 .print-out{display:none}
 @media(max-width:600px){.grid2{grid-template-columns:1fr}.dash-grid{grid-template-columns:repeat(2,1fr)}.main{padding:1rem .75rem}nav{padding:0 .75rem}}
+
+/* "How to improve" — warm gold-accent cards */
+.sbox.improve{background:rgba(200,132,10,0.06);border-left:3px solid var(--gold);color:var(--text)}
+
+/* Toast notifications */
+#toast-wrap{position:fixed;right:20px;bottom:20px;z-index:2000;display:flex;flex-direction:column;gap:10px;align-items:flex-end;pointer-events:none}
+.toast{pointer-events:auto;display:flex;align-items:center;gap:10px;min-width:240px;max-width:360px;padding:12px 16px;border-radius:12px;font-size:13px;font-weight:500;line-height:1.4;color:#fff;background:var(--text);box-shadow:0 10px 30px -8px rgba(0,0,0,0.3);cursor:pointer;animation:toastIn .3s var(--ease-spring)}
+.toast.out{animation:toastOut .2s var(--ease) forwards}
+.toast.ok{background:var(--green)}
+.toast.err{background:var(--danger-text)}
+.toast.warn{background:var(--warn-text)}
+.toast .tdot{flex-shrink:0;font-weight:700}
+@keyframes toastIn{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastOut{to{opacity:0;transform:translateY(100%)}}
+@media(max-width:600px){#toast-wrap{right:12px;left:12px;bottom:96px;align-items:stretch}.toast{min-width:0;max-width:none}}
+.ntab:focus-visible,.btn:focus-visible,.copy-btn:focus-visible,.dd-btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 </style>
 </head>
 <body>
@@ -180,12 +211,13 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 </svg>
   </a>
   <div class="nav-tabs">
-    <button class="ntab active" onclick="showTab('mark')">✏️ Mark</button>
-    <button class="ntab" onclick="showTab('dashboard')">📊 Dashboard</button>
-    <button class="ntab" onclick="showTab('history')">🗂 History</button>
-    <button class="ntab" onclick="showTab('comments')">📝 Comments</button>
-    <button class="ntab" onclick="showTab('compare')">📈 Compare</button>
-    <button class="ntab" onclick="showTab('class')">👥 Class</button>
+    <div class="nav-ind" id="nav-ind"></div>
+    <button class="ntab active" onclick="showTab('mark')"><span class="ti">✏️</span><span class="tl">Mark</span></button>
+    <button class="ntab" onclick="showTab('dashboard')"><span class="ti">📊</span><span class="tl">Dashboard</span></button>
+    <button class="ntab" onclick="showTab('history')"><span class="ti">🗂</span><span class="tl">History</span></button>
+    <button class="ntab" onclick="showTab('comments')"><span class="ti">📝</span><span class="tl">Comments</span></button>
+    <button class="ntab" onclick="showTab('compare')"><span class="ti">📈</span><span class="tl">Compare</span></button>
+    <button class="ntab" onclick="showTab('class')"><span class="ti">👥</span><span class="tl">Class</span></button>
   </div>
   <div class="nav-right">
     <div class="avatar" id="avatar-btn" onclick="toggleDD()">
@@ -236,7 +268,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
     </div>
     <div class="card">
       <div class="step-row"><span class="step-n">2</span><span class="step-title">Upload student work</span></div>
-      <div class="upload-box" id="dropzone">
+      <div class="upload-box empty-pulse" id="dropzone">
         <div style="font-size:32px;margin-bottom:10px">📄</div>
         <div style="font-size:14px;font-weight:500;margin-bottom:4px">Drag and drop files here</div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:14px">PDF, JPG and PNG — scanned handwriting works too</div>
@@ -378,6 +410,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 <div class="modal-bg" id="rename-modal"><div class="modal"><div class="modal-title">Rename session</div><input type="text" id="rename-input" placeholder="Session name"><div class="modal-footer"><button class="btn" onclick="closeModal('rename-modal')">Cancel</button><button class="btn btn-p" onclick="confirmRename()">Rename</button></div></div></div>
 <div class="modal-bg" id="add-stu-modal"><div class="modal"><div class="modal-title">Add student</div><div class="field"><label class="lbl">Name</label><input type="text" id="new-stu-name" placeholder="Student name"></div><div class="grid2" style="margin-bottom:0"><div class="field"><label class="lbl">Year level</label><select id="new-stu-year"><option value="">Select</option><option>Year 1</option><option>Year 2</option><option>Year 3</option><option>Year 4</option><option>Year 5</option><option>Year 6</option><option>Year 7</option><option>Year 8</option><option>Year 9</option><option>Year 10</option></select></div><div class="field"><label class="lbl">Gender</label><select id="new-stu-gender"><option value="">Select</option><option value="boy">Boy (he/him)</option><option value="girl">Girl (she/her)</option><option value="nonbinary">Non-binary (they/them)</option></select></div></div><div class="modal-footer"><button class="btn" onclick="closeModal('add-stu-modal')">Cancel</button><button class="btn btn-p" onclick="addStu()">Add</button></div></div></div>
 <div class="print-out" id="print-out"></div>
+<div id="toast-wrap" aria-live="polite" aria-atomic="false"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -395,7 +428,20 @@ function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function stripExt(n){return String(n).replace(/\.[^.]+$/,'')}
 function getStyle(){return(PROFILE&&PROFILE.writing_style&&PROFILE.writing_style.trim())||DEFAULT_STYLE}
 function getKey(){var k=(document.getElementById('apikey').value||'').trim()||(PROFILE&&PROFILE.gemini_key)||'';if(!k){alert('Please enter your Gemini API key.');return null}return k}
-function showStatus(id,msg,type){var el=document.getElementById(id);if(!el)return;el.textContent=msg;el.className=type==='ok'?'ok':'err';setTimeout(function(){if(el){el.textContent='';el.className=''}},3000)}
+function showToast(msg,type){
+  var wrap=document.getElementById('toast-wrap');if(!wrap)return;
+  var t=document.createElement('div');
+  t.className='toast'+(type==='ok'?' ok':type==='warn'?' warn':type==='err'?' err':'');
+  var dot=type==='ok'?'✓':type==='err'?'✕':type==='warn'?'!':'';
+  t.innerHTML=(dot?'<span class="tdot">'+dot+'</span>':'')+'<span>'+esc(msg)+'</span>';
+  var killed=false;
+  function kill(){if(killed)return;killed=true;t.classList.add('out');setTimeout(function(){t.remove()},220)}
+  t.addEventListener('click',kill);
+  wrap.appendChild(t);
+  setTimeout(kill,3000);
+}
+// Status messages now surface as toasts (inline element cleared for safety)
+function showStatus(id,msg,type){var el=document.getElementById(id);if(el){el.textContent='';el.className=''}showToast(msg,type==='ok'?'ok':'err')}
 function openModal(id){document.getElementById(id).classList.add('open')}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
 
@@ -450,7 +496,18 @@ function showTab(id){
   if(id==='settings')loadRubricsSettings();
   if(id==='compare')loadCompareSessions();
   if(id==='class')loadClassList();
+  moveNavInd();
+  window.scrollTo({top:0,behavior:'smooth'});
 }
+function moveNavInd(){
+  var ind=document.getElementById('nav-ind');if(!ind)return;
+  var active=document.querySelector('.ntab.active');if(!active)return;
+  ind.style.width=active.offsetWidth+'px';
+  ind.style.transform='translateX('+active.offsetLeft+'px)';
+}
+window.addEventListener('resize',moveNavInd);
+window.addEventListener('load',function(){setTimeout(moveNavInd,60)});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){setTimeout(moveNavInd,30)});
 function toggleDD(){document.getElementById('dropdown').classList.toggle('open')}
 document.addEventListener('click',function(e){if(document.getElementById('avatar-btn')&&!document.getElementById('avatar-btn').contains(e.target))document.getElementById('dropdown').classList.remove('open')});
 
@@ -540,6 +597,7 @@ function fileIcon(f){return f.type==='application/pdf'?'📕':'🖼️'}
 function fileTag(f){return f.type==='application/pdf'?'<span class="ftag ftag-pdf">PDF</span>':'<span class="ftag ftag-img">Image</span>'}
 function renderFiles(){
   var el=document.getElementById('flist'),cnt=document.getElementById('upload-count');
+  var dze=document.getElementById('dropzone');if(dze)dze.classList.toggle('empty-pulse',!files.length);
   if(!files.length){el.innerHTML='';cnt.style.display='none';return}
   el.innerHTML=files.slice(0,10).map(function(f,i){return'<li class="fitem"><span style="font-size:15px">'+fileIcon(f)+'</span><span class="fname">'+esc(f.name)+'</span>'+fileTag(f)+'<span class="fsize">'+fmt(f.size)+'</span><button class="xbtn" data-i="'+i+'">×</button></li>'}).join('');
   cnt.textContent=files.length>10?'...and '+(files.length-10)+' more ('+files.length+' total)':files.length+' file'+(files.length!==1?'s':'')+' ready';
@@ -679,7 +737,7 @@ function saveSess(name,area,level,task,rubric,res){
   var ss=document.getElementById('save-status');
   ss.innerHTML='<div style="font-size:13px;color:var(--text2);margin-top:8px;display:flex;align-items:center;gap:6px"><div class="spinner"></div>Saving…</div>';
   sb.from('sessions').insert({teacher_id:USER.id,name:name,learning_area:area,level:level,task:task,rubric:rubric}).select().single().then(function(sres){
-    if(sres.error){ss.innerHTML='<div class="err" style="margin-top:8px">Could not save: '+esc(sres.error.message)+'</div>';return}
+    if(sres.error){ss.innerHTML='';showToast('Could not save: '+sres.error.message,'err');return}
     currentSessId=sres.data.id;
     var valid=res.filter(function(r){return!r._error});
     if(valid.length){
@@ -702,9 +760,9 @@ function saveSess(name,area,level,task,rubric,res){
         }})).then(function(){}).catch(function(){});
       });
     }
-    ss.innerHTML='<div class="ok" style="margin-top:8px">✓ Saved — '+valid.length+' students in "'+esc(name)+'"</div>';
+    ss.innerHTML='';showToast('Saved — '+valid.length+' students in "'+name+'"','ok');
     loadDashSessions();loadCompareSessions();
-  }).catch(function(e){ss.innerHTML='<div class="err" style="margin-top:8px">Could not save: '+esc(e.message)+'</div>'});
+  }).catch(function(e){ss.innerHTML='';showToast('Could not save: '+e.message,'err')});
 }
 
 function pillCls(pct){return pct>=75?'ph':pct>=50?'pm':'pl'}
@@ -738,8 +796,8 @@ function renderResultCard(r,idx,editable){
   }
   if(i1||i2){
     html+='<div class="slbl">How to improve</div>';
-    if(i1)html+='<div class="sbox" style="margin-bottom:6px">💡 '+esc(i1)+'</div>';
-    if(i2)html+='<div class="sbox">💡 '+esc(i2)+'</div>';
+    if(i1)html+='<div class="sbox improve" style="margin-bottom:6px">💡 '+esc(i1)+'</div>';
+    if(i2)html+='<div class="sbox improve">💡 '+esc(i2)+'</div>';
   }
   html+='</div>';
   return html;
