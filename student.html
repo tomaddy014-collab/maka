@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Markr — Student Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--bg2:#f7f6f3;--bg3:#f5f0e8;
+  --text:#1a1a1a;--text2:#6b6b6b;--text3:#9a9a9a;
+  --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.18);
+  --green:#2d5a27;--green-bg:#e8f0e6;
+  --warn-bg:#faeeda;--warn-text:#854f0b;
+  --danger-bg:#fcebeb;--danger-text:#a32d2d;
+  --info-bg:#e6f1fb;--info-text:#185fa5;
+  --r:10px;--rs:6px;
+}
+body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg3);color:var(--text);min-height:100vh}
+:root{--ease:cubic-bezier(.25,.8,.25,1);--ease-spring:cubic-bezier(.16,1,.3,1)}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+@keyframes riseIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.card{animation:riseIn .5s var(--ease-spring) backwards;transition:box-shadow .3s var(--ease),transform .3s var(--ease)}
+.stats-grid .stat-box:nth-child(1){animation-delay:.03s}.stats-grid .stat-box:nth-child(2){animation-delay:.08s}
+.stats-grid .stat-box:nth-child(3){animation-delay:.13s}.stats-grid .stat-box:nth-child(4){animation-delay:.18s}
+
+/* NAV */
+nav{background:rgba(245,240,232,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 1.5rem;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.logo{font-family:'Fraunces',serif;font-size:20px;font-weight:800;color:#0f0e0c;text-decoration:none;letter-spacing:-.02em}
+.logo span{color:var(--green)}
+.nav-back{font-size:13px;color:var(--text2);text-decoration:none}
+.nav-back:hover{color:var(--text)}
+
+/* LAYOUT */
+.main{max-width:860px;margin:0 auto;padding:2rem 1rem}
+
+/* CARDS */
+.card{background:var(--bg);border:.5px solid var(--border);border-radius:var(--r);padding:1.5rem;margin-bottom:1.25rem}
+.card-title{font-weight:600;font-size:15px;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:9px 16px;border-radius:var(--rs);border:.5px solid var(--border2);background:var(--bg);color:var(--text);font-size:13px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;text-decoration:none;transition:background .2s var(--ease),transform .2s var(--ease-spring),box-shadow .2s var(--ease)}
+.btn:hover{background:var(--bg2);transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,0.08)}.btn:active{transform:scale(.97)}.btn:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-p{background:#1a1a1a;color:#fff;border-color:#1a1a1a}.btn-p:hover{background:#333}
+.btn-green{background:var(--green);color:#fff;border-color:var(--green)}.btn-green:hover{background:#1e3d1a}
+.btn-danger{color:var(--danger-text);border-color:var(--danger-text)}.btn-danger:hover{background:var(--danger-bg)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+
+/* PILLS */
+.pill{font-size:12px;font-weight:600;padding:4px 12px;border-radius:100px;flex-shrink:0}
+.ph{background:var(--green-bg);color:var(--green)}
+.pm{background:var(--warn-bg);color:var(--warn-text)}
+.pl{background:var(--danger-bg);color:var(--danger-text)}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.25rem}
+.stat-box{background:var(--bg);border:.5px solid var(--border);border-radius:var(--r);padding:1.25rem;text-align:center;transition:transform .3s var(--ease-spring),box-shadow .3s var(--ease)}
+.stat-box:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,0.06)}
+.stat-num{font-family:'Fraunces',serif;font-size:1.9rem;font-weight:800;color:var(--green);line-height:1}
+.stat-lbl{font-size:11px;color:var(--text2);margin-top:4px}
+
+/* CHART */
+.chart-wrap{position:relative;height:200px;margin-top:8px}
+canvas{width:100%!important}
+
+/* CRITERION BARS */
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.bar-lbl{width:160px;font-size:12px;color:var(--text2);flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{flex:1;height:8px;background:var(--bg2);border-radius:100px;overflow:hidden}
+.bar-fill{height:100%;border-radius:100px;width:0;transition:width 1s var(--ease-spring)}
+.bar-val{width:36px;text-align:right;font-size:12px;font-weight:600}
+
+/* SESSION CARDS */
+.sess-card{background:var(--bg);border:.5px solid var(--border);border-radius:var(--r);padding:1.25rem;margin-bottom:.75rem;transition:box-shadow .3s var(--ease),transform .3s var(--ease)}
+.sess-card:hover{box-shadow:0 8px 28px rgba(0,0,0,0.06);transform:translateY(-2px)}
+.sess-hd{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;cursor:pointer}
+.sess-name{font-weight:600;font-size:14px}
+.sess-meta{font-size:12px;color:var(--text2);margin-top:2px}
+.sess-body{max-height:0;opacity:0;overflow:hidden;transition:max-height .45s var(--ease-spring),opacity .3s var(--ease)}
+.sess-body.open{max-height:2000px;opacity:1;margin-top:4px}
+.ctable{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px;table-layout:fixed}
+.ctable th{text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);padding:4px 0 6px;border-bottom:.5px solid var(--border)}
+.ctable td{padding:7px 4px 7px 0;border-bottom:.5px solid var(--border);vertical-align:top}
+.ctable tr:last-child td{border-bottom:none}
+.ctable .cn{width:30%;color:var(--text)}.ctable .cs{width:18%}.ctable .cc{color:var(--text2);line-height:1.5}
+.slbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin:10px 0 5px}
+.sbox{font-size:13px;color:var(--text2);line-height:1.6;padding:10px 12px;background:var(--bg2);border-radius:var(--rs)}
+.nslist{list-style:none}
+.nslist li{font-size:13px;padding:3px 0 3px 16px;position:relative;color:var(--text);line-height:1.5}
+.nslist li::before{content:"→";position:absolute;left:0;color:var(--text3)}
+.chevron{font-size:12px;color:var(--text3);transition:transform .35s var(--ease-spring);flex-shrink:0;margin-top:2px}
+.chevron.open{transform:rotate(90deg)}
+
+/* COMMENT CARDS */
+.comment-card{background:var(--bg2);border-radius:var(--rs);padding:1rem 1.25rem;margin-bottom:.75rem;transition:transform .3s var(--ease),box-shadow .3s var(--ease)}
+.comment-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.05)}
+.comment-meta{font-size:11px;color:var(--text3);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.comment-text{font-size:13px;line-height:1.75;color:var(--text)}
+.copy-btn{font-size:11px;padding:4px 10px;border-radius:100px;border:.5px solid var(--border2);background:var(--bg);cursor:pointer;color:var(--text2);font-family:'DM Sans',sans-serif}
+.copy-btn:hover{background:var(--bg2)}
+
+/* REPORT GEN */
+.rep-output{font-size:13px;line-height:1.8;background:var(--bg2);padding:14px;border-radius:var(--rs);margin-top:12px;display:none}
+
+/* MISC */
+.err{font-size:13px;color:var(--danger-text);background:var(--danger-bg);padding:10px 12px;border-radius:var(--rs);line-height:1.5}
+.ok{font-size:13px;color:var(--green);background:var(--green-bg);padding:10px 12px;border-radius:var(--rs)}
+.spinner{width:14px;height:14px;border:2px solid var(--border2);border-top-color:#1a1a1a;border-radius:50%;animation:spin .75s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.delta{font-size:11px;font-weight:600;padding:2px 8px;border-radius:100px}
+.d-up{background:var(--green-bg);color:var(--green)}
+.d-dn{background:var(--danger-bg);color:var(--danger-text)}
+.d-eq{background:var(--bg2);color:var(--text3)}
+.field{margin-bottom:12px}
+.lbl{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;display:block}
+input[type=text],input[type=password],select,textarea{width:100%;font-size:14px;padding:9px 11px;border-radius:var(--rs);border:.5px solid var(--border2);background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
+textarea{resize:vertical;min-height:60px;line-height:1.5}
+.key-row{display:flex;gap:8px}.key-row input{flex:1;font-family:monospace;font-size:13px}
+.eye-btn{padding:9px 11px;border:.5px solid var(--border2);border-radius:var(--rs);background:var(--bg2);cursor:pointer;font-size:13px;flex-shrink:0}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem;opacity:0;transition:opacity .25s var(--ease)}
+.modal-bg.open{display:flex;opacity:1}
+.modal{background:#fff;border-radius:var(--r);padding:1.5rem;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.2);transform:scale(.94) translateY(8px);transition:transform .35s var(--ease-spring)}
+.modal-bg.open .modal{transform:scale(1) translateY(0)}
+.modal-title{font-weight:600;font-size:16px;margin-bottom:1rem}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem}
+.empty{text-align:center;padding:2rem;color:var(--text2);font-size:13px}
+@media(max-width:600px){.stats-grid{grid-template-columns:repeat(2,1fr)}.main{padding:1rem .75rem}}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="logo">mark<span>r</span></a>
+  <a href="tool.html" class="nav-back">← Back to Markr</a>
+</nav>
+
+<!-- Page renders immediately — check sessionStorage before Supabase even loads -->
+<div class="main" id="main">
+  <div style="text-align:center;padding:4rem 1rem;color:var(--text2)">
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px">
+      <div class="spinner"></div>Loading…
+    </div>
+  </div>
+</div>
+
+<script>
+// Read from URL params — sessionStorage doesn't work across new tabs
+var _params=new URLSearchParams(window.location.search);
+var STUDENT_ID=_params.get('sid')||'';
+var STUDENT_NAME=_params.get('name')||'Student';
+var _TEACHER_ID=_params.get('tid')||'';
+
+// Immediately replace spinner if params missing
+(function(){
+  if(!STUDENT_ID||!_TEACHER_ID){
+    document.getElementById('main').innerHTML='<div style="max-width:860px;margin:2rem auto;padding:0 1rem"><div class="card" style="text-align:center;padding:2rem"><p style="color:var(--text2);margin-bottom:1rem">Please open the student hub from the Class tab in Markr.</p><a href="tool.html" class="btn btn-p">← Back to Markr</a></div></div>';
+  }
+})();
+</script>
+
+<!-- Edit student modal -->
+<div class="modal-bg" id="edit-modal">
+  <div class="modal">
+    <div class="modal-title">Edit student</div>
+    <div class="field"><label class="lbl">Name</label><input type="text" id="edit-name"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="field"><label class="lbl">Year level</label>
+        <select id="edit-year"><option value="">Select</option><option>Year 1</option><option>Year 2</option><option>Year 3</option><option>Year 4</option><option>Year 5</option><option>Year 6</option><option>Year 7</option><option>Year 8</option><option>Year 9</option><option>Year 10</option></select>
+      </div>
+      <div class="field"><label class="lbl">Gender</label>
+        <select id="edit-gender"><option value="">Select</option><option value="boy">Boy (he/him)</option><option value="girl">Girl (she/her)</option><option value="nonbinary">Non-binary (they/them)</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-p" onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var SURL='https://agwqenhduoxxeemklmpr.supabase.co';
+var SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnd3FlbmhkdW94eGVlbWtsbXByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MzkxNDAsImV4cCI6MjA5NDAxNTE0MH0.TZkrRgForSDTzQ4vZ9j36WncEAVBx4reG-ADcoohY8o';
+
+var sb=null,USER=null,STUDENT=null,ALL_RESULTS=[],ALL_COMMENTS=[];
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function stripExt(n){return String(n).replace(/\.[^.]+$/,'')}
+function fmtDate(d){return new Date(d).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'})}
+function pillCls(pct){return pct>=75?'ph':pct>=50?'pm':'pl'}
+function dots(sc){var h='';for(var i=1;i<=5;i++)h+='<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:2px;background:'+(i<=sc?'#2d5a27':'#d8d5cf')+'"></span>';return h}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
+function showErr(msg){document.getElementById('main').innerHTML='<div class="card" style="max-width:860px;margin:2rem auto;padding:0 1rem"><div class="err">'+esc(msg)+'</div><div style="margin-top:1rem"><a href="tool.html" class="btn">← Back to Markr</a></div></div>'}
+function closeModal(){document.getElementById('edit-modal').classList.remove('open')}
+
+// initSupabase is called by the Supabase script onload (defined below after all functions)
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+
+// ── LOAD ALL DATA ─────────────────────────────────────────────────────────────
+async function loadAll(){
+  if(!STUDENT_ID){showErr('No student selected — go back to the Class tab and click a student.');return}
+
+  // Load student record
+  var sr;
+  try{sr=await sb.from('students').select('*').eq('id',STUDENT_ID).eq('teacher_id',USER.id).maybeSingle()}catch(e){sr={data:null}}
+  if(!sr||!sr.data){showErr('Student not found. They may have been deleted.');return}
+  STUDENT=sr.data;
+  document.title='Markr — '+STUDENT.name;
+
+  // Load all marking results for this student (match file_name to first name)
+  var firstName=STUDENT.name.split(' ')[0];
+  var rr;
+  try{rr=await sb.from('student_results').select('*, sessions(id,name,learning_area,task,created_at,level,rubric)').eq('teacher_id',USER.id).ilike('file_name','%'+firstName+'%').order('created_at',{ascending:true})}catch(e){rr={data:[]}}
+  ALL_RESULTS=(rr&&rr.data)||[];
+
+  // Load saved report comments for this student
+  var cr;
+  try{cr=await sb.from('report_comments').select('*').eq('teacher_id',USER.id).eq('student_name',STUDENT.name).order('created_at',{ascending:false})}catch(e){cr={data:[]}}
+  ALL_COMMENTS=(cr&&cr.data)||[];
+
+  renderPage();
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderPage(){
+  var gL={boy:'He/him',girl:'She/her',nonbinary:'They/them'};
+  var gC={boy:'background:#e6f1fb;color:#185fa5',girl:'background:#fce8f3;color:#8b1a5e',nonbinary:'background:#f0ede8;color:#5a564e'};
+  var gender=STUDENT.gender&&gL[STUDENT.gender]?'<span style="font-size:11px;padding:2px 8px;border-radius:100px;font-weight:600;'+gC[STUDENT.gender]+'">'+gL[STUDENT.gender]+'</span>':'';
+
+  var totals=ALL_RESULTS.map(function(r){return parseInt((r.criteria_total||'0').split('/')[0])||0});
+  var avg=totals.length?(totals.reduce(function(a,b){return a+b},0)/totals.length).toFixed(1):'—';
+  var best=totals.length?Math.max.apply(null,totals):'—';
+  var latest=totals.length?totals[totals.length-1]:null;
+  var prev=totals.length>1?totals[totals.length-2]:null;
+  var trend=latest!==null&&prev!==null?latest-prev:null;
+  var trendHtml=trend===null?'—':trend>0?'<span class="delta d-up">↑ +'+trend+'</span>':trend<0?'<span class="delta d-dn">↓ '+trend+'</span>':'<span class="delta d-eq">→</span>';
+
+  document.getElementById('main').innerHTML=`
+    <!-- HEADER -->
+    <div class="card" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:54px;height:54px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:24px;flex-shrink:0">${esc(STUDENT.name[0].toUpperCase())}</div>
+        <div>
+          <div style="font-family:'Fraunces',serif;font-size:26px;font-weight:800;line-height:1.1">${esc(STUDENT.name)}</div>
+          <div style="font-size:13px;color:var(--text2);margin-top:5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            ${esc(STUDENT.year_level||'')} ${gender}
+          </div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-sm" onclick="openEdit()">✏️ Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteStudent()">Remove</button>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-box"><div class="stat-num">${ALL_RESULTS.length}</div><div class="stat-lbl">Sessions marked</div></div>
+      <div class="stat-box"><div class="stat-num">${avg}<span style="font-size:1rem;font-weight:400;color:var(--text2)">/25</span></div><div class="stat-lbl">Average score</div></div>
+      <div class="stat-box"><div class="stat-num">${best}<span style="font-size:1rem;font-weight:400;color:var(--text2)">${best!=='—'?'/25':''}</span></div><div class="stat-lbl">Best score</div></div>
+      <div class="stat-box"><div class="stat-num" style="font-size:1.3rem;display:flex;align-items:center;justify-content:center">${trendHtml}</div><div class="stat-lbl">Latest change</div></div>
+    </div>
+
+    <!-- PROGRESS CHART -->
+    <div class="card" id="chart-card">
+      <div class="card-title">Progress over time</div>
+      ${ALL_RESULTS.length<2?'<div class="empty">Mark at least 2 sessions to see the progress chart.</div>':'<div class="chart-wrap"><canvas id="progress-chart"></canvas></div>'}
+    </div>
+
+    <!-- CRITERION AVERAGES -->
+    <div class="card">
+      <div class="card-title">Average by criterion <span style="font-size:12px;font-weight:400;color:var(--text2)">(all sessions)</span></div>
+      <div id="crit-bars">${renderCritBars()}</div>
+    </div>
+
+    <!-- SESSION HISTORY -->
+    <div class="card">
+      <div class="card-title">
+        Session history
+        <span style="font-size:12px;font-weight:400;color:var(--text2)">${ALL_RESULTS.length} session${ALL_RESULTS.length!==1?'s':''}</span>
+      </div>
+      <div id="session-list">${renderSessions()}</div>
+    </div>
+
+    <!-- REPORT COMMENTS HISTORY -->
+    <div class="card">
+      <div class="card-title">
+        Report comments
+        <span style="font-size:12px;font-weight:400;color:var(--text2)">${ALL_COMMENTS.length} saved</span>
+      </div>
+      <div id="comments-list">${renderComments()}</div>
+    </div>
+
+    <!-- REPORT GENERATOR -->
+    <div class="card">
+      <div class="card-title">Generate report comment</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.5">Generates a full paragraph from all ${ALL_RESULTS.length} marking session${ALL_RESULTS.length!==1?'s':''} — in your saved writing style.</p>
+      <div class="field"><label class="lbl">Gemini API key</label><div class="key-row"><input type="password" id="rep-key" placeholder="AIza…" autocomplete="off"><button class="eye-btn" onclick="var f=document.getElementById('rep-key');f.type=f.type=='password'?'text':'password'">👁</button></div></div>
+      <div class="field"><label class="lbl">Term / context <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label><input type="text" id="rep-term" placeholder="e.g. End of Term 2, 2026"></div>
+      <button class="btn btn-p" id="rep-btn" onclick="genReport()">📝 Generate report comment</button>
+      <div id="rep-output" class="rep-output"></div>
+    </div>
+  `;
+
+  // Load API key from Supabase profile
+  sb.from('profiles').select('gemini_key,writing_style').eq('id',USER.id).maybeSingle().then(function(res){
+    if(res.data&&res.data.gemini_key)document.getElementById('rep-key').value=res.data.gemini_key;
+  }).catch(function(){});
+
+  // Draw chart after DOM is ready
+  if(ALL_RESULTS.length>=2)setTimeout(drawChart,50);
+
+  // Animate stat numbers counting up + bars filling in
+  setTimeout(function(){
+    document.querySelectorAll('.stat-num').forEach(function(el){
+      var m=el.textContent.match(/^(\d+(?:\.\d+)?)/);
+      if(!m)return;
+      var target=parseFloat(m[1]),suffix=el.textContent.slice(m[1].length),isFloat=m[1].indexOf('.')!==-1;
+      var start=0,t0=performance.now(),dur=700;
+      function tick(now){
+        var p=Math.min(1,(now-t0)/dur),e=1-Math.pow(1-p,3);
+        var v=start+(target-start)*e;
+        el.firstChild.textContent=(isFloat?v.toFixed(1):Math.round(v))+'';
+        if(p<1)requestAnimationFrame(tick);else el.firstChild.textContent=m[1];
+      }
+      var span=el.querySelector('span');
+      el.innerHTML='';el.appendChild(document.createTextNode(''));if(span)el.appendChild(span);
+      requestAnimationFrame(tick);
+    });
+    document.querySelectorAll('.bar-fill').forEach(function(el){var w=el.style.width;el.style.width='0';requestAnimationFrame(function(){requestAnimationFrame(function(){el.style.width=w})})});
+  },80);
+}
+
+// ── CRITERION BARS ────────────────────────────────────────────────────────────
+function renderCritBars(){
+  var withCrit=ALL_RESULTS.filter(function(r){return r.criteria&&r.criteria.length});
+  if(!withCrit.length)return'<div class="empty">No criterion data yet.</div>';
+  var latest=withCrit[withCrit.length-1];
+  var cn=latest.criteria.map(function(c){return c.name||''});
+  return cn.map(function(name,ci){
+    var vals=withCrit.filter(function(r){return r.criteria[ci]}).map(function(r){return parseInt(r.criteria[ci].score)||0});
+    var a=vals.length?(vals.reduce(function(a,b){return a+b},0)/vals.length):0;
+    var pct=Math.round(a/5*100);
+    var col=pct>=70?'var(--green)':pct>=50?'#854f0b':'#a32d2d';
+    return'<div class="bar-row"><div class="bar-lbl">'+esc(name.split('—')[0].trim())+'</div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+col+'"></div></div><div class="bar-val">'+a.toFixed(1)+'/5</div></div>';
+  }).join('');
+}
+
+// ── SESSION LIST ──────────────────────────────────────────────────────────────
+function renderSessions(){
+  if(!ALL_RESULTS.length)return'<div class="empty">No sessions yet. PDFs named with this student\'s first name will appear here automatically after marking.</div>';
+  return ALL_RESULTS.slice().reverse().map(function(r,i){
+    var tot=parseInt((r.criteria_total||'0').split('/')[0])||0;
+    var pct=Math.round(tot/25*100);
+    var crit=r.criteria||[];
+    var critRows=crit.map(function(c){return'<tr><td class="cn">'+esc(c.name||'')+'</td><td class="cs" style="text-align:center">'+dots(parseInt(c.score)||0)+'</td></tr>'}).join('');
+    var i1=r.strengths||'';
+    var i2=(r.next_steps&&r.next_steps[0])||'';
+    var date=r.sessions&&r.sessions.created_at?fmtDate(r.sessions.created_at):'';
+    var area=r.sessions&&r.sessions.learning_area?r.sessions.learning_area:'';
+    return'<div class="sess-card">'
+      +'<div class="sess-hd" onclick="toggleSess(\'s'+i+'\')">' 
+        +'<div><div class="sess-name">'+esc((r.sessions&&r.sessions.name)||'Session')+'</div><div class="sess-meta">'+esc(area)+(date?' · '+date:'')+'</div></div>'
+        +'<div style="display:flex;align-items:center;gap:8px"><span class="pill '+pillCls(pct)+'">'+esc(r.overall_score||'')+' · '+esc(r.criteria_total||'')+'</span><span class="chevron" id="chev-s'+i+'">›</span></div>'
+      +'</div>'
+      +'<div class="sess-body" id="s'+i+'">'
+        +(critRows?'<table class="ctable"><thead><tr><th>Criterion</th><th style="width:90px;text-align:center">Score</th></tr></thead><tbody>'+critRows+'</tbody></table>':'')
+        +'<div class="total-row">Total: <strong>'+esc(r.criteria_total||'')+'</strong></div>'
+        +((i1||i2)?'<div class="slbl">How to improve</div>':'')
+        +(i1?'<div class="sbox" style="margin-bottom:6px">💡 '+esc(i1)+'</div>':'')
+        +(i2?'<div class="sbox">💡 '+esc(i2)+'</div>':'')
+        +(r.pdf_path?'<button class="btn" style="margin-top:12px;font-size:12px;padding:6px 12px" onclick="viewPDF(''+esc(r.pdf_path||'')+'',this)">📄 View your work</button>':'')
+      +'</div>'
+    +'</div>';
+  }).join('');
+}
+
+function toggleSess(id){
+  var body=document.getElementById(id);
+  var chev=document.getElementById('chev-'+id);
+  if(!body)return;
+  var open=body.classList.toggle('open');
+  if(chev)chev.classList.toggle('open',open);
+}
+
+async function viewPDF(path,btn){
+  if(!path||!sb)return;
+  btn.disabled=true;btn.textContent='Loading…';
+  try{
+    var res=await sb.storage.from('student-pdfs').createSignedUrl(path,3600);
+    if(res.error)throw new Error(res.error.message);
+    window.open(res.data.signedUrl,'_blank');
+  }catch(e){
+    btn.textContent='Could not load PDF';
+    setTimeout(function(){btn.disabled=false;btn.textContent='📄 View your work'},2000);
+    return;
+  }
+  btn.disabled=false;btn.textContent='📄 View your work';
+}
+
+// ── COMMENTS LIST ─────────────────────────────────────────────────────────────
+function renderComments(){
+  if(!ALL_COMMENTS.length)return'<div class="empty">No report comments saved yet. Generate one below — it\'ll save here automatically.</div>';
+  return ALL_COMMENTS.map(function(c,i){
+    return'<div class="comment-card">'
+      +'<div class="comment-meta"><span>'+esc(c.label||'Report comment')+' · '+fmtDate(c.created_at)+'</span><button class="copy-btn" data-t="'+esc(c.comment_text||'')+'">Copy</button></div>'
+      +'<div class="comment-text">'+esc(c.comment_text||'')+'</div>'
+    +'</div>';
+  }).join('');
+}
+
+// ── CHART ─────────────────────────────────────────────────────────────────────
+function drawChart(){
+  var canvas=document.getElementById('progress-chart');
+  if(!canvas)return;
+  var ctx=canvas.getContext('2d');
+  var wrap=canvas.parentElement;
+  var W=wrap.clientWidth,H=200;
+  canvas.width=W*devicePixelRatio;canvas.height=H*devicePixelRatio;
+  canvas.style.width=W+'px';canvas.style.height=H+'px';
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+
+  var data=ALL_RESULTS.map(function(r){return parseInt((r.criteria_total||'0').split('/')[0])||0});
+  var labels=ALL_RESULTS.map(function(r){return r.sessions&&r.sessions.name?(r.sessions.name.substring(0,20)):'Session'});
+
+  var pad={t:20,r:20,b:50,l:40};
+  var cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  var n=data.length;
+  var xStep=n>1?cw/(n-1):cw;
+  var maxVal=25;
+
+  function xPos(i){return pad.l+(n>1?i*xStep:cw/2)}
+  function yPos(v){return pad.t+ch-(v/maxVal)*ch}
+
+  // Grid lines
+  ctx.strokeStyle='rgba(0,0,0,0.06)';ctx.lineWidth=1;
+  [0,5,10,15,20,25].forEach(function(v){
+    var y=yPos(v);
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,0.35)';ctx.font='10px DM Sans,sans-serif';ctx.textAlign='right';
+    ctx.fillText(v,pad.l-6,y+3);
+  });
+
+  // Line fill
+  ctx.beginPath();
+  ctx.moveTo(xPos(0),yPos(data[0]));
+  data.forEach(function(v,i){if(i>0)ctx.lineTo(xPos(i),yPos(v))});
+  ctx.lineTo(xPos(n-1),pad.t+ch);
+  ctx.lineTo(xPos(0),pad.t+ch);
+  ctx.closePath();
+  ctx.fillStyle='rgba(45,90,39,0.08)';ctx.fill();
+
+  // Line
+  ctx.beginPath();ctx.strokeStyle='#2d5a27';ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.lineCap='round';
+  data.forEach(function(v,i){i===0?ctx.moveTo(xPos(i),yPos(v)):ctx.lineTo(xPos(i),yPos(v))});
+  ctx.stroke();
+
+  // Dots + labels
+  data.forEach(function(v,i){
+    var x=xPos(i),y=yPos(v);
+    ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);
+    ctx.fillStyle='#fff';ctx.fill();
+    ctx.strokeStyle='#2d5a27';ctx.lineWidth=2;ctx.stroke();
+    // Score label
+    ctx.fillStyle='#2d5a27';ctx.font='bold 11px DM Sans,sans-serif';ctx.textAlign='center';
+    ctx.fillText(v+'/25',x,y-10);
+    // X axis label
+    ctx.fillStyle='rgba(0,0,0,0.4)';ctx.font='10px DM Sans,sans-serif';
+    var lbl=labels[i];if(lbl.length>12)lbl=lbl.substring(0,12)+'…';
+    ctx.save();ctx.translate(x,pad.t+ch+14);ctx.rotate(-0.4);ctx.fillText(lbl,0,0);ctx.restore();
+  });
+}
+
+// ── REPORT GENERATOR ─────────────────────────────────────────────────────────
+var DEFAULT_STYLE="Ashton has demonstrated positive growth in his writing this term. He engaged enthusiastically with our unit on poetic forms, successfully using his creative mind to compose an excellent piece of poetry. Bennett has bravely embraced the challenge of improving his spelling and handwriting this term. Georgia has made pleasing progress in English this term, demonstrating a strong understanding of structure and form. Harper has continued to make excellent progress in English this term. Jessica has made noticeable progress in her writing this term.";
+
+async function genReport(){
+  var key=document.getElementById('rep-key').value.trim();
+  if(!key){alert('Please enter your Gemini API key.');return}
+  var term=document.getElementById('rep-term').value.trim();
+  var btn=document.getElementById('rep-btn');
+  var out=document.getElementById('rep-output');
+  btn.disabled=true;btn.textContent='Generating…';
+  out.style.display='none';
+
+  // Get writing style
+  var style=DEFAULT_STYLE;
+  try{var pr=await sb.from('profiles').select('writing_style').eq('id',USER.id).maybeSingle();if(pr.data&&pr.data.writing_style)style=pr.data.writing_style}catch(e){}
+
+  // Build history summary
+  var hist=ALL_RESULTS.length?ALL_RESULTS.map(function(r){
+    var s=(r.sessions&&r.sessions.name)||'Session';
+    var area=(r.sessions&&r.sessions.learning_area)||'';
+    var tot=r.criteria_total||'';
+    var ov=r.overall_score||'';
+    var strengths=r.strengths||'';
+    var ns=(r.next_steps||[]).join(', ');
+    return s+(area?' ('+area+')':'')+': '+ov+' '+tot+(strengths?' — '+strengths:'')+(ns?' | Next: '+ns:'');
+  }).join('\n'):'No prior marking results.';
+
+  // Pronouns
+  var pro={subject:'they',object:'them',possessive:'their'};
+  if(STUDENT.gender==='boy')pro={subject:'he',object:'him',possessive:'his'};
+  else if(STUDENT.gender==='girl')pro={subject:'she',object:'her',possessive:'her'};
+
+  var prompt=[
+    'Write a full school report comment for a NZ Years 7–8 student named '+STUDENT.name+'.',
+    'Single paragraph, 4–6 sentences, third person.',
+    'Use pronouns: '+pro.subject+'/'+pro.object+'/'+pro.possessive+'.',
+    term?'Report context: '+term:'',
+    'Match this teacher\'s writing style exactly:',
+    style,'',
+    'All marking history across '+ALL_RESULTS.length+' session'+(ALL_RESULTS.length!==1?'s':'')+':',
+    hist,'',
+    'Rules: use student name, third person, correct pronouns, reference specific growth, include one clear next step, 4–6 sentences. Return ONLY the paragraph text.'
+  ].filter(Boolean).join('\n');
+
+  try{
+    var d=await(await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:1024}})
+    })).json();
+    if(d.error)throw new Error(d.error.message||'Gemini error');
+    var ps=((d.candidates||[])[0]||{content:{parts:[]}}).content.parts||[];
+    var text=ps.filter(function(p){return p.text&&!p.thought}).map(function(p){return p.text}).join('').trim();
+    if(!text)throw new Error('Empty response from Gemini');
+
+    out.style.display='block';
+    out.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px"><span style="font-size:12px;font-weight:600;color:var(--text2)">Report comment</span><button class="copy-btn" onclick="navigator.clipboard.writeText(this.dataset.t).then(function(){this.textContent=\'Copied!\';setTimeout(function(){document.querySelector(\'.copy-btn[data-t]\').textContent=\'Copy\'},1500)}.bind(this))" data-t="'+esc(text)+'">Copy</button></div><div style="font-size:13px;line-height:1.8">'+esc(text)+'</div>';
+
+    // Save to report_comments table
+    var label=(term||'Report')+' — '+new Date().toLocaleDateString('en-NZ');
+    sb.from('report_comments').insert({
+      teacher_id:USER.id,
+      student_name:STUDENT.name,
+      comment_text:text,
+      label:label
+    }).then(function(){
+      ALL_COMMENTS.unshift({comment_text:text,label:label,created_at:new Date().toISOString()});
+      document.getElementById('comments-list').innerHTML=renderComments();
+      document.querySelectorAll('.copy-btn[data-t]').forEach(function(b){b.onclick=function(){navigator.clipboard.writeText(b.dataset.t).then(function(){b.textContent='Copied!';setTimeout(function(){b.textContent='Copy'},1500)})}});
+    }).catch(function(){});// silent — saved in UI even if DB fails
+
+  }catch(e){
+    out.style.display='block';
+    out.innerHTML='<div class="err">'+esc(e.message)+'</div>';
+  }
+
+  btn.disabled=false;btn.textContent='📝 Generate report comment';
+}
+
+// ── EDIT / DELETE ─────────────────────────────────────────────────────────────
+function openEdit(){
+  document.getElementById('edit-name').value=STUDENT.name;
+  var yr=document.getElementById('edit-year');
+  for(var i=0;i<yr.options.length;i++)if(yr.options[i].value===STUDENT.year_level)yr.selectedIndex=i;
+  var gd=document.getElementById('edit-gender');
+  for(var i=0;i<gd.options.length;i++)if(gd.options[i].value===STUDENT.gender)gd.selectedIndex=i;
+  document.getElementById('edit-modal').classList.add('open');
+}
+function saveEdit(){
+  var name=document.getElementById('edit-name').value.trim();
+  if(!name){alert('Name required.');return}
+  var year=document.getElementById('edit-year').value;
+  var gender=document.getElementById('edit-gender').value;
+  sb.from('students').update({name:name,year_level:year||null,gender:gender||null}).eq('id',STUDENT.id).then(function(res){
+    if(res.error){alert('Could not save: '+res.error.message);return}
+    STUDENT.name=name;STUDENT.year_level=year;STUDENT.gender=gender;
+    STUDENT_NAME=name;
+    closeModal();renderPage();
+    if(ALL_RESULTS.length>=2)setTimeout(drawChart,50);
+  }).catch(function(e){alert(e.message)});
+}
+function deleteStudent(){
+  if(!confirm('Remove '+STUDENT.name+' from your class list? Their marking history will be kept.'))return;
+  sb.from('students').delete().eq('id',STUDENT.id).then(function(){window.location.href='tool.html'}).catch(function(e){alert(e.message)});
+}
+
+// Called last — all functions are defined by now
+function initSupabase(){
+  try{
+    sb=supabase.createClient(SURL,SKEY);
+    if(!_TEACHER_ID||!STUDENT_ID){
+      document.getElementById('main').innerHTML='<div style="max-width:860px;margin:2rem auto;padding:0 1rem"><div class="card" style="text-align:center;padding:2rem"><p style="color:var(--text2);margin-bottom:1rem">Please open the student hub from the Class tab in Markr.</p><a href="tool.html" class="btn btn-p">← Back to Markr</a></div></div>';
+      return;
+    }
+    USER={id:_TEACHER_ID};
+    loadAll();
+  }catch(e){showErr('Failed to initialise: '+e.message)}
+}
+initSupabase();
+</script>
+</body>
+</html>

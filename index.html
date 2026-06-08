@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Markr — AI marking for NZ teachers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,800;1,9..144,300;1,9..144,400;1,9..144,800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --paper:#f5f0e8;
+  --paper-dark:#ede7d9;
+  --ink:#0f0e0c;
+  --ink-light:#3a3630;
+  --ink-muted:#7a7468;
+  --green:#2d5a27;
+  --green-mid:#3d7a35;
+  --green-light:#e8f0e6;
+  --green-pale:#f0f5ef;
+  --rust:#c8500a;
+  --rust-light:#faeee4;
+  --border:rgba(15,14,12,0.1);
+  --border-strong:rgba(15,14,12,0.2);
+}
+
+html{scroll-behavior:smooth}
+:root{--ease:cubic-bezier(.25,.8,.25,1);--ease-spring:cubic-bezier(.16,1,.3,1)}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--paper);
+  color:var(--ink);
+  overflow-x:hidden;
+  cursor:default;
+}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+/* ── NAV ── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:1.25rem 2.5rem;
+  background:rgba(245,240,232,0.85);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid transparent;
+  transition:border-color .4s var(--ease),padding .4s var(--ease),box-shadow .4s var(--ease);
+}
+nav.scrolled{box-shadow:0 8px 30px -12px rgba(15,14,12,0.08)}
+nav.scrolled{border-color:var(--border)}
+.nav-logo{
+  font-family:'Fraunces',serif;
+  font-size:22px;font-weight:800;
+  color:var(--ink);letter-spacing:-.02em;
+  text-decoration:none;
+  transition:opacity .2s var(--ease);
+}
+.nav-logo:hover{opacity:.7}
+.nav-logo span{color:var(--green)}
+.nav-links{display:flex;align-items:center;gap:2rem}
+.nav-links a{
+  font-size:14px;font-weight:500;
+  color:var(--ink-muted);text-decoration:none;
+  transition:color .25s var(--ease);
+  position:relative;
+}
+.nav-links a:not(.nav-cta)::after{
+  content:'';position:absolute;left:0;right:100%;bottom:-4px;height:1px;background:var(--ink);
+  transition:right .3s var(--ease-spring);
+}
+.nav-links a:not(.nav-cta):hover::after{right:0}
+.nav-links a:hover{color:var(--ink)}
+.nav-cta{
+  background:var(--ink)!important;color:var(--paper)!important;
+  padding:9px 20px;border-radius:100px;
+  font-size:14px;font-weight:500;
+  transition:background .3s var(--ease),transform .25s var(--ease-spring),box-shadow .3s var(--ease)!important;
+  box-shadow:0 2px 14px rgba(15,14,12,0.12);
+}
+.nav-cta:hover{background:var(--ink-light)!important;transform:translateY(-2px);box-shadow:0 8px 28px rgba(15,14,12,0.22)}
+.nav-cta:active{transform:translateY(0) scale(.97)}
+
+/* ── HERO ── */
+.hero{
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;
+  padding:8rem 2rem 5rem;
+  position:relative;
+  overflow:hidden;
+}
+
+/* Decorative background circles */
+.hero::before{
+  content:'';
+  position:absolute;
+  top:-15%;left:-8%;
+  width:55%;height:75%;
+  background:radial-gradient(ellipse,rgba(45,90,39,0.07) 0%,transparent 65%);
+  pointer-events:none;
+  animation:heroFloat 18s ease-in-out infinite;
+}
+.hero::after{
+  content:'';
+  position:absolute;
+  bottom:-5%;right:-5%;
+  width:45%;height:60%;
+  background:radial-gradient(ellipse,rgba(200,80,10,0.06) 0%,transparent 65%);
+  pointer-events:none;
+  animation:heroFloat 22s ease-in-out infinite reverse;
+}
+@keyframes heroFloat{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(3%,-4%) scale(1.06)}}
+
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--green-light);
+  border:1px solid rgba(45,90,39,0.2);
+  border-radius:100px;
+  padding:7px 16px;
+  font-size:12px;font-weight:500;
+  letter-spacing:.06em;text-transform:uppercase;
+  color:var(--green);
+  margin-bottom:2.5rem;
+  opacity:0;animation:riseUp .8s .1s var(--ease-spring) forwards;
+  transition:transform .3s var(--ease),box-shadow .3s var(--ease);
+}
+.hero-eyebrow:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(45,90,39,0.15)}
+.hero-eyebrow::before{content:'✦';font-size:10px}
+
+.hero h1{
+  font-family:'Fraunces',serif;
+  font-size:clamp(3.5rem,9vw,7.5rem);
+  font-weight:800;
+  line-height:.95;
+  letter-spacing:-.03em;
+  margin-bottom:1.75rem;
+  opacity:0;animation:riseUp .8s .2s var(--ease-spring) forwards;
+}
+.hero h1 .italic{
+  font-style:italic;
+  font-weight:300;
+  color:var(--green);
+}
+.hero h1 .small{font-size:.65em}
+
+.hero-sub{
+  font-size:clamp(1rem,2vw,1.2rem);
+  color:var(--ink-muted);
+  max-width:540px;
+  line-height:1.75;
+  margin-bottom:3rem;
+  opacity:0;animation:riseUp .8s .3s var(--ease-spring) forwards;
+}
+
+.hero-actions{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;
+  opacity:0;animation:riseUp .8s .4s var(--ease-spring) forwards;
+  margin-bottom:1.5rem;
+}
+.btn-primary{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--green);color:#fff;
+  padding:15px 32px;border-radius:100px;
+  font-size:15px;font-weight:500;
+  text-decoration:none;
+  transition:background .3s var(--ease),transform .3s var(--ease-spring),box-shadow .3s var(--ease);
+  box-shadow:0 4px 20px rgba(45,90,39,0.25);
+  will-change:transform;
+}
+.btn-primary:hover{background:var(--green-mid);transform:translateY(-3px) scale(1.02);box-shadow:0 12px 36px rgba(45,90,39,0.32)}
+.btn-primary:active{transform:translateY(-1px) scale(.99)}
+.btn-secondary{
+  display:inline-flex;align-items:center;gap:8px;
+  background:transparent;color:var(--ink);
+  padding:15px 28px;border-radius:100px;
+  font-size:15px;font-weight:500;
+  text-decoration:none;
+  border:1.5px solid var(--border-strong);
+  transition:border-color .25s var(--ease),transform .3s var(--ease-spring),background .25s var(--ease);
+}
+.btn-secondary:hover{border-color:var(--ink);transform:translateY(-3px);background:rgba(15,14,12,0.03)}
+.btn-secondary:active{transform:translateY(-1px)}
+
+.hero-note{
+  font-size:12px;color:var(--ink-muted);
+  opacity:0;animation:riseUp .8s .5s var(--ease-spring) forwards;
+}
+
+/* ── MARQUEE STRIP ── */
+.marquee-wrap{
+  background:var(--ink);
+  padding:.9rem 0;
+  overflow:hidden;
+  white-space:nowrap;
+}
+.marquee-track{
+  display:inline-flex;gap:0;
+  animation:marquee 30s linear infinite;
+}
+.marquee-track:hover{animation-play-state:paused}
+.marquee-item{
+  display:inline-flex;align-items:center;gap:.75rem;
+  padding:0 2.5rem;
+  font-size:13px;font-weight:500;
+  color:rgba(245,240,232,0.7);
+  letter-spacing:.04em;
+}
+.marquee-item .dot{
+  width:4px;height:4px;border-radius:50%;
+  background:var(--green-mid);flex-shrink:0;
+}
+
+/* ── STATS ROW ── */
+.stats{
+  background:var(--paper-dark);
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  padding:3rem 2rem;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:1px;
+}
+.stat{
+  text-align:center;
+  padding:1.5rem 1rem;
+  position:relative;
+}
+.stat:not(:last-child)::after{
+  content:'';
+  position:absolute;right:0;top:20%;bottom:20%;
+  width:1px;background:var(--border);
+}
+.stat-n{
+  font-family:'Fraunces',serif;
+  font-size:3rem;font-weight:800;
+  color:var(--green);
+  line-height:1;display:block;
+}
+.stat-l{font-size:12px;color:var(--ink-muted);margin-top:6px;display:block}
+
+/* ── HOW IT WORKS ── */
+.section{padding:7rem 2rem;max-width:1100px;margin:0 auto}
+.section-tag{
+  font-size:11px;font-weight:500;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--green);
+  margin-bottom:1rem;display:block;
+}
+.section-h{
+  font-family:'Fraunces',serif;
+  font-size:clamp(2.2rem,5vw,3.5rem);
+  font-weight:800;line-height:1.05;
+  letter-spacing:-.025em;
+  margin-bottom:1.25rem;
+}
+.section-h em{font-style:italic;font-weight:300;color:var(--rust)}
+.section-sub{
+  font-size:1.05rem;color:var(--ink-muted);
+  max-width:500px;line-height:1.7;
+}
+
+.steps-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:1.5rem;
+  margin-top:3.5rem;
+}
+.step{
+  background:var(--paper-dark);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:2rem 1.5rem;
+  position:relative;
+  overflow:hidden;
+  transition:transform .4s var(--ease-spring),box-shadow .4s var(--ease),border-color .3s var(--ease);
+}
+.step:hover{transform:translateY(-6px) scale(1.015);box-shadow:0 20px 56px rgba(0,0,0,0.08);border-color:rgba(45,90,39,0.25)}
+.step-icon{transition:transform .4s var(--ease-spring)}
+.step:hover .step-icon{transform:scale(1.15) rotate(-4deg)}
+.step-num{
+  font-family:'Fraunces',serif;
+  font-size:5rem;font-weight:800;
+  color:rgba(15,14,12,0.04);
+  position:absolute;top:-10px;right:10px;
+  line-height:1;pointer-events:none;
+}
+.step-icon{font-size:26px;margin-bottom:1rem;display:block}
+.step-title{font-weight:600;font-size:15px;margin-bottom:8px}
+.step-desc{font-size:13px;color:var(--ink-muted);line-height:1.6}
+
+/* ── FEATURES BENTO ── */
+.bento-section{
+  background:var(--paper-dark);
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  padding:7rem 2rem;
+}
+.bento-inner{max-width:1100px;margin:0 auto}
+.bento-grid{
+  display:grid;
+  grid-template-columns:repeat(12,1fr);
+  grid-template-rows:auto;
+  gap:1.25rem;
+  margin-top:3.5rem;
+}
+.bento{
+  background:var(--paper);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:2rem;
+  transition:transform .4s var(--ease-spring),box-shadow .4s var(--ease),border-color .3s var(--ease);
+}
+.bento:hover{transform:translateY(-5px);box-shadow:0 18px 56px rgba(0,0,0,0.08);border-color:rgba(15,14,12,0.16)}
+.bento-icon{transition:transform .4s var(--ease-spring)}
+.bento:hover .bento-icon{transform:scale(1.12) rotate(-5deg)}
+.sample-card{transition:transform .3s var(--ease)}
+.bento:hover .sample-card{transform:translateY(-2px)}
+.b1{grid-column:span 5}
+.b2{grid-column:span 7}
+.b3{grid-column:span 4}
+.b4{grid-column:span 4}
+.b5{grid-column:span 4}
+.b6{grid-column:span 6}
+.b7{grid-column:span 6}
+.bento-icon{
+  width:44px;height:44px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;margin-bottom:1.25rem;
+}
+.bg-green{background:var(--green-light)}
+.bg-rust{background:var(--rust-light)}
+.bg-ink{background:rgba(15,14,12,0.06)}
+.bento-title{font-weight:600;font-size:16px;margin-bottom:8px}
+.bento-desc{font-size:13px;color:var(--ink-muted);line-height:1.65}
+.bento-big .bento-title{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:800;letter-spacing:-.01em}
+.bento-big .bento-desc{font-size:14px}
+
+/* Sample result card inside bento */
+.sample-card{
+  margin-top:1.5rem;
+  background:var(--paper-dark);
+  border-radius:10px;
+  padding:1.25rem;
+  border:1px solid var(--border);
+}
+.sample-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.sample-name{font-weight:600;font-size:13px}
+.sample-pill{
+  font-size:11px;font-weight:600;padding:3px 10px;
+  border-radius:100px;background:var(--green-light);color:var(--green);
+}
+.sample-crit{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:11px;padding:5px 0;
+  border-bottom:1px solid var(--border);
+  color:var(--ink-muted);
+}
+.sample-crit:last-child{border-bottom:none}
+.dots-row{display:flex;gap:2px}
+.dot-on{width:7px;height:7px;border-radius:50%;background:var(--green)}
+.dot-off{width:7px;height:7px;border-radius:50%;background:#d8d5cf}
+
+/* ── TESTIMONIAL / QUOTE ── */
+.quote-section{
+  padding:7rem 2rem;
+  max-width:800px;margin:0 auto;
+  text-align:center;
+}
+.quote-mark{
+  font-family:'Fraunces',serif;
+  font-size:6rem;line-height:.7;
+  color:var(--green);
+  opacity:.3;
+  display:block;margin-bottom:.5rem;
+}
+.quote-text{
+  font-family:'Fraunces',serif;
+  font-size:clamp(1.5rem,3.5vw,2.5rem);
+  font-weight:300;font-style:italic;
+  line-height:1.4;letter-spacing:-.01em;
+  color:var(--ink);
+  margin-bottom:2rem;
+}
+.quote-attr{font-size:13px;color:var(--ink-muted)}
+
+/* ── CTA BAND ── */
+.cta-band{
+  background:var(--green);
+  padding:6rem 2rem;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+}
+.cta-band::before{
+  content:'';
+  position:absolute;top:-50%;left:-20%;
+  width:60%;height:200%;
+  background:radial-gradient(ellipse,rgba(255,255,255,0.06) 0%,transparent 60%);
+  pointer-events:none;
+}
+.cta-band h2{
+  font-family:'Fraunces',serif;
+  font-size:clamp(2.2rem,5vw,3.5rem);
+  font-weight:800;color:#fff;
+  letter-spacing:-.025em;
+  line-height:1.05;
+  margin-bottom:1rem;
+}
+.cta-band h2 em{font-style:italic;font-weight:300;opacity:.8}
+.cta-band p{color:rgba(255,255,255,0.7);font-size:1.05rem;margin-bottom:2.5rem}
+.btn-white{
+  display:inline-flex;align-items:center;gap:8px;
+  background:#fff;color:var(--green);
+  padding:16px 36px;border-radius:100px;
+  font-size:15px;font-weight:600;
+  text-decoration:none;
+  transition:transform .3s var(--ease-spring),box-shadow .3s var(--ease);
+  box-shadow:0 4px 20px rgba(0,0,0,0.15);
+}
+.btn-white:hover{transform:translateY(-3px) scale(1.03);box-shadow:0 14px 48px rgba(0,0,0,0.22)}
+.btn-white:active{transform:translateY(-1px) scale(1)}
+
+/* ── FOOTER ── */
+footer{
+  border-top:1px solid var(--border);
+  padding:2.5rem 2.5rem;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:1rem;
+}
+.footer-logo{
+  font-family:'Fraunces',serif;
+  font-size:18px;font-weight:800;
+  color:var(--ink);letter-spacing:-.02em;
+  text-decoration:none;
+}
+.footer-logo span{color:var(--green)}
+.footer-links{display:flex;gap:1.5rem;flex-wrap:wrap}
+.footer-links a{font-size:13px;color:var(--ink-muted);text-decoration:none}
+.footer-links a:hover{color:var(--ink)}
+.footer-note{font-size:12px;color:var(--ink-muted)}
+
+/* ── ANIMATIONS ── */
+@keyframes riseUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .8s var(--ease-spring),transform .8s var(--ease-spring)}
+.reveal.visible{opacity:1;transform:none}
+.footer-logo{transition:opacity .2s var(--ease)}
+.footer-logo:hover{opacity:.7}
+.reveal-delay-1{transition-delay:.1s}
+.reveal-delay-2{transition-delay:.2s}
+.reveal-delay-3{transition-delay:.3s}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .steps-grid{grid-template-columns:repeat(2,1fr)}
+  .bento-grid{grid-template-columns:1fr 1fr}
+  .b1,.b2,.b3,.b4,.b5,.b6,.b7{grid-column:span 1}
+  .b2{grid-column:span 2}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .stat:nth-child(2)::after{display:none}
+}
+@media(max-width:600px){
+  nav{padding:1rem 1.25rem}
+  .nav-links .hide-mobile{display:none}
+  .steps-grid{grid-template-columns:1fr}
+  .bento-grid{grid-template-columns:1fr}
+  .b2{grid-column:span 1}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .hero h1{font-size:clamp(3rem,14vw,5rem)}
+  footer{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <a href="#" class="nav-logo">mark<span>r</span></a>
+  <div class="nav-links">
+    <a href="#how" class="hide-mobile">How it works</a>
+    <a href="#features" class="hide-mobile">Features</a>
+    <a href="login.html">Sign in</a>
+    <a href="tool.html" class="nav-cta">Open tool →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">Built for the refreshed NZC · Years 7–8</div>
+  <h1>
+    Mark smarter,<br>
+    <span class="italic">not longer</span>
+  </h1>
+  <p class="hero-sub">Upload your students' PDFs. Gemini AI reads, marks, and moderates each piece — then rewrites feedback in your own voice.</p>
+  <div class="hero-actions">
+    <a href="tool.html" class="btn-primary">Start marking free →</a>
+    <a href="#how" class="btn-secondary">See how it works</a>
+  </div>
+  <div class="hero-note">Free Gemini API key required · Works in your browser · Student data never stored externally</div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-wrap" aria-hidden="true">
+  <div class="marquee-track">
+    <!-- duplicated for seamless loop -->
+    <span class="marquee-item"><span class="dot"></span>Refreshed NZC aligned</span>
+    <span class="marquee-item"><span class="dot"></span>2-pass AI marking</span>
+    <span class="marquee-item"><span class="dot"></span>Always out of 25</span>
+    <span class="marquee-item"><span class="dot"></span>Your writing voice</span>
+    <span class="marquee-item"><span class="dot"></span>Report comments</span>
+    <span class="marquee-item"><span class="dot"></span>Class dashboard</span>
+    <span class="marquee-item"><span class="dot"></span>Scanned handwriting</span>
+    <span class="marquee-item"><span class="dot"></span>Student history</span>
+    <span class="marquee-item"><span class="dot"></span>Refreshed NZC aligned</span>
+    <span class="marquee-item"><span class="dot"></span>2-pass AI marking</span>
+    <span class="marquee-item"><span class="dot"></span>Always out of 25</span>
+    <span class="marquee-item"><span class="dot"></span>Your writing voice</span>
+    <span class="marquee-item"><span class="dot"></span>Report comments</span>
+    <span class="marquee-item"><span class="dot"></span>Class dashboard</span>
+    <span class="marquee-item"><span class="dot"></span>Scanned handwriting</span>
+    <span class="marquee-item"><span class="dot"></span>Student history</span>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats reveal">
+  <div class="stat"><span class="stat-n">2×</span><span class="stat-l">passes per student</span></div>
+  <div class="stat"><span class="stat-n">25</span><span class="stat-l">point consistent rubric</span></div>
+  <div class="stat"><span class="stat-n">~60s</span><span class="stat-l">per class set</span></div>
+  <div class="stat"><span class="stat-n">0</span><span class="stat-l">data stored externally</span></div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div id="how">
+  <section class="section reveal">
+    <span class="section-tag">How it works</span>
+    <h2 class="section-h">Four steps to a<br><em>full class marked</em></h2>
+    <p class="section-sub">From upload to printed feedback sheets in under two minutes per student.</p>
+    <div class="steps-grid">
+      <div class="step reveal reveal-delay-1">
+        <span class="step-num">1</span>
+        <span class="step-icon">🔑</span>
+        <div class="step-title">Add your Gemini key</div>
+        <div class="step-desc">Paste your free Gemini API key. It saves to your account and stays in your browser — never sent anywhere else.</div>
+      </div>
+      <div class="step reveal reveal-delay-2">
+        <span class="step-num">2</span>
+        <span class="step-icon">📋</span>
+        <div class="step-title">Set your criteria</div>
+        <div class="step-desc">Choose learning area, curriculum level, and task. Use the default NZC rubric or write your own and save it for reuse.</div>
+      </div>
+      <div class="step reveal reveal-delay-3">
+        <span class="step-num">3</span>
+        <span class="step-icon">📄</span>
+        <div class="step-title">Upload the class set</div>
+        <div class="step-desc">Drag and drop your whole class at once. PDFs, scanned JPGs, photos of handwriting — Gemini reads them all.</div>
+      </div>
+      <div class="step reveal reveal-delay-3">
+        <span class="step-num">4</span>
+        <span class="step-icon">✨</span>
+        <div class="step-title">Get results instantly</div>
+        <div class="step-desc">Gemini marks, moderates its own scores, then rewrites every comment in your voice. Export CSV or print feedback sheets.</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- FEATURES BENTO -->
+<div id="features" class="bento-section">
+  <div class="bento-inner">
+    <div class="reveal">
+      <span class="section-tag">Features</span>
+      <h2 class="section-h">Everything a NZ teacher<br><em>actually needs</em></h2>
+    </div>
+    <div class="bento-grid">
+
+      <div class="bento b1 bento-big reveal">
+        <div class="bento-icon bg-green">🇳🇿</div>
+        <div class="bento-title">Refreshed NZC aligned</div>
+        <div class="bento-desc">Every score and comment references the refreshed New Zealand Curriculum. Levels 3–5 across all learning areas.</div>
+      </div>
+
+      <div class="bento b2 reveal reveal-delay-1">
+        <div class="bento-icon bg-rust">🔁</div>
+        <div class="bento-title">Two-pass marking</div>
+        <div class="bento-desc">Pass 1 marks the work. Pass 2 moderates every score for fairness and consistency, then rewrites all feedback to sound like you — not an AI.</div>
+        <div class="sample-card">
+          <div class="sample-row">
+            <span class="sample-name">📕 Billy Bob.pdf</span>
+            <span class="sample-pill">Achieved · 16/25</span>
+          </div>
+          <div class="sample-crit"><span>Ideas and Content</span><div class="dots-row"><span class="dot-on"></span><span class="dot-on"></span><span class="dot-on"></span><span class="dot-on"></span><span class="dot-off"></span></div></div>
+          <div class="sample-crit"><span>Structure and Organisation</span><div class="dots-row"><span class="dot-on"></span><span class="dot-on"></span><span class="dot-on"></span><span class="dot-off"></span><span class="dot-off"></span></div></div>
+          <div class="sample-crit"><span>Vocabulary and Language</span><div class="dots-row"><span class="dot-on"></span><span class="dot-on"></span><span class="dot-on"></span><span class="dot-off"></span><span class="dot-off"></span></div></div>
+          <div class="sample-crit"><span>Conventions</span><div class="dots-row"><span class="dot-on"></span><span class="dot-on"></span><span class="dot-off"></span><span class="dot-off"></span><span class="dot-off"></span></div></div>
+          <div class="sample-crit"><span>Clarity and Cohesion</span><div class="dots-row"><span class="dot-on"></span><span class="dot-on"></span><span class="dot-on"></span><span class="dot-on"></span><span class="dot-off"></span></div></div>
+        </div>
+      </div>
+
+      <div class="bento b3 reveal">
+        <div class="bento-icon bg-green">🎯</div>
+        <div class="bento-title">Consistent scoring</div>
+        <div class="bento-desc">Always 5 criteria, always out of 25. No more students getting 13/20 while others get 9/15.</div>
+      </div>
+
+      <div class="bento b4 reveal reveal-delay-1">
+        <div class="bento-icon bg-rust">🗣️</div>
+        <div class="bento-title">Your voice</div>
+        <div class="bento-desc">Paste 3–5 of your own report comments. Every piece of feedback comes out sounding like you wrote it.</div>
+      </div>
+
+      <div class="bento b5 reveal reveal-delay-2">
+        <div class="bento-icon bg-ink">📊</div>
+        <div class="bento-title">Class dashboard</div>
+        <div class="bento-desc">Bands, averages per criterion, and a support flag for students averaging below 2.5/5.</div>
+      </div>
+
+      <div class="bento b6 reveal">
+        <div class="bento-icon bg-green">📝</div>
+        <div class="bento-title">Report & weekly comments</div>
+        <div class="bento-desc">Generate full end-of-term report paragraphs or quick weekly posts for parents and whānau — all pulled from past marking sessions, all in your voice. Pronoun-aware (he/she/they) using your class list.</div>
+      </div>
+
+      <div class="bento b7 reveal reveal-delay-1">
+        <div class="bento-icon bg-rust">🔒</div>
+        <div class="bento-title">Private by design</div>
+        <div class="bento-desc">Student PDFs go directly to Gemini in your browser and are never stored anywhere. Your results save to your own Supabase account — no third party ever sees student work.</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- QUOTE -->
+<section class="quote-section reveal">
+  <span class="quote-mark">"</span>
+  <p class="quote-text">The best marking tool is one that sounds like you wrote it yourself — and gives you your Friday afternoons back.</p>
+  <span class="quote-attr">Built by a teacher, for NZ teachers</span>
+</section>
+
+<!-- CTA -->
+<div class="cta-band reveal">
+  <h2>Ready to mark your<br><em>next class set?</em></h2>
+  <p>Free to use. Bring your own Gemini API key.</p>
+  <a href="tool.html" class="btn-white">Open Markr →</a>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <a href="#" class="footer-logo">mark<span>r</span></a>
+  <div class="footer-links">
+    <a href="tool.html">Open tool</a>
+    <a href="login.html">Sign in</a>
+    <a href="login.html">Create account</a>
+  </div>
+  <span class="footer-note">NZC Assessment Tool · Student data never stored externally</span>
+</footer>
+
+<script>
+// Nav scroll state
+var nav=document.getElementById('nav');
+window.addEventListener('scroll',function(){nav.classList.toggle('scrolled',window.scrollY>40)},{passive:true});
+
+// Scroll reveal
+var els=document.querySelectorAll('.reveal');
+var io=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){if(e.isIntersecting)e.target.classList.add('visible')});
+},{threshold:0.08});
+els.forEach(function(el){io.observe(el)});
+
+// Smooth scroll for anchor links
+document.querySelectorAll('a[href^="#"]').forEach(function(a){
+  a.addEventListener('click',function(e){
+    var id=a.getAttribute('href');
+    if(id==='#')return;
+    var el=document.querySelector(id);
+    if(el){e.preventDefault();el.scrollIntoView({behavior:'smooth',block:'start'})}
+  });
+});
+</script>
+</body>
+</html>
