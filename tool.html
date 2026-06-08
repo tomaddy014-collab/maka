@@ -642,7 +642,7 @@ async function uploadPDF(file,teacherId){
   if(!sb||!file)return null;
   try{
     var path=teacherId+'/'+Date.now()+'_'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-    var res=await sb.storage.from('student-pdfs').upload(path,file,{contentType:'application/pdf',upsert:true});
+    var res=await sb.storage.from('student-pdfs').upload(path,file,{contentType:file.type||'application/octet-stream',upsert:true});
     if(res.error){console.error('PDF upload error:',res.error.message);return null;}
     return path;
   }catch(e){console.error('PDF upload failed:',e.message);return null;}
