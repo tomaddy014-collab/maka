@@ -15,6 +15,7 @@
   --warn-bg:#faeeda;--warn-text:#854f0b;
   --danger-bg:#fcebeb;--danger-text:#a32d2d;
   --info-bg:#e6f1fb;--info-text:#185fa5;
+  --gold:#c8840a;--gold-soft:rgba(200,132,10,0.12);
   --r:10px;--rs:6px;
 }
 body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg3);color:var(--text);min-height:100vh}
@@ -117,7 +118,7 @@ canvas{width:100%!important}
 .field{margin-bottom:12px}
 .lbl{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;display:block}
 input[type=text],input[type=password],select,textarea{width:100%;font-size:14px;padding:9px 11px;border-radius:var(--rs);border:.5px solid var(--border2);background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-soft)}
 textarea{resize:vertical;min-height:60px;line-height:1.5}
 .key-row{display:flex;gap:8px}.key-row input{flex:1;font-family:monospace;font-size:13px}
 .eye-btn{padding:9px 11px;border:.5px solid var(--border2);border-radius:var(--rs);background:var(--bg2);cursor:pointer;font-size:13px;flex-shrink:0}
@@ -127,7 +128,27 @@ textarea{resize:vertical;min-height:60px;line-height:1.5}
 .modal-bg.open .modal{transform:scale(1) translateY(0)}
 .modal-title{font-weight:600;font-size:16px;margin-bottom:1rem}
 .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem}
-.empty{text-align:center;padding:2rem;color:var(--text2);font-size:13px}
+.empty{text-align:center;padding:2.5rem 1.5rem;color:var(--text2);font-size:13.5px;line-height:1.6}
+
+/* HERO SCORE */
+.hero-score{text-align:center;padding:2.75rem 1.5rem}
+.hs-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:14px}
+.hs-num{font-family:'Fraunces',serif;font-size:clamp(4rem,16vw,5.5rem);font-weight:800;line-height:.95;color:var(--text)}
+.hs-den{font-size:.32em;font-weight:400;color:var(--text3);letter-spacing:-.02em}
+.hs-grade{display:inline-block;margin-top:1.1rem;font-size:14px;font-weight:600;padding:8px 22px;border-radius:100px}
+.grade-exceeds{background:rgba(200,132,10,0.14);color:#9c6500}
+.grade-achieved{background:var(--green-bg);color:var(--green)}
+.grade-approaching{background:var(--warn-bg);color:var(--warn-text)}
+.grade-beginning{background:var(--danger-bg);color:var(--danger-text)}
+.hs-sub{font-size:13px;color:var(--text2);margin-top:14px}
+
+/* "How to improve" — warm gold-accent cards */
+.sbox.improve{background:rgba(200,132,10,0.06);border-left:3px solid var(--gold);color:var(--text)}
+
+/* View-work CTA */
+.view-work{margin-top:14px;font-size:13px;padding:9px 18px;border-radius:100px}
+
+.btn:focus-visible,.copy-btn:focus-visible,.eye-btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 @media(max-width:600px){.stats-grid{grid-template-columns:repeat(2,1fr)}.main{padding:1rem .75rem}}
 </style>
 </head>
@@ -267,6 +288,14 @@ function renderPage(){
   var trend=latest!==null&&prev!==null?latest-prev:null;
   var trendHtml=trend===null?'—':trend>0?'<span class="delta d-up">↑ +'+trend+'</span>':trend<0?'<span class="delta d-dn">↓ '+trend+'</span>':'<span class="delta d-eq">→</span>';
 
+  // Hero score — latest result
+  var latestRes=ALL_RESULTS.length?ALL_RESULTS[ALL_RESULTS.length-1]:null;
+  var latestTot=latestRes?(parseInt((latestRes.criteria_total||'0').split('/')[0])||0):null;
+  var latestGrade=latestRes?(latestRes.overall_score||''):'';
+  var gradeMap={'Exceeds':'grade-exceeds','Achieved':'grade-achieved','Approaching':'grade-approaching','Beginning':'grade-beginning'};
+  var gradeCls=gradeMap[latestGrade]||'grade-achieved';
+  var heroHtml=latestRes?'<div class="card hero-score"><div class="hs-label">Latest result</div><div class="hs-num stat-num">'+latestTot+'<span class="hs-den">/25</span></div><div class="hs-grade '+gradeCls+'">'+esc(latestGrade||'In progress')+'</div><div class="hs-sub">'+esc((latestRes.sessions&&latestRes.sessions.name)||'')+'</div></div>':'';
+
   document.getElementById('main').innerHTML=`
     <!-- HEADER -->
     <div class="card" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
@@ -284,6 +313,8 @@ function renderPage(){
         <button class="btn btn-sm btn-danger" onclick="deleteStudent()">Remove</button>
       </div>
     </div>
+
+    ${heroHtml}
 
     <!-- STATS -->
     <div class="stats-grid">
@@ -399,9 +430,9 @@ function renderSessions(){
         +(critRows?'<table class="ctable"><thead><tr><th>Criterion</th><th style="width:90px;text-align:center">Score</th></tr></thead><tbody>'+critRows+'</tbody></table>':'')
         +'<div class="total-row">Total: <strong>'+esc(r.criteria_total||'')+'</strong></div>'
         +((i1||i2)?'<div class="slbl">How to improve</div>':'')
-        +(i1?'<div class="sbox" style="margin-bottom:6px">💡 '+esc(i1)+'</div>':'')
-        +(i2?'<div class="sbox">💡 '+esc(i2)+'</div>':'')
-        +(r.pdf_path?'<button class="btn" style="margin-top:12px;font-size:12px;padding:6px 12px" onclick="viewPDF(''+esc(r.pdf_path||'')+'',this)">📄 View your work</button>':'')
+        +(i1?'<div class="sbox improve" style="margin-bottom:6px">💡 '+esc(i1)+'</div>':'')
+        +(i2?'<div class="sbox improve">💡 '+esc(i2)+'</div>':'')
+        +(r.pdf_path?'<button class="btn btn-green view-work" onclick="viewPDF(''+esc(r.pdf_path||'')+'',this)">📄 View your work</button>':'')
       +'</div>'
     +'</div>';
   }).join('');
