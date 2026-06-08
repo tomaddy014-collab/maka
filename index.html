@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Māka — AI marking for NZ teachers</title>
+<script>
+// Set no-splash before first paint to avoid flash when splash should be skipped
+(function(){try{
+  if(sessionStorage.getItem('maka-splash-seen')||window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    document.documentElement.className+=' no-splash';
+  }
+}catch(e){document.documentElement.className+=' no-splash';}})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,800;1,9..144,300;1,9..144,400;1,9..144,800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -91,27 +99,6 @@ nav.scrolled{border-color:var(--border)}
   overflow:hidden;
 }
 
-/* Decorative background circles */
-.hero::before{
-  content:'';
-  position:absolute;
-  top:-15%;left:-8%;
-  width:55%;height:75%;
-  background:radial-gradient(ellipse,rgba(45,90,39,0.07) 0%,transparent 65%);
-  pointer-events:none;
-  animation:heroFloat 18s ease-in-out infinite;
-}
-.hero::after{
-  content:'';
-  position:absolute;
-  bottom:-5%;right:-5%;
-  width:45%;height:60%;
-  background:radial-gradient(ellipse,rgba(200,80,10,0.06) 0%,transparent 65%);
-  pointer-events:none;
-  animation:heroFloat 22s ease-in-out infinite reverse;
-}
-@keyframes heroFloat{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(3%,-4%) scale(1.06)}}
-
 .hero-eyebrow{
   display:inline-flex;align-items:center;gap:8px;
   background:var(--green-light);
@@ -135,8 +122,17 @@ nav.scrolled{border-color:var(--border)}
   line-height:.95;
   letter-spacing:-.03em;
   margin-bottom:1.75rem;
-  opacity:0;animation:riseUp .8s .2s var(--ease-spring) forwards;
 }
+.hero h1 .hw{
+  display:inline-block;
+  opacity:0;transform:translateY(.45em);
+  animation:wordRise .7s var(--ease) forwards;
+}
+.hero h1 .hw:nth-child(1){animation-delay:.05s}
+.hero h1 .hw:nth-child(2){animation-delay:.11s}
+.hero h1 .hw:nth-child(3){animation-delay:.17s}
+.hero h1 .hw:nth-child(4){animation-delay:.23s}
+@keyframes wordRise{to{opacity:1;transform:translateY(0)}}
 .hero h1 .italic{
   font-style:italic;
   font-weight:300;
@@ -149,109 +145,64 @@ nav.scrolled{border-color:var(--border)}
   color:var(--ink-muted);
   max-width:540px;
   line-height:1.75;
-  margin-bottom:3rem;
-  opacity:0;animation:riseUp .8s .3s var(--ease-spring) forwards;
+  margin-bottom:2.5rem;
+  opacity:0;animation:riseUp .7s .42s var(--ease) forwards;
 }
 
 .hero-actions{
   display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;
-  opacity:0;animation:riseUp .8s .4s var(--ease-spring) forwards;
+  opacity:0;animation:riseUp .7s .56s var(--ease) forwards;
+  margin-bottom:1.25rem;
+}
+.hero-link{
+  display:inline-block;
+  font-size:14px;font-weight:500;color:var(--ink-muted);
+  text-decoration:none;letter-spacing:.01em;
+  opacity:0;animation:riseUp .7s .68s var(--ease) forwards;
+  transition:color .25s var(--ease),transform .25s var(--ease);
   margin-bottom:1.5rem;
 }
+.hero-link:hover{color:var(--ink);transform:translateY(2px)}
 .btn-primary{
   display:inline-flex;align-items:center;gap:8px;
-  background:var(--green);color:#fff;
-  padding:15px 32px;border-radius:100px;
+  background:var(--ink);color:var(--paper);
+  padding:16px 34px;border-radius:100px;
   font-size:15px;font-weight:500;
   text-decoration:none;
-  transition:background .3s var(--ease),transform .3s var(--ease-spring),box-shadow .3s var(--ease);
-  box-shadow:0 4px 20px rgba(45,90,39,0.25);
+  transition:background .3s var(--ease),transform .25s var(--ease),box-shadow .3s var(--ease);
+  box-shadow:0 4px 20px rgba(15,14,12,0.18);
   will-change:transform;
   position:relative;overflow:hidden;
 }
 .btn-primary::before{
   content:'';position:absolute;top:0;left:-75%;width:50%;height:100%;
-  background:linear-gradient(115deg,transparent,rgba(255,255,255,0.35),transparent);
+  background:linear-gradient(115deg,transparent,rgba(255,255,255,0.22),transparent);
   transform:skewX(-20deg);transition:left .65s var(--ease);
 }
 .btn-primary:hover::before{left:125%}
-.btn-primary:hover{background:var(--green-mid);transform:translateY(-3px) scale(1.02);box-shadow:0 12px 36px rgba(45,90,39,0.32),0 0 0 6px rgba(200,132,10,0.12)}
-.btn-primary:active{transform:translateY(-1px) scale(.97)}
+.btn-primary:hover{background:var(--ink-light);transform:translateY(-1px);box-shadow:0 12px 36px rgba(15,14,12,0.26)}
+.btn-primary:active{transform:scale(.97);transition:transform .08s var(--ease)}
 
-#intro-overlay{
+/* ── SPLASH ── */
+#splash{
   position:fixed;inset:0;z-index:9999;
   background:var(--paper);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;
-  transition:opacity .8s var(--ease),visibility .8s;
-  overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity .4s var(--ease);
 }
-#intro-overlay.hide{opacity:0;visibility:hidden;pointer-events:none}
-#intro-overlay::before{
-  content:'';position:absolute;inset:0;pointer-events:none;
-  background:radial-gradient(circle at 50% 48%,rgba(200,132,10,0.10),transparent 60%);
-  opacity:0;animation:introGlow 7s ease-in-out forwards;
-}
-#intro-overlay .word{
-  font-family:'Fraunces',serif;font-weight:800;letter-spacing:-.02em;
-  font-size:clamp(40px,9vw,72px);color:var(--ink);
-  opacity:0;transform:scale(.9) translateY(6px);
-  animation:introWord .8s .15s var(--ease-spring) forwards;
-  position:relative;z-index:1;
-}
-#intro-overlay .word .accent{color:var(--green)}
-#intro-overlay .word{letter-spacing:0;position:relative}
-#intro-overlay .word .mac{position:relative}
-#intro-overlay #mac-bar{
-  position:absolute;height:.06em;background:var(--ink);border-radius:1px;
-  opacity:0;transition:opacity .3s var(--ease);
-}
-#intro-overlay #mac-bar.show{opacity:1}
-#intro-overlay .feather-wrap{position:relative;z-index:1;width:min(86vw,260px);height:auto;aspect-ratio:220/90}
-#intro-overlay .feather-wrap svg{width:100%;height:100%;overflow:visible}
-#intro-overlay .f-outline{
-  fill:none;stroke:var(--gold,#c8840a);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;
-}
-#intro-overlay .f-quill{
-  fill:none;stroke:var(--ink);stroke-width:1;stroke-linecap:round;opacity:.4;
-}
-#intro-overlay .f-quill-main{stroke-width:1.8;opacity:.6}
-#intro-overlay .f-band{
-  display:none;
-}
-#intro-overlay .f-fill{
-  opacity:0;
-}
-@keyframes introWord{from{opacity:0;transform:scale(.9) translateY(6px)}to{opacity:1;transform:scale(1) translateY(0)}}
-@keyframes introGlow{0%{opacity:0}35%{opacity:1}75%{opacity:1}100%{opacity:0}}
-@media (prefers-reduced-motion: no-preference){
-  #intro-overlay .f-outline{
-    stroke-dasharray:480;stroke-dashoffset:480;
-    animation:drawFeather 2.6s .6s cubic-bezier(.45,.05,.35,1) forwards;
-  }
-  #intro-overlay .f-fill{animation:fadeInSoft 1.4s 2.9s var(--ease) forwards}
-  #intro-overlay .f-quill{
-    stroke-dasharray:90;stroke-dashoffset:90;
-    animation:drawQuill 1s var(--ease) forwards;
-  }
-  #intro-overlay .f-quill-main{animation-delay:3.1s!important}
-  #intro-overlay .f-quill:nth-of-type(n+4){animation-delay:calc(3.3s + (var(--bi, 0) * 0.09s))}
-  #intro-overlay .f-quill:nth-of-type(4){--bi:0}#intro-overlay .f-quill:nth-of-type(5){--bi:1}
-  #intro-overlay .f-quill:nth-of-type(6){--bi:2}#intro-overlay .f-quill:nth-of-type(7){--bi:3}
-  #intro-overlay .f-quill:nth-of-type(8){--bi:4}#intro-overlay .f-quill:nth-of-type(9){--bi:5}
-  #intro-overlay .f-quill:nth-of-type(10){--bi:6}#intro-overlay .f-quill:nth-of-type(11){--bi:7}
-  #intro-overlay .f-quill:nth-of-type(12){--bi:8}#intro-overlay .f-quill:nth-of-type(13){--bi:9}
-  #intro-overlay .f-quill:nth-of-type(14){--bi:10}#intro-overlay .f-quill:nth-of-type(15){--bi:11}
-  #intro-overlay .f-quill:nth-of-type(16){--bi:12}#intro-overlay .f-quill:nth-of-type(17){--bi:13}
-  #intro-overlay .feather-wrap{
-    animation:featherSettle 1s 5.5s var(--ease-spring) forwards;
-  }
-  @keyframes drawFeather{to{stroke-dashoffset:0}}
-  @keyframes drawQuill{to{stroke-dashoffset:0}}
-  @keyframes fadeInSoft{to{opacity:1}}
-  @keyframes featherSettle{0%{transform:scale(1) translateY(0)}50%{transform:scale(1.06) translateY(-4px)}100%{transform:scale(1) translateY(0)}}
-}
+#splash.done{opacity:0;pointer-events:none}
+.splash-logo{transform:scale(2.5);transform-origin:center;position:relative}
+.splash-logo > span{opacity:0}
+.splash-logo.show-word > span{opacity:1;transition:opacity .4s ease-out}
+.splash-logo.pulse{animation:splashPulse .4s var(--ease)}
+@keyframes splashPulse{0%{transform:scale(2.5)}50%{transform:scale(2.62)}100%{transform:scale(2.5)}}
+html.no-splash #splash{display:none}
+#page{opacity:1}
+html:not(.no-splash) #page{opacity:0}
+html:not(.no-splash) #page.ready{opacity:1;transition:opacity .5s var(--ease)}
 @media (prefers-reduced-motion: reduce){
-  #intro-overlay{display:none}
+  #splash{display:none}
+  #page{opacity:1!important}
 }
 .btn-secondary{
   display:inline-flex;align-items:center;gap:8px;
@@ -526,13 +477,13 @@ footer{
 @keyframes riseUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
 @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 
-.reveal{opacity:0;transform:translateY(28px);transition:opacity .8s var(--ease-spring),transform .8s var(--ease-spring)}
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .7s cubic-bezier(0.25,0.46,0.45,0.94),transform .7s cubic-bezier(0.25,0.46,0.45,0.94)}
 .reveal.visible{opacity:1;transform:none}
 .footer-logo{transition:opacity .2s var(--ease)}
 .footer-logo:hover{opacity:.7}
-.reveal-delay-1{transition-delay:.1s}
-.reveal-delay-2{transition-delay:.2s}
-.reveal-delay-3{transition-delay:.3s}
+.reveal-delay-1{transition-delay:.08s}
+.reveal-delay-2{transition-delay:.16s}
+.reveal-delay-3{transition-delay:.24s}
 
 /* ── RESPONSIVE ── */
 @media(max-width:900px){
@@ -557,40 +508,37 @@ footer{
 </head>
 <body>
 
-<div id="intro-overlay" aria-hidden="true">
-  <div class="word">M<span class="mac">a</span><span class="accent">ka</span><span id="mac-bar"></span></div>
-  <div class="feather-wrap">
-  <svg viewBox="0 0 240 96" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="featherGrad" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%" stop-color="var(--ink)" stop-opacity=".75"/>
-        <stop offset="55%" stop-color="var(--gold,#c8840a)"/>
-        <stop offset="100%" stop-color="var(--gold,#c8840a)" stop-opacity=".5"/>
-      </linearGradient>
-    </defs>
-    <!-- vane silhouette: narrower upper lobe, fuller lower lobe, tapering to a point -->
-    <path class="f-fill" fill="url(#featherGrad)" d="M10 50 C 28 34, 60 22, 108 18 C 152 15, 196 22, 230 47 C 198 60, 158 70, 112 71 C 66 72, 32 64, 10 50 Z" />
-    <path class="f-outline" d="M10 50 C 28 34, 60 22, 108 18 C 152 15, 196 22, 230 47 C 198 60, 158 70, 112 71 C 66 72, 32 64, 10 50 Z" />
-    <!-- tapering quill, slightly curved -->
-    <path class="f-quill f-quill-main" d="M14 49 C 70 43, 160 43, 226 47" />
-    <!-- fine angled barbs along the vane, denser near the base -->
-    <path class="f-quill" d="M40 47 C 44 38, 52 30, 64 25" />
-    <path class="f-quill" d="M40 49 C 44 56, 50 63, 60 68" />
-    <path class="f-quill" d="M64 45 C 68 36, 76 28, 90 23" />
-    <path class="f-quill" d="M64 48 C 68 56, 76 63, 88 68" />
-    <path class="f-quill" d="M90 44 C 94 35, 104 28, 118 23" />
-    <path class="f-quill" d="M90 48 C 94 57, 102 64, 116 69" />
-    <path class="f-quill" d="M118 43 C 122 35, 132 29, 146 25" />
-    <path class="f-quill" d="M118 48 C 122 56, 130 63, 144 68" />
-    <path class="f-quill" d="M146 44 C 150 37, 158 31, 170 27" />
-    <path class="f-quill" d="M146 48 C 150 55, 156 61, 168 65" />
-    <path class="f-quill" d="M172 45 C 175 39, 182 34, 192 30" />
-    <path class="f-quill" d="M172 48 C 175 53, 181 58, 190 62" />
-    <path class="f-quill" d="M196 46 C 199 42, 204 38, 211 35" />
-    <path class="f-quill" d="M196 48 C 199 51, 204 55, 210 58" />
-  </svg>
-  </div>
+<div id="splash" aria-hidden="true">
+  <a href="#" id="splash-logo" class="splash-logo" tabindex="-1" style="text-decoration:none;display:inline-block;position:relative;padding-bottom:7px">
+    <span style="font-family:'Fraunces',Georgia,serif;font-size:28px;font-weight:900;color:#0f0e0c;letter-spacing:-0.02em;line-height:1;white-space:nowrap">m<span style="position:relative;display:inline-block"><span style="position:absolute;top:2px;left:50%;transform:translateX(-50%);width:55%;height:2.5px;background:#0f0e0c;border-radius:1px"></span>a</span>ka</span>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190 20" style="position:absolute;bottom:-3px;left:0;width:100%;height:20px;pointer-events:none">
+  <defs><linearGradient id="fg_i1s" x1="100%" y1="0%" x2="0%" y2="0%">
+    <stop offset="0%" style="stop-color:#f0b429;stop-opacity:1"/>
+    <stop offset="65%" style="stop-color:#d4a017;stop-opacity:0.65"/>
+    <stop offset="100%" style="stop-color:#d4a017;stop-opacity:0.03"/>
+  </linearGradient></defs>
+  <path d="M 183 7 C 150 11, 90 15, 30 16 C 12 16, 2 14, 0 12" fill="none" stroke="url(#fg_i1s)" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 176 6 C 171 1, 164 0, 156 1" fill="none" stroke="#f0b429" stroke-width="1" stroke-linecap="round" opacity="0.9"/>
+  <path d="M 162 8 C 156 3, 149 2, 141 3" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.8"/>
+  <path d="M 147 9 C 141 5, 134 4, 126 5" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.72"/>
+  <path d="M 131 10 C 125 7, 118 6, 110 7" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.62"/>
+  <path d="M 114 11 C 108 8, 101 8, 93 8" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.52"/>
+  <path d="M 96 12 C 90 10, 83 9, 75 10" fill="none" stroke="#f0b429" stroke-width="0.7" stroke-linecap="round" opacity="0.42"/>
+  <path d="M 77 12 C 71 11, 64 10, 56 11" fill="none" stroke="#f0b429" stroke-width="0.6" stroke-linecap="round" opacity="0.32"/>
+  <path d="M 174 8 C 169 13, 162 15, 154 14" fill="none" stroke="#f0b429" stroke-width="1" stroke-linecap="round" opacity="0.8"/>
+  <path d="M 159 9 C 154 14, 147 16, 139 15" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.72"/>
+  <path d="M 144 10 C 139 15, 132 17, 124 16" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.64"/>
+  <path d="M 128 11 C 123 16, 116 17, 108 16" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.55"/>
+  <path d="M 111 12 C 106 16, 99 17, 91 16" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.46"/>
+  <path d="M 93 13 C 88 16, 81 17, 73 16" fill="none" stroke="#f0b429" stroke-width="0.7" stroke-linecap="round" opacity="0.36"/>
+  <path d="M 73 13 C 68 16, 61 16, 53 15" fill="none" stroke="#f0b429" stroke-width="0.6" stroke-linecap="round" opacity="0.26"/>
+  <path d="M 3 13 C 2 12, 1 11, 0.5 10" fill="none" stroke="#ede7d9" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 1 11 C 0.5 10, 0 9.5, 0 9" fill="none" stroke="#f5f0e8" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
+  </a>
 </div>
+
+<div id="page">
 
 <nav id="nav">
 <a href="#" class="nav-logo" style="text-decoration:none;display:inline-block;position:relative;padding-bottom:7px">
@@ -653,14 +601,14 @@ footer{
 <section class="hero">
   <div class="hero-eyebrow">Built for the refreshed NZC · Years 7–8</div>
   <h1>
-    Mark smarter,<br>
-    <span class="italic">not longer</span>
+    <span class="hw">Mark</span> <span class="hw">smarter,</span><br>
+    <span class="hw italic">not</span> <span class="hw italic">longer</span>
   </h1>
   <p class="hero-sub">Upload your students' PDFs. Gemini AI reads, marks, and moderates each piece — then rewrites feedback in your own voice.</p>
   <div class="hero-actions">
     <a href="tool.html" class="btn-primary">Start marking free →</a>
-    <a href="#how" class="btn-secondary">See how it works</a>
   </div>
+  <a href="#how" class="hero-link">See how it works ↓</a>
   <div class="hero-note">Free Gemini API key required · Works in your browser · Student data never stored externally</div>
 </section>
 
@@ -820,38 +768,43 @@ footer{
   </div>
   <span class="footer-note">NZC Assessment Tool · Student data never stored externally</span>
 </footer>
+</div><!-- /#page -->
 
 <script>
-// Position macron bar exactly above the "a"
+// Splash screen — plays once per session, signature-style feather draw-on
 (function(){
-  var word=document.querySelector('#intro-overlay .word');
-  var mac=document.querySelector('#intro-overlay .mac');
-  var bar=document.getElementById('mac-bar');
-  if(!word||!mac||!bar)return;
-  function place(){
-    var wr=word.getBoundingClientRect(),mr=mac.getBoundingClientRect();
-    bar.style.width=(mr.width*0.85)+'px';
-    bar.style.left=(mr.left-wr.left+mr.width*0.075)+'px';
-    bar.style.top=(mr.top-wr.top-mr.height*-0.04)+'px';
-    bar.classList.add('show');
-  }
-  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(place);
-  setTimeout(place,50);
-  setTimeout(place,400);
-})();
-
-// Intro logo animation (once per session)
-(function(){
-  var ov=document.getElementById('intro-overlay');
-  if(!ov)return;
-  var seen=sessionStorage.getItem('maka_intro_seen');
-  var reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if(seen||reduced){ov.remove();return}
-  sessionStorage.setItem('maka_intro_seen','1');
+  var html=document.documentElement;
+  var splash=document.getElementById('splash');
+  var page=document.getElementById('page');
+  function reveal(){ if(page) page.classList.add('ready'); }
+  if(html.classList.contains('no-splash')){ reveal(); if(splash)splash.remove(); return; }
+  var logo=document.getElementById('splash-logo');
+  if(!logo){ reveal(); if(splash)splash.remove(); return; }
+  var paths=logo.querySelectorAll('svg path');
+  paths.forEach(function(p){
+    var len=p.getTotalLength();
+    p.style.strokeDasharray=len;
+    p.style.strokeDashoffset=len;
+    p.style.transition='none';
+  });
+  // 1. wordmark fades in (400ms)
+  requestAnimationFrame(function(){ logo.classList.add('show-word'); });
+  // 2. after wordmark + 300ms pause → draw feather right-to-left (900ms)
   setTimeout(function(){
-    ov.classList.add('hide');
-    setTimeout(function(){ov.remove()},800);
-  },7000);
+    paths.forEach(function(p){
+      p.style.transition='stroke-dashoffset .9s ease-in-out';
+      p.style.strokeDashoffset='0';
+    });
+  },700);
+  // 3. feather done (1600) + 200ms pause → gentle pulse (400ms)
+  setTimeout(function(){ logo.classList.add('pulse'); },1800);
+  // 4. fade splash out + reveal page content
+  setTimeout(function(){
+    splash.classList.add('done');
+    reveal();
+    try{ sessionStorage.setItem('maka-splash-seen','1'); }catch(e){}
+    setTimeout(function(){ if(splash)splash.remove(); },450);
+  },2150);
 })();
 
 // Nav scroll state
