@@ -791,7 +791,7 @@ function loadRubricsSettings(){
 }
 function delRubric(id){if(!confirm('Delete?'))return;sb.from('rubrics').delete().eq('id',id).then(function(){loadRubricsSettings()}).catch(function(){})}
 
-function autoSessName(){var task=document.getElementById('task').value.trim();var sn=document.getElementById('session-name');if(!sn._userEdited&&task)sn.value=document.getElementById('la').value.split(' ')[0]+' — '+task.substring(0,40)}
+function autoSessName(){var task=document.getElementById('task').value.trim();var sn=document.getElementById('session-name');if(sn._userEdited||!task)return;var area=document.getElementById('la').value.split(' ')[0];var t=task.length>40?task.substring(0,40).replace(/\s+\S*$/,'')+'…':task;var date=new Date().toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});sn.value=area+' — '+t+' — '+date}
 document.getElementById('session-name').addEventListener('input',function(){this._userEdited=true});
 
 function fileIcon(f){return f.type==='application/pdf'?'📕':'🖼️'}
