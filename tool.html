@@ -1237,16 +1237,34 @@ function renderDashboard(res){
   }
 }
 
+var HIST_SESSIONS=[];
 function loadHistory(){
   document.getElementById('hist-list-view').style.display='block';document.getElementById('hist-detail-view').style.display='none';
   var el=document.getElementById('hist-list');
   if(!sb||!USER){el.innerHTML='<div style="font-size:13px;color:var(--text2)"><a href="login.html" style="color:var(--green)">Sign in</a> to see your history.</div>';return}
   el.innerHTML='<div style="font-size:13px;color:var(--text2)">Loading…</div>';
   sb.from('sessions').select('*').eq('teacher_id',USER.id).order('created_at',{ascending:false}).then(function(res){
-    var sessions=res.data||[];
-    if(!sessions.length){el.innerHTML='<div style="font-size:13px;color:var(--text2)">No past sessions yet.</div>';return}
-    el.innerHTML=sessions.map(function(s){var d=new Date(s.created_at).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});return'<div class="sess-item" id="sess-'+s.id+'"><div class="ico" style="font-size:26px;flex-shrink:0;display:flex;align-items:center">'+ic('clipboard')+'</div><div class="sess-info"><div class="sess-name">'+esc(s.name||'Untitled')+'</div><div class="sess-meta">'+esc(s.learning_area||'')+(s.level?' · Level '+s.level:'')+' · '+d+'</div></div><div class="btn-row"><button class="btn btn-sm" onclick="loadHistDetail(\''+s.id+'\',\''+esc(s.name||'Session')+'\')">View</button><button class="btn btn-sm" onclick="renameSession(\''+s.id+'\',\''+esc(s.name||'')+'\')">Rename</button><button class="btn btn-sm btn-danger" onclick="delSession(\''+s.id+'\',\''+esc(s.name||'Session')+'\')">Delete</button></div></div>'}).join('');
+    HIST_SESSIONS=res.data||[];
+    if(!HIST_SESSIONS.length){el.innerHTML='<div style="font-size:13px;color:var(--text2)">No past sessions yet.</div>';return}
+    var areas=HIST_SESSIONS.map(function(s){return s.learning_area||''}).filter(function(a,i,arr){return a&&arr.indexOf(a)===i}).sort();
+    el.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">'
+      +'<input type="text" id="hist-search" placeholder="Search sessions…" oninput="renderHistList()" aria-label="Search sessions" style="flex:1;min-width:160px;font-size:13px;padding:8px 11px">'
+      +'<select id="hist-area" onchange="renderHistList()" aria-label="Filter by learning area" style="width:auto;font-size:13px;padding:8px 10px"><option value="">All learning areas</option>'+areas.map(function(a){return'<option value="'+esc(a)+'">'+esc(a)+'</option>'}).join('')+'</select>'
+      +'</div><div id="hist-rows"></div>';
+    renderHistList();
   }).catch(function(e){el.innerHTML='<div class="err">'+esc(e.message)+'</div>'});
+}
+function renderHistList(){
+  var rows=document.getElementById('hist-rows');if(!rows)return;
+  var q=(document.getElementById('hist-search')||{}).value||'';q=q.trim().toLowerCase();
+  var area=(document.getElementById('hist-area')||{}).value||'';
+  var list=HIST_SESSIONS.filter(function(s){
+    if(area&&(s.learning_area||'')!==area)return false;
+    if(!q)return true;
+    return((s.name||'')+' '+(s.learning_area||'')+' '+(s.task||'')).toLowerCase().indexOf(q)!==-1;
+  });
+  if(!list.length){rows.innerHTML='<div style="font-size:13px;color:var(--text2);padding:8px 0">No sessions match your search.</div>';return}
+  rows.innerHTML=list.map(function(s){var d=new Date(s.created_at).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});return'<div class="sess-item" id="sess-'+s.id+'"><div class="ico" style="font-size:26px;flex-shrink:0;display:flex;align-items:center">'+ic('clipboard')+'</div><div class="sess-info"><div class="sess-name">'+esc(s.name||'Untitled')+'</div><div class="sess-meta">'+esc(s.learning_area||'')+(s.level?' · Level '+s.level:'')+' · '+d+'</div></div><div class="btn-row"><button class="btn btn-sm" onclick="loadHistDetail(\''+s.id+'\',\''+esc(s.name||'Session')+'\')">View</button><button class="btn btn-sm" onclick="renameSession(\''+s.id+'\',\''+esc(s.name||'')+'\')">Rename</button><button class="btn btn-sm btn-danger" onclick="delSession(\''+s.id+'\',\''+esc(s.name||'Session')+'\')">Delete</button></div></div>'}).join('');
 }
 function loadHistDetail(id,name){
   document.getElementById('hist-list-view').style.display='none';document.getElementById('hist-detail-view').style.display='block';
@@ -1408,7 +1426,19 @@ document.getElementById('cmpbtn').onclick=async function(){
   var v=results.filter(function(r){return!r._error&&prev[r.fileName]!==undefined});
   var el=document.getElementById('cmp-results');
   if(!v.length){el.innerHTML='<div class="err" style="margin-top:1rem">No matching student names found.</div>';return}
-  el.innerHTML='<div class="card" style="margin-top:1rem"><div style="display:flex;gap:20px;font-size:12px;color:var(--text2);margin-bottom:1rem"><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2d5a27;margin-right:4px"></span>Current</span><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#c8500a;margin-right:4px"></span>Previous</span></div>'+v.map(function(r){var cur=parseInt((r.criteriaTotal||'0').split('/')[0])||0,prv=parseInt((prev[r.fileName]||'0').split('/')[0])||0,d=cur-prv;var dh=d>0?'<span class="delta d-up">↑ +'+d+'</span>':d<0?'<span class="delta d-dn">↓ '+d+'</span>':'<span class="delta d-eq">no change</span>';return'<div class="cmp-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px"><span style="font-weight:600;font-size:14px">'+esc(stripExt(r.fileName))+'</span><div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;color:var(--text2)">'+prv+' → '+cur+' /25</span>'+dh+'</div></div><div style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:6px"><span style="width:64px;color:var(--text2)">Previous</span><div style="flex:1;height:7px;background:var(--bg2);border-radius:100px;overflow:hidden"><div style="width:'+Math.round(prv/25*100)+'%;height:100%;background:#c8500a;border-radius:100px"></div></div><span style="width:36px;text-align:right;font-weight:600">'+prv+'</span></div><div style="display:flex;align-items:center;gap:8px;font-size:12px"><span style="width:64px;color:var(--text2)">Current</span><div style="flex:1;height:7px;background:var(--bg2);border-radius:100px;overflow:hidden"><div style="width:'+Math.round(cur/25*100)+'%;height:100%;background:#2d5a27;border-radius:100px"></div></div><span style="width:36px;text-align:right;font-weight:600">'+cur+'</span></div></div>'}).join('')+'</div>';
+  var deltas=v.map(function(r){return(parseInt((r.criteriaTotal||'0').split('/')[0])||0)-(parseInt((prev[r.fileName]||'0').split('/')[0])||0)});
+  var up=deltas.filter(function(d){return d>0}).length,dn=deltas.filter(function(d){return d<0}).length,eq=deltas.filter(function(d){return d===0}).length;
+  var avgD=deltas.reduce(function(a,b){return a+b},0)/deltas.length;
+  var avgStr=(avgD>0?'+':'')+avgD.toFixed(1);
+  var avgCls=avgD>0?'d-up':avgD<0?'d-dn':'d-eq';
+  var summary='<div class="card" style="margin-top:1rem"><div class="card-title">Summary <span style="font-size:12px;font-weight:400;color:var(--text2)">'+v.length+' student'+(v.length!==1?'s':'')+' compared</span></div>'
+    +'<div class="dash-grid" style="margin-bottom:0">'
+    +'<div class="stat-box"><div class="stat-num" style="color:var(--green)">'+up+'</div><div class="stat-lbl">Improved</div></div>'
+    +'<div class="stat-box"><div class="stat-num" style="color:var(--danger-text)">'+dn+'</div><div class="stat-lbl">Declined</div></div>'
+    +'<div class="stat-box"><div class="stat-num" style="color:var(--text3)">'+eq+'</div><div class="stat-lbl">No change</div></div>'
+    +'<div class="stat-box"><div class="stat-num"><span class="delta '+avgCls+'" style="font-size:1.3rem">'+avgStr+'</span></div><div class="stat-lbl">Avg change /25</div></div>'
+    +'</div></div>';
+  el.innerHTML=summary+'<div class="card" style="margin-top:1rem"><div style="display:flex;gap:20px;font-size:12px;color:var(--text2);margin-bottom:1rem"><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2d5a27;margin-right:4px"></span>Current</span><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#c8500a;margin-right:4px"></span>Previous</span></div>'+v.map(function(r){var cur=parseInt((r.criteriaTotal||'0').split('/')[0])||0,prv=parseInt((prev[r.fileName]||'0').split('/')[0])||0,d=cur-prv;var dh=d>0?'<span class="delta d-up">↑ +'+d+'</span>':d<0?'<span class="delta d-dn">↓ '+d+'</span>':'<span class="delta d-eq">no change</span>';return'<div class="cmp-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px"><span style="font-weight:600;font-size:14px">'+esc(stripExt(r.fileName))+'</span><div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;color:var(--text2)">'+prv+' → '+cur+' /25</span>'+dh+'</div></div><div style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:6px"><span style="width:64px;color:var(--text2)">Previous</span><div style="flex:1;height:7px;background:var(--bg2);border-radius:100px;overflow:hidden"><div style="width:'+Math.round(prv/25*100)+'%;height:100%;background:#c8500a;border-radius:100px"></div></div><span style="width:36px;text-align:right;font-weight:600">'+prv+'</span></div><div style="display:flex;align-items:center;gap:8px;font-size:12px"><span style="width:64px;color:var(--text2)">Current</span><div style="flex:1;height:7px;background:var(--bg2);border-radius:100px;overflow:hidden"><div style="width:'+Math.round(cur/25*100)+'%;height:100%;background:#2d5a27;border-radius:100px"></div></div><span style="width:36px;text-align:right;font-weight:600">'+cur+'</span></div></div>'}).join('')+'</div>';
 };
 
 function printSheets(){
