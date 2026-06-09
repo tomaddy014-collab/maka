@@ -666,7 +666,7 @@ async function buildRubric(){
     '...and so on for all 5 criteria'
   ].join('\n');
   try{
-    var raw=await gemini(key,[{text:prompt}]);
+    var raw=await gemini(key,[{text:prompt}],function(a,max){status.textContent='Gemini busy — retrying ('+a+'/'+(max-1)+')…';status.style.color='var(--text2)'});
     document.getElementById('rubric').value=raw.trim();
     status.textContent='✓ Rubric built! Review it below, then mark as normal or save it for later.';
     status.style.color='var(--green)';
@@ -741,13 +741,41 @@ document.getElementById('markbtn').onclick=runMarking;
 updMark();
 
 function toB64(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1])};r.onerror=rej;r.readAsDataURL(file)})}
-async function gemini(key,parts){
-  var d=await(await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0.3,maxOutputTokens:8192}})})).json();
-  if(d.error)throw new Error(d.error.message||'Gemini error');
-  var ps=((d.candidates||[])[0]||{content:{parts:[]}}).content.parts||[];
-  var raw=ps.map(function(p){return p.text||''}).join('');
-  if(!raw.trim())throw new Error('Empty response from Gemini');
-  return raw.replace(/```json/g,'').replace(/```/g,'').trim();
+async function gemini(key,parts,onRetry){
+  var url='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key;
+  var body=JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0.3,maxOutputTokens:8192}});
+  var maxTries=10,delay=2000,lastErr='Gemini unavailable';
+  for(var attempt=1;attempt<=maxTries;attempt++){
+    try{
+      var resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:body});
+      // Hard client errors (bad key, bad request) — surface immediately, no point retrying
+      if(resp.status===400||resp.status===401||resp.status===403||resp.status===404){
+        var ed=await resp.json().catch(function(){return{}});
+        throw new Error((ed.error&&ed.error.message)||('Gemini error '+resp.status));
+      }
+      if(!resp.ok){
+        // 429 (rate limit / busy), 500, 503 etc — transient, fall through to retry
+        lastErr='Gemini is busy ('+resp.status+')';
+      }else{
+        var d=await resp.json();
+        if(d.error)throw new Error(d.error.message||'Gemini error');
+        var ps=((d.candidates||[])[0]||{content:{parts:[]}}).content.parts||[];
+        var raw=ps.map(function(p){return p.text||''}).join('');
+        if(!raw.trim())throw new Error('Empty response from Gemini');
+        return raw.replace(/```json/g,'').replace(/```/g,'').trim();
+      }
+    }catch(e){
+      // Re-throw clearly fatal errors; retry everything else (busy, network, parse, empty)
+      if(/error 40|api key|api_key|invalid|permission|not valid|unregistered/i.test(e.message||''))throw e;
+      lastErr=e.message||'Gemini error';
+    }
+    if(attempt<maxTries){
+      if(typeof onRetry==='function')onRetry(attempt,maxTries,Math.round(delay/1000));
+      await sleep(delay);
+      delay=Math.min(Math.round(delay*1.7),30000);
+    }
+  }
+  throw new Error('Gemini is still busy after '+maxTries+' tries — please try again in a moment.');
 }
 function parseJSON(raw){var s=raw.indexOf('{'),e=raw.lastIndexOf('}');if(s===-1||e===-1)throw new Error('No JSON in response');return JSON.parse(raw.slice(s,e+1))}
 
@@ -787,7 +815,8 @@ async function markOne(key,file,rubric,area,level,task,style,idx){
       '  "improve2": "Second warm specific improvement tip written directly to the student (you/your). One clear sentence."',
       '}'
     ].join('\n');
-    var r=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:'File: "'+file.name+'"\n\n'+p1}]));
+    var onBusy=function(a,max){progressItems[idx].phase='Gemini busy — retrying ('+a+'/'+(max-1)+')…';renderProg()};
+    var r=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:'File: "'+file.name+'"\n\n'+p1}],onBusy));
     r.fileName=r.fileName||file.name;
     await sleep(1000);
     progressItems[idx].phase='Moderating…';renderProg();
@@ -809,7 +838,7 @@ async function markOne(key,file,rubric,area,level,task,style,idx){
       '',
       'Return ONLY updated raw JSON in the same format. No markdown, no explanation.'
     ].join('\n');
-    var mod=parseJSON(await gemini(key,[{text:p2}]));
+    var mod=parseJSON(await gemini(key,[{text:p2}],onBusy));
     mod.fileName=r.fileName;
     progressItems[idx].status='done';progressItems[idx].phase='';renderProg();
     return mod;
