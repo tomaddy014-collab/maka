@@ -242,6 +242,8 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .skel::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(127,127,127,0.13),transparent);animation:shimmer 1.3s infinite}
 @keyframes shimmer{100%{transform:translateX(100%)}}
 .skel-card{height:60px;margin-bottom:8px;border-radius:var(--r)}
+.empty-state{text-align:center;padding:2.25rem 1.25rem;color:var(--text2);font-size:13.5px;line-height:1.6}
+.empty-state .ico{font-size:28px;color:var(--text3);margin-bottom:10px;display:inline-block}
 @media(prefers-reduced-motion:reduce){.skel::after{animation:none}}
 
 /* Batch progress bar */
@@ -452,7 +454,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <button class="btn btn-p" onclick="genComments()"><span data-ic="message"></span>Generate comments</button>
       <div id="comment-progress" style="display:none;margin-top:12px"></div>
     </div>
-    <div id="comment-empty" style="text-align:center;padding:2rem;color:var(--text2);font-size:13px">Mark some student work first.</div>
+    <div id="comment-empty" class="empty-state"><span data-ic="message"></span><div>Generate report or weekly comments above. They'll appear here, ready to copy into your reporting system.</div></div>
     <div id="comment-results"></div>
   </div>
 
@@ -543,6 +545,10 @@ var DEFAULT_RUBRIC="Ideas and Content — selects and develops relevant ideas th
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function fmt(b){return b>1048576?(b/1048576).toFixed(1)+' MB':Math.round(b/1024)+' KB'}
+// Shimmer placeholders while async lists load (uses .skel styles)
+function skeletonRows(n){var h='';for(var i=0;i<(n||4);i++)h+='<div class="skel skel-card"></div>';return h}
+// Consistent icon-led empty state
+function emptyState(icon,msg){return'<div class="empty-state">'+ic(icon)+'<div>'+msg+'</div></div>'}
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function stripExt(n){return String(n).replace(/\.[^.]+$/,'')}
 function getStyle(){return(PROFILE&&PROFILE.writing_style&&PROFILE.writing_style.trim())||DEFAULT_STYLE}
@@ -1282,10 +1288,10 @@ function loadHistory(){
   document.getElementById('hist-list-view').style.display='block';document.getElementById('hist-detail-view').style.display='none';
   var el=document.getElementById('hist-list');
   if(!sb||!USER){el.innerHTML='<div style="font-size:13px;color:var(--text2)"><a href="login.html" style="color:var(--green)">Sign in</a> to see your history.</div>';return}
-  el.innerHTML='<div style="font-size:13px;color:var(--text2)">Loading…</div>';
+  el.innerHTML=skeletonRows(4);
   sb.from('sessions').select('*').eq('teacher_id',USER.id).order('created_at',{ascending:false}).then(function(res){
     HIST_SESSIONS=res.data||[];
-    if(!HIST_SESSIONS.length){el.innerHTML='<div style="font-size:13px;color:var(--text2)">No past sessions yet.</div>';return}
+    if(!HIST_SESSIONS.length){el.innerHTML=emptyState('layers','No marking sessions yet. Head to the Mark tab to mark your first set of student work.');return}
     var areas=HIST_SESSIONS.map(function(s){return s.learning_area||''}).filter(function(a,i,arr){return a&&arr.indexOf(a)===i}).sort();
     el.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">'
       +'<input type="text" id="hist-search" placeholder="Search sessions…" oninput="renderHistList()" aria-label="Search sessions" style="flex:1;min-width:160px;font-size:13px;padding:8px 11px">'
@@ -1309,9 +1315,9 @@ function renderHistList(){
 function loadHistDetail(id,name){
   document.getElementById('hist-list-view').style.display='none';document.getElementById('hist-detail-view').style.display='block';
   document.getElementById('hist-detail-name').textContent=name;
-  var el=document.getElementById('hist-detail-results');el.innerHTML='<div style="font-size:13px;color:var(--text2)">Loading…</div>';
+  var el=document.getElementById('hist-detail-results');el.innerHTML=skeletonRows(3);
   sb.from('student_results').select('*').eq('session_id',id).order('file_name',{ascending:true}).then(function(res){
-    if(!res.data||!res.data.length){el.innerHTML='<div style="font-size:13px;color:var(--text2)">No results found.</div>';return}
+    if(!res.data||!res.data.length){el.innerHTML=emptyState('layers','No results saved for this session.');return}
     renderResultSet(res.data.map(normResult),el);
   }).catch(function(e){el.innerHTML='<div class="err">'+esc(e.message)+'</div>'});
 }
@@ -1403,12 +1409,13 @@ function renderCommentResults(out,label){
 function loadClassList(){
   var el=document.getElementById('class-list-content');
   if(!sb||!USER){el.innerHTML='<div style="font-size:13px;color:var(--text2)"><a href="login.html" style="color:var(--green)">Sign in</a> to manage your class list.</div>';return}
+  el.innerHTML=skeletonRows(4);
   sb.from('students').select('*').eq('teacher_id',USER.id).order('name').then(function(res){
     var data=res.data||[];
-    if(!data.length){el.innerHTML='<div style="font-size:13px;color:var(--text2)">No students added yet.</div>';return}
+    if(!data.length){el.innerHTML=emptyState('users','No students yet. Add them above, or import a CSV — pronouns and year levels power your comments and student hubs.');return}
     var gC={boy:'background:#e6f1fb;color:#185fa5',girl:'background:#fce8f3;color:#8b1a5e',nonbinary:'background:#f0ede8;color:#5a564e'};
     var gL={boy:'He/him',girl:'She/her',nonbinary:'They/them'};
-    el.innerHTML='<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+data.length+' students — click to open hub</div>'+data.map(function(s){var gb=s.gender&&gL[s.gender]?'<span style="font-size:10px;padding:2px 7px;border-radius:100px;font-weight:600;'+gC[s.gender]+'">'+gL[s.gender]+'</span>':'';return'<div class="stu-item" style="cursor:pointer" onclick="openHub(\''+s.id+'\',\''+esc(s.name)+'\')"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0">'+esc(s.name[0].toUpperCase())+'</div><div style="flex:1;min-width:0"><div style="font-weight:500;font-size:14px">'+esc(s.name)+'</div><div style="font-size:12px;color:var(--text2);margin-top:1px">'+esc(s.year_level||'No year set')+'</div></div>'+gb+'<button class="btn btn-sm" onclick="event.stopPropagation();openHub(\''+s.id+'\',\''+esc(s.name)+'\')" aria-label="Open hub for '+esc(s.name)+'">'+ic('external')+'Hub</button><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delStu(\''+s.id+'\')" style="margin-left:4px" aria-label="Remove '+esc(s.name)+'">×</button></div>'}).join('');
+    el.innerHTML='<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+data.length+' students — click to open hub</div>'+data.map(function(s){var gb=s.gender&&gL[s.gender]?'<span style="font-size:10px;padding:2px 7px;border-radius:100px;font-weight:600;'+gC[s.gender]+'">'+gL[s.gender]+'</span>':'';return'<div class="stu-item" id="stu-'+s.id+'" style="cursor:pointer" onclick="openHub(\''+s.id+'\',\''+esc(s.name)+'\')"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0">'+esc(s.name[0].toUpperCase())+'</div><div style="flex:1;min-width:0"><div style="font-weight:500;font-size:14px">'+esc(s.name)+'</div><div style="font-size:12px;color:var(--text2);margin-top:1px">'+esc(s.year_level||'No year set')+'</div></div>'+gb+'<button class="btn btn-sm" onclick="event.stopPropagation();openHub(\''+s.id+'\',\''+esc(s.name)+'\')" aria-label="Open hub for '+esc(s.name)+'">'+ic('external')+'Hub</button><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delStu(\''+s.id+'\',\''+esc(s.name)+'\')" style="margin-left:4px" aria-label="Remove '+esc(s.name)+'">×</button></div>'}).join('');
   }).catch(function(e){el.innerHTML='<div class="err">'+esc(e.message)+'</div>'});
 }
 function openHub(id,name){
@@ -1430,7 +1437,18 @@ function addStu(){
     })
     .catch(function(e){alert('Could not save: '+e.message);if(btn){btn.disabled=false;btn.textContent='Add'}})
 }
-function delStu(id){if(!confirm('Remove this student?'))return;sb.from('students').delete().eq('id',id).then(function(res){if(res.error){alert('Could not remove: '+res.error.message);return}loadClassList();loadClassStudents()}).catch(function(e){alert(e.message)})}
+function delStu(id,name){
+  var row=document.getElementById('stu-'+id);if(row)row.style.opacity='0.4';
+  var undone=false;
+  var timer=setTimeout(function(){
+    if(undone)return;
+    sb.from('students').delete().eq('id',id).then(function(res){
+      if(res.error){if(row)row.style.opacity='';showToast('Could not remove: '+res.error.message,'err');return}
+      loadClassList();loadClassStudents();
+    }).catch(function(e){if(row)row.style.opacity='';showToast(e.message,'err')});
+  },4000);
+  showToast(ic('trash')+'Removed '+esc(name||'student')+' — marking history kept','neutral',5000,'Undo',function(){undone=true;clearTimeout(timer);if(row)row.style.opacity=''});
+}
 function importClassCSV(){
   var f=document.getElementById('class-csv').files[0];if(!f){alert('Please select a CSV file.');return}
   if(!sb||!USER){alert('Sign in to import students.');return}
