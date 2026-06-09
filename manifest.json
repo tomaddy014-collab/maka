@@ -1,6 +1,6 @@
 {
-  "name": "Maka — AI Marking Tool",
-  "short_name": "Maka",
+  "name": "Māka — AI Marking Tool",
+  "short_name": "Māka",
   "description": "AI-powered student marking and feedback for teachers",
   "start_url": "/tool.html",
   "scope": "/",
