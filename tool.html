@@ -86,7 +86,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .btn-danger{color:var(--danger-text);border-color:var(--danger-text)}.btn-danger:hover{background:var(--danger-bg)}
 .btn-sm{padding:6px 12px;font-size:12px}
 .btn-row{display:flex;gap:8px;flex-wrap:wrap}
-.flist{list-style:none;margin-top:12px}
+.flist{list-style:none;margin-top:12px;max-height:340px;overflow-y:auto}
 .fitem{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:.5px solid var(--border);font-size:13px}
 .fitem:last-child{border-bottom:none}
 .fname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -602,8 +602,8 @@ function renderFiles(){
   var el=document.getElementById('flist'),cnt=document.getElementById('upload-count');
   var dze=document.getElementById('dropzone');if(dze)dze.classList.toggle('empty-pulse',!files.length);
   if(!files.length){el.innerHTML='';cnt.style.display='none';return}
-  el.innerHTML=files.slice(0,10).map(function(f,i){return'<li class="fitem"><span style="font-size:15px">'+fileIcon(f)+'</span><span class="fname">'+esc(f.name)+'</span>'+fileTag(f)+'<span class="fsize">'+fmt(f.size)+'</span><button class="xbtn" data-i="'+i+'">×</button></li>'}).join('');
-  cnt.textContent=files.length>10?'...and '+(files.length-10)+' more ('+files.length+' total)':files.length+' file'+(files.length!==1?'s':'')+' ready';
+  el.innerHTML=files.map(function(f,i){return'<li class="fitem"><span style="font-size:15px">'+fileIcon(f)+'</span><span class="fname">'+esc(f.name)+'</span>'+fileTag(f)+'<span class="fsize">'+fmt(f.size)+'</span><button class="xbtn" data-i="'+i+'">×</button></li>'}).join('');
+  cnt.textContent=files.length+' file'+(files.length!==1?'s':'')+' ready';
   cnt.style.display='block';
   el.querySelectorAll('.xbtn').forEach(function(b){b.onclick=function(){files.splice(parseInt(b.dataset.i),1);renderFiles();updMark()}});
 }
