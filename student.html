@@ -314,6 +314,7 @@ var sb=null,USER=null,STUDENT=null,ALL_RESULTS=[],ALL_COMMENTS=[];
 
 // ── Inline SVG icon set (Lucide-style, stroke=currentColor) ──────────────────
 var ICONS={
+  link:'<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7.1-7.1l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7.1 7.1l1.7-1.7"/>',
   edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>',
   trash:'<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
@@ -420,6 +421,7 @@ function renderPage(){
       <div class="btn-row">
         <button class="btn btn-sm" onclick="openEdit()">${ic('edit')} Edit</button>
         <button class="btn btn-sm" onclick="downloadReportPDF()">${ic('download')} Report PDF</button>
+        <button class="btn btn-sm" id="share-btn" onclick="copyStudentLink()">${ic('link')} Copy student link</button>
         <button class="btn btn-sm btn-danger" onclick="deleteStudent()">${ic('trash')} Remove</button>
       </div>
     </div>
@@ -805,6 +807,22 @@ function saveEdit(){
     closeModal();renderPage();
     if(ALL_RESULTS.length>=2)setTimeout(drawChart,50);
   }).catch(function(e){alert(e.message)});
+}
+async function copyStudentLink(){
+  var btn=document.getElementById('share-btn');
+  try{
+    var r=await sb.from('students').select('share_code').eq('id',STUDENT.id).maybeSingle();
+    var code=r&&r.data?r.data.share_code:null;
+    if(!code){
+      // Generate one client-side if the column exists but is empty
+      code=btoa(String.fromCharCode.apply(null,crypto.getRandomValues(new Uint8Array(12)))).replace(/\//g,'x').replace(/\+/g,'y');
+      var u=await sb.from('students').update({share_code:code}).eq('id',STUDENT.id);
+      if(u.error)throw new Error('Run the student hub SQL setup first (supabase-student-hub.sql).');
+    }
+    var link=location.origin+location.pathname.replace(/[^/]*$/,'')+'myhub.html?c='+encodeURIComponent(code);
+    await navigator.clipboard.writeText(link);
+    if(btn){var old=btn.innerHTML;btn.innerHTML=ic('link')+' Copied!';setTimeout(function(){btn.innerHTML=old},1800)}
+  }catch(e){alert('Could not create the link: '+e.message)}
 }
 function deleteStudent(){
   if(!confirm('Remove '+STUDENT.name+' from your class list? Their marking history will be kept.'))return;

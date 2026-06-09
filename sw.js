@@ -1,7 +1,8 @@
-var CACHE = 'maka-v1';
+var CACHE = 'maka-v2';
 var ASSETS = [
   '/tool.html',
   '/student.html',
+  '/myhub.html',
   '/login.html',
   '/index.html',
   '/manifest.json',

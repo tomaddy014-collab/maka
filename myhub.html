@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Māka — My Learning</title>
+<script>
+(function(){try{
+  var t=localStorage.getItem('maka-theme');
+  if(!t)t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+  if(t==='dark')document.documentElement.setAttribute('data-theme','dark');
+}catch(e){}})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--bg2:#f7f6f3;--bg3:#f5f0e8;
+  --text:#1a1a1a;--text2:#6b6b6b;--text3:#9a9a9a;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.16);
+  --green:#2d5a27;--green-bg:#e8f0e6;
+  --warn-bg:#faeeda;--warn-text:#854f0b;
+  --danger-bg:#fcebeb;--danger-text:#a32d2d;
+  --info-bg:#e6f1fb;--info-text:#185fa5;
+  --gold:#c8840a;--gold-soft:rgba(200,132,10,0.12);
+  --r:12px;--rs:8px;--r-lg:18px;
+  --nav-bg:rgba(245,240,232,0.72);
+  --sh-sm:0 1px 2px rgba(15,14,12,0.04),0 1px 3px rgba(15,14,12,0.04);
+  --sh-md:0 8px 28px -10px rgba(15,14,12,0.12);
+  --ease:cubic-bezier(.25,.8,.25,1)}
+[data-theme="dark"]{
+  --bg:#1c1b19;--bg2:#242220;--bg3:#161513;
+  --text:#ece9e3;--text2:#a9a49b;--text3:#7d7972;
+  --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.16);
+  --green:#7fb87a;--green-bg:#23302180;
+  --warn-bg:#3a2e1a;--warn-text:#e0b878;
+  --danger-bg:#3a2020;--danger-text:#e89a9a;
+  --info-bg:#1d2c3a;--info-text:#7fb0e0;
+  --gold:#e0a52a;--gold-soft:rgba(224,165,42,0.16);
+  --nav-bg:rgba(22,21,19,0.78);
+  --sh-md:0 8px 28px -10px rgba(0,0,0,0.5);--sh-sm:0 1px 2px rgba(0,0,0,0.3)}
+[data-theme="dark"] .logo>span{color:#ece9e3!important}
+[data-theme="dark"] .logo span span span{background:#ece9e3!important}
+body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg3);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+@keyframes riseIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.ico{width:1em;height:1em;display:inline-block;vertical-align:-0.14em;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav{background:var(--nav-bg);backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);border-bottom:1px solid var(--border);padding:0 1.5rem;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.logo{font-family:'Fraunces',serif;font-size:20px;font-weight:800;color:#0f0e0c;text-decoration:none;letter-spacing:-.02em}
+.icon-btn{background:none;border:none;cursor:pointer;color:var(--text2);width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:18px;transition:background .2s var(--ease),color .2s var(--ease)}
+.icon-btn:hover{background:var(--bg2);color:var(--text)}
+.main{max-width:680px;margin:0 auto;padding:1.75rem 1.25rem 4rem;animation:riseIn .4s var(--ease)}
+.card{background:var(--bg);border:.5px solid var(--border);border-radius:var(--r-lg);padding:1.5rem;box-shadow:var(--sh-sm);margin-bottom:1rem}
+.greet{font-family:'Fraunces',serif;font-size:clamp(26px,6vw,34px);font-weight:800;letter-spacing:-.02em;margin-bottom:.25rem}
+.greet em{color:var(--green);font-style:normal}
+.greet-sub{font-size:14px;color:var(--text2);margin-bottom:1.5rem}
+.hero{text-align:center;padding:2rem 1.5rem}
+.hero-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:.5rem}
+.hero-num{font-family:'Fraunces',serif;font-size:64px;font-weight:800;line-height:1;color:var(--green)}
+.hero-den{font-size:24px;color:var(--text3);font-weight:600}
+.hero-grade{display:inline-flex;align-items:center;gap:6px;margin-top:.75rem;padding:6px 16px;border-radius:100px;font-size:14px;font-weight:600}
+.g-exceeds{background:var(--gold-soft);color:var(--gold)}
+.g-achieved{background:var(--green-bg);color:var(--green)}
+.g-approaching{background:var(--warn-bg);color:var(--warn-text)}
+.g-beginning{background:var(--info-bg);color:var(--info-text)}
+.hero-sub{font-size:13px;color:var(--text2);margin-top:.5rem}
+.sect-title{font-weight:600;font-size:15px;display:flex;align-items:center;gap:8px;margin-bottom:.9rem}
+.ico-chip{width:28px;height:28px;border-radius:8px;background:var(--green-bg);color:var(--green);display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.tip{display:flex;gap:10px;align-items:flex-start;padding:.7rem .9rem;border-radius:var(--r);background:var(--bg2);font-size:14px;line-height:1.55;margin-bottom:.6rem}
+.tip .ico{margin-top:3px;color:var(--green);flex-shrink:0}
+.prog-row{display:flex;align-items:center;gap:10px;margin-bottom:.65rem;font-size:13px}
+.prog-lbl{width:130px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.prog-track{flex:1;height:10px;background:var(--bg2);border-radius:100px;overflow:hidden}
+.prog-fill{height:100%;background:var(--green);border-radius:100px;transition:width .8s var(--ease)}
+.prog-val{width:44px;text-align:right;font-weight:600;color:var(--text2);flex-shrink:0}
+.crit-dots{display:flex;gap:3px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--border2)}
+.dot.on{background:var(--green)}
+.work-item{padding:.9rem 0;border-bottom:.5px solid var(--border)}
+.work-item:last-child{border-bottom:none}
+.work-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:.4rem}
+.work-name{font-weight:600;font-size:14px}
+.work-meta{font-size:12px;color:var(--text2)}
+.pill{padding:3px 11px;border-radius:100px;font-size:12px;font-weight:600;flex-shrink:0}
+.crit-line{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);margin-top:3px}
+.crit-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty{text-align:center;padding:3rem 1rem;color:var(--text2);font-size:14px}
+.empty .ico{font-size:32px;color:var(--text3);display:block;margin:0 auto .75rem}
+.err-box{background:var(--danger-bg);color:var(--danger-text);border-radius:var(--r);padding:1rem 1.25rem;font-size:14px;line-height:1.5}
+footer{text-align:center;font-size:12px;color:var(--text3);padding:0 1rem 2.5rem}
+</style>
+</head>
+<body>
+
+<nav>
+<a class="logo" style="text-decoration:none;display:inline-block;position:relative;padding-bottom:7px">
+    <span style="font-family:'Fraunces',Georgia,serif;font-size:28px;font-weight:900;color:#0f0e0c;letter-spacing:-0.02em;line-height:1;white-space:nowrap">m<span style="position:relative;display:inline-block"><span style="position:absolute;top:2px;left:50%;transform:translateX(-50%);width:55%;height:2.5px;background:#0f0e0c;border-radius:1px"></span>a</span>ka</span>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190 20" style="position:absolute;bottom:-3px;left:0;width:100%;height:20px;pointer-events:none">
+  <defs><linearGradient id="fg_m1" x1="100%" y1="0%" x2="0%" y2="0%">
+    <stop offset="0%" style="stop-color:#f0b429;stop-opacity:1"/>
+    <stop offset="65%" style="stop-color:#d4a017;stop-opacity:0.65"/>
+    <stop offset="100%" style="stop-color:#d4a017;stop-opacity:0.03"/>
+  </linearGradient></defs>
+  <path d="M 183 7 C 150 11, 90 15, 30 16 C 12 16, 2 14, 0 12" fill="none" stroke="url(#fg_m1)" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 176 6 C 171 1, 164 0, 156 1" fill="none" stroke="#f0b429" stroke-width="1" stroke-linecap="round" opacity="0.9"/>
+  <path d="M 162 8 C 156 3, 149 2, 141 3" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.8"/>
+  <path d="M 147 9 C 141 5, 134 4, 126 5" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.72"/>
+  <path d="M 131 10 C 125 7, 118 6, 110 7" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.62"/>
+  <path d="M 114 11 C 108 8, 101 8, 93 8" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.52"/>
+  <path d="M 96 12 C 90 10, 83 9, 75 10" fill="none" stroke="#f0b429" stroke-width="0.7" stroke-linecap="round" opacity="0.42"/>
+  <path d="M 77 12 C 71 11, 64 10, 56 11" fill="none" stroke="#f0b429" stroke-width="0.6" stroke-linecap="round" opacity="0.32"/>
+  <path d="M 174 8 C 169 13, 162 15, 154 14" fill="none" stroke="#f0b429" stroke-width="1" stroke-linecap="round" opacity="0.8"/>
+  <path d="M 159 9 C 154 14, 147 16, 139 15" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.72"/>
+  <path d="M 144 10 C 139 15, 132 17, 124 16" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.64"/>
+  <path d="M 128 11 C 123 16, 116 17, 108 16" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.55"/>
+  <path d="M 111 12 C 106 16, 99 17, 91 16" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.46"/>
+  <path d="M 93 13 C 88 16, 81 17, 73 16" fill="none" stroke="#f0b429" stroke-width="0.7" stroke-linecap="round" opacity="0.36"/>
+  <path d="M 73 13 C 68 16, 61 16, 53 15" fill="none" stroke="#f0b429" stroke-width="0.6" stroke-linecap="round" opacity="0.26"/>
+  <path d="M 3 13 C 2 12, 1 11, 0.5 10" fill="none" stroke="#ede7d9" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 1 11 C 0.5 10, 0 9.5, 0 9" fill="none" stroke="#f5f0e8" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
+  </a>
+  <button id="theme-btn" class="icon-btn" onclick="toggleTheme()" aria-label="Toggle dark mode"></button>
+</nav>
+
+<div class="main" id="main">
+  <div class="empty"><div style="font-size:14px;color:var(--text2)">Loading your learning page…</div></div>
+</div>
+<footer>Māka — your learning, your progress 🌱</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var SURL='https://agwqenhduoxxeemklmpr.supabase.co';
+var SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnd3FlbmhkdW94eGVlbWtsbXByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MzkxNDAsImV4cCI6MjA5NDAxNTE0MH0.TZkrRgForSDTzQ4vZ9j36WncEAVBx4reG-ADcoohY8o';
+var CODE=new URLSearchParams(location.search).get('c')||'';
+var sb=null;
+
+var ICONS={
+  award:'<circle cx="12" cy="8" r="6"/><path d="M15.5 13l1.5 8-5-3-5 3 1.5-8"/>',
+  trophy:'<path d="M6 9a6 6 0 0 0 12 0V3H6zM6 5H3a3 3 0 0 0 3 5M18 5h3a3 3 0 0 1-3 5M12 15v4M8 21h8"/>',
+  star:'<path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>',
+  arrow:'<path d="M5 12h14M12 5l7 7-7 7"/>',
+  chart:'<path d="M3 3v18h18M8 17V9m5 8V5m5 12v-6"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4"/>',
+  moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+  book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5zM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/>',
+  sprout:'<path d="M12 22V10M12 10c0-3-2.5-5-6-5 0 3.5 2.5 5 6 5zm0 0c0-4 3-6 7-6 0 4.5-3 6-7 6z"/>',
+  alert:'<circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/>'
+};
+function ic(n){return ICONS[n]?'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'+ICONS[n]+'</svg>':''}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function fmtDate(d){try{return new Date(d).toLocaleDateString('en-NZ',{day:'numeric',month:'short'})}catch(e){return''}}
+
+function applyThemeLabel(){var b=document.getElementById('theme-btn');if(!b)return;var dark=document.documentElement.getAttribute('data-theme')==='dark';b.innerHTML=dark?ic('sun'):ic('moon')}
+function toggleTheme(){
+  var dark=document.documentElement.getAttribute('data-theme')==='dark';
+  if(dark){document.documentElement.removeAttribute('data-theme');try{localStorage.setItem('maka-theme','light')}catch(e){}}
+  else{document.documentElement.setAttribute('data-theme','dark');try{localStorage.setItem('maka-theme','dark')}catch(e){}}
+  applyThemeLabel();
+}
+applyThemeLabel();
+
+function showErr(msg){document.getElementById('main').innerHTML='<div class="err-box">'+ic('alert')+' '+esc(msg)+'</div>'}
+
+function gradeCls(g){g=g||'';return g.includes('Exceeds')?'g-exceeds':g.includes('Achieved')?'g-achieved':g.includes('Approaching')?'g-approaching':'g-beginning'}
+function gradeWord(g){g=g||'';return g.includes('Exceeds')?'Exceeding expectations — amazing!':g.includes('Achieved')?'Achieved — well done!':g.includes('Approaching')?'Almost there — keep going!':g?'Just getting started — kia kaha!':''}
+
+async function load(){
+  if(!CODE){showErr('This link is missing its code. Ask your teacher to send you your learning link again.');return}
+  try{
+    sb=supabase.createClient(SURL,SKEY);
+    var res=await sb.rpc('student_hub',{code:CODE});
+    if(res.error)throw new Error(res.error.message);
+    var d=res.data||{};
+    if(!d.student){showErr('We couldn’t find your page. Ask your teacher for a new link.');return}
+    render(d.student,d.results||[]);
+  }catch(e){showErr('Something went wrong loading your page: '+e.message)}
+}
+
+function render(stu,results){
+  var first=esc((stu.name||'').split(' ')[0]);
+  document.title='Māka — '+(stu.name||'My Learning');
+  var latest=results.length?results[results.length-1]:null;
+  var hero='';
+  if(latest){
+    var tot=parseInt((latest.criteria_total||'0').split('/')[0])||0;
+    hero='<div class="card hero">'
+      +'<div class="hero-label">'+ic('award')+'Your latest result</div>'
+      +'<div class="hero-num">'+tot+'<span class="hero-den">/25</span></div>'
+      +'<div class="hero-grade '+gradeCls(latest.overall_score)+'">'+ic('trophy')+esc(gradeWord(latest.overall_score))+'</div>'
+      +'<div class="hero-sub">'+esc(latest.session_name||'')+(latest.learning_area?' · '+esc(latest.learning_area):'')+'</div>'
+    +'</div>';
+  }else{
+    hero='<div class="card empty">'+ic('sprout')+'No marked work yet — your results will show up here once your teacher marks your mahi.</div>';
+  }
+
+  var tips='';
+  if(latest){
+    var t1=latest.strengths||'';
+    var t2=(latest.next_steps&&latest.next_steps[0])||'';
+    if(t1||t2){
+      tips='<div class="card"><div class="sect-title"><span class="ico-chip">'+ic('star')+'</span>Your feedback</div>'
+        +(t1?'<div class="tip">'+ic('star')+'<div><strong>What you did well:</strong> '+esc(t1)+'</div></div>':'')
+        +(t2?'<div class="tip">'+ic('arrow')+'<div><strong>Your next step:</strong> '+esc(t2)+'</div></div>':'')
+      +'</div>';
+    }
+  }
+
+  var prog='';
+  if(results.length>=2){
+    prog='<div class="card"><div class="sect-title"><span class="ico-chip">'+ic('chart')+'</span>Your progress</div>'
+      +results.map(function(r){
+        var t=parseInt((r.criteria_total||'0').split('/')[0])||0;
+        return'<div class="prog-row"><div class="prog-lbl" title="'+esc(r.session_name||'')+'">'+esc(r.session_name||'Session')+'</div><div class="prog-track"><div class="prog-fill" style="width:'+Math.round(t/25*100)+'%"></div></div><div class="prog-val">'+t+'/25</div></div>';
+      }).join('')
+    +'</div>';
+  }
+
+  var work='';
+  if(results.length){
+    var revd=results.slice().reverse();
+    work='<div class="card"><div class="sect-title"><span class="ico-chip">'+ic('book')+'</span>All your marked work</div>'
+      +revd.map(function(r){
+        var crits=(r.criteria||[]).map(function(c){
+          var s=parseInt(c.score)||0;
+          var dots='';for(var i=1;i<=5;i++)dots+='<span class="dot'+(i<=s?' on':'')+'"></span>';
+          return'<div class="crit-line"><span class="crit-name">'+esc((c.name||'').split('—')[0].trim())+'</span><span class="crit-dots">'+dots+'</span></div>';
+        }).join('');
+        return'<div class="work-item"><div class="work-hd"><div><div class="work-name">'+esc(r.session_name||'Session')+'</div><div class="work-meta">'+fmtDate(r.created_at)+(r.learning_area?' · '+esc(r.learning_area):'')+'</div></div><span class="pill '+gradeCls(r.overall_score)+'">'+esc(r.criteria_total||'')+'</span></div>'+crits+'</div>';
+      }).join('')
+    +'</div>';
+  }
+
+  document.getElementById('main').innerHTML=
+    '<div class="greet">Kia ora, <em>'+first+'</em>!</div>'
+    +'<div class="greet-sub">This is your learning page — see how you’re going and what to work on next.</div>'
+    +hero+tips+prog+work;
+
+  requestAnimationFrame(function(){requestAnimationFrame(function(){document.querySelectorAll('.prog-fill').forEach(function(el){var w=el.style.width;el.style.width='0';requestAnimationFrame(function(){el.style.width=w})})})});
+}
+load();
+</script>
+</body>
+</html>
