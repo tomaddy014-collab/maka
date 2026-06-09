@@ -321,6 +321,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         <div class="dd-sep"></div>
         <button class="dd-btn" onclick="showTab('settings');toggleDD()"><span data-ic="settings"></span>Settings</button>
         <button class="dd-btn" id="theme-btn" onclick="toggleTheme()" aria-label="Toggle dark mode"><span data-ic="moon"></span>Dark mode</button>
+        <button class="dd-btn" onclick="openShortcuts();toggleDD()"><span data-ic="keyboard"></span>Keyboard shortcuts</button>
         <div class="dd-sep"></div>
         <button class="dd-btn" id="dd-auth-btn" onclick="handleAuthBtn()">Sign in / Sign up</button>
       </div>
@@ -397,7 +398,10 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
   <div class="panel" id="panel-dashboard">
     <div class="card" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:1rem 1.25rem">
       <div style="font-weight:600;font-size:14px" id="dash-sess-label">Current session</div>
-      <select id="dash-sess-sel" style="font-size:13px;padding:6px 10px;width:auto" onchange="loadDashSess()"><option value="current">Current session</option></select>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" id="dash-export-btn" onclick="exportAllReportCards()"><span data-ic="download"></span>Download all report cards</button>
+        <select id="dash-sess-sel" style="font-size:13px;padding:6px 10px;width:auto" onchange="loadDashSess()"><option value="current">Current session</option></select>
+      </div>
     </div>
     <div id="dash-empty" class="card" style="text-align:center;padding:3rem;color:var(--text2)"><div class="empty-ico" style="margin-bottom:12px"><span data-ic="chart"></span></div><div style="font-weight:500;margin-bottom:6px">No results yet</div><div style="font-size:13px">Mark some student work first.</div></div>
     <div id="dash-content" style="display:none">
@@ -509,14 +513,16 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 
 <div class="modal-bg" id="rename-modal"><div class="modal"><div class="modal-title">Rename session</div><input type="text" id="rename-input" placeholder="Session name"><div class="modal-footer"><button class="btn" onclick="closeModal('rename-modal')">Cancel</button><button class="btn btn-p" onclick="confirmRename()">Rename</button></div></div></div>
 <div class="modal-bg" id="add-stu-modal"><div class="modal"><div class="modal-title">Add student</div><div class="field"><label class="lbl">Name</label><input type="text" id="new-stu-name" placeholder="Student name"></div><div class="grid2" style="margin-bottom:0"><div class="field"><label class="lbl">Year level</label><select id="new-stu-year"><option value="">Select</option><option>Year 1</option><option>Year 2</option><option>Year 3</option><option>Year 4</option><option>Year 5</option><option>Year 6</option><option>Year 7</option><option>Year 8</option><option>Year 9</option><option>Year 10</option></select></div><div class="field"><label class="lbl">Gender</label><select id="new-stu-gender"><option value="">Select</option><option value="boy">Boy (he/him)</option><option value="girl">Girl (she/her)</option><option value="nonbinary">Non-binary (they/them)</option></select></div></div><div class="modal-footer"><button class="btn" onclick="closeModal('add-stu-modal')">Cancel</button><button class="btn btn-p" onclick="addStu()">Add</button></div></div></div>
+<div class="modal-bg" id="shortcuts-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div class="modal-title">Keyboard shortcuts</div><div id="shortcuts-body" style="font-size:13px"></div><div class="modal-footer"><button class="btn btn-p" onclick="closeModal('shortcuts-modal')">Got it</button></div></div></div>
 <div class="print-out" id="print-out"></div>
 <div id="toast-wrap" aria-live="polite" aria-atomic="false"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
 var SURL='https://agwqenhduoxxeemklmpr.supabase.co';
 var SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnd3FlbmhkdW94eGVlbWtsbXByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MzkxNDAsImV4cCI6MjA5NDAxNTE0MH0.TZkrRgForSDTzQ4vZ9j36WncEAVBx4reG-ADcoohY8o';
-var sb=null,USER=null,PROFILE={};
+var sb=null,USER=null,PROFILE={},DASH_VIEW=[];
 var files=[],results=[],currentSessId=null,progressItems=[],currentCType='report',renameTargetId=null,CLASS_STUDENTS=[];
 
 var DEFAULT_STYLE="Ashton has demonstrated positive growth in his writing this term. He engaged enthusiastically with our unit on poetic forms, successfully using his creative mind to compose an excellent piece of poetry. He participated effectively in classroom debates, demonstrating strong verbal communication skills. He is encouraged to apply the same focus and energy he shows in group work to his individual assignments. Bennett has bravely embraced the challenge of improving his spelling and handwriting this term, diligently applying learned phonics patterns to his work. His engagement across both reading and writing is commendable, and he is encouraged to maintain this focus. Georgia has made pleasing progress in English this term, demonstrating a strong understanding of structure and form. Moving forward, she is encouraged to continue developing her collaborative skills. Harper has continued to make excellent progress in English this term. A noticeable highlight has been his growing sense of pride in his work. His sustained effort and pride in learning are commendable strengths to carry forward. Jessica has made noticeable progress in her writing this term. A highlight has been her involvement in an additional writing group which has helped her rediscover pride in her writing. Maintaining this confidence and continuing to expand on her ideas will strengthen her writing even further.";
@@ -557,7 +563,9 @@ var ICONS={
   x:'<path d="M18 6 6 18"/><path d="M6 6l12 12"/>',
   circle:'<circle cx="12" cy="12" r="9"/>',
   target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
-  grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>'
+  grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
+  keyboard:'<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
+  external:'<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/>'
 };
 function ic(name){return'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[name]||'')+'</svg>'}
 function showToast(msg,type,dur,undoLabel,undoCb){
@@ -1196,6 +1204,7 @@ function loadDashSess(){
 function heatColor(s){return s>=5?'#1f6b1c':s>=4?'#3a833a':s>=3?'#936a0a':s>=2?'#a85525':s>=1?'#9c2b2b':'#9a958c'}
 function renderDashboard(res){
   var v=(res||[]).filter(function(r){return!r._error&&(r.criteria||[]).length});
+  DASH_VIEW=v;
   if(!v.length){document.getElementById('dash-empty').style.display='block';document.getElementById('dash-content').style.display='none';return}
   document.getElementById('dash-empty').style.display='none';document.getElementById('dash-content').style.display='block';
   var tots=v.map(function(r){return(r.criteria||[]).map(function(c){return parseInt(c.score)||0}).reduce(function(a,b){return a+b},0)});
@@ -1341,7 +1350,7 @@ function loadClassList(){
     if(!data.length){el.innerHTML='<div style="font-size:13px;color:var(--text2)">No students added yet.</div>';return}
     var gC={boy:'background:#e6f1fb;color:#185fa5',girl:'background:#fce8f3;color:#8b1a5e',nonbinary:'background:#f0ede8;color:#5a564e'};
     var gL={boy:'He/him',girl:'She/her',nonbinary:'They/them'};
-    el.innerHTML='<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+data.length+' students — click to open hub</div>'+data.map(function(s){var gb=s.gender&&gL[s.gender]?'<span style="font-size:10px;padding:2px 7px;border-radius:100px;font-weight:600;'+gC[s.gender]+'">'+gL[s.gender]+'</span>':'';return'<div class="stu-item" style="cursor:pointer" onclick="openHub(\''+s.id+'\',\''+esc(s.name)+'\')"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0">'+esc(s.name[0].toUpperCase())+'</div><div style="flex:1;min-width:0"><div style="font-weight:500;font-size:14px">'+esc(s.name)+'</div><div style="font-size:12px;color:var(--text2);margin-top:1px">'+esc(s.year_level||'No year set')+'</div></div>'+gb+'<span style="font-size:12px;color:var(--text3)">→</span><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delStu(\''+s.id+'\')" style="margin-left:4px">×</button></div>'}).join('');
+    el.innerHTML='<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+data.length+' students — click to open hub</div>'+data.map(function(s){var gb=s.gender&&gL[s.gender]?'<span style="font-size:10px;padding:2px 7px;border-radius:100px;font-weight:600;'+gC[s.gender]+'">'+gL[s.gender]+'</span>':'';return'<div class="stu-item" style="cursor:pointer" onclick="openHub(\''+s.id+'\',\''+esc(s.name)+'\')"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0">'+esc(s.name[0].toUpperCase())+'</div><div style="flex:1;min-width:0"><div style="font-weight:500;font-size:14px">'+esc(s.name)+'</div><div style="font-size:12px;color:var(--text2);margin-top:1px">'+esc(s.year_level||'No year set')+'</div></div>'+gb+'<button class="btn btn-sm" onclick="event.stopPropagation();openHub(\''+s.id+'\',\''+esc(s.name)+'\')" aria-label="Open hub for '+esc(s.name)+'">'+ic('external')+'Hub</button><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delStu(\''+s.id+'\')" style="margin-left:4px" aria-label="Remove '+esc(s.name)+'">×</button></div>'}).join('');
   }).catch(function(e){el.innerHTML='<div class="err">'+esc(e.message)+'</div>'});
 }
 function openHub(id,name){
@@ -1418,6 +1427,86 @@ function exportCSV(){
   results.forEach(function(r){var ns=r.nextSteps||[];rows.push([r.fileName||'',r.overallScore||'',r.criteriaTotal||'',r.strengths||'',ns[0]||'',ns[1]||'',ns[2]||'',r.nzcReference||''])});
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(function(r){return r.map(function(v){return'"'+String(v).replace(/"/g,'""')+'"'}).join(',')}).join('\n')],{type:'text/csv'}));a.download='marking_results.csv';a.click();
 }
+// ── Bulk PDF export: one report card per student, all in one file ─────────────
+function exportAllReportCards(){
+  var v=DASH_VIEW||[];
+  if(!v.length){showToast('No results to export — mark some work first','warn');return}
+  var jsPDFns=window.jspdf||window.jsPDF;var JSP=jsPDFns&&(jsPDFns.jsPDF||jsPDFns);
+  if(!JSP){showToast('PDF library still loading — try again in a moment','warn');return}
+  var btn=document.getElementById('dash-export-btn');
+  if(btn){btn.disabled=true;btn.innerHTML=ic('download')+'Building PDF…'}
+  try{
+    var doc=new JSP({unit:'pt',format:'a4'});
+    var pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight(),m=48;
+    var gold=[200,132,10],ink=[26,26,26],grey=[107,107,107],green=[45,90,39];
+    var sessLabel=document.getElementById('dash-sess-label').textContent||'Marking session';
+    var task=(document.getElementById('task').value||'').trim();
+    v.forEach(function(r,idx){
+      if(idx>0)doc.addPage();
+      var y=56;
+      function need(h){if(y+h>ph-48){doc.addPage();y=56}}
+      var sc=(r.criteria||[]).map(function(c){return parseInt(c.score)||0});
+      var tot=sc.reduce(function(a,b){return a+b},0);
+      doc.setFont('helvetica','bold');doc.setFontSize(22);doc.setTextColor(ink[0],ink[1],ink[2]);
+      doc.text('Māka',m,y);
+      doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(grey[0],grey[1],grey[2]);
+      doc.text('NZC Feedback',pw-m,y,{align:'right'});
+      y+=10;doc.setDrawColor(220,216,210);doc.line(m,y,pw-m,y);y+=22;
+      doc.setFont('helvetica','bold');doc.setFontSize(18);doc.setTextColor(ink[0],ink[1],ink[2]);
+      doc.text(stripExt(r.fileName||r.file_name||'Student'),m,y);
+      doc.setTextColor(green[0],green[1],green[2]);
+      doc.text(tot+'/25',pw-m,y,{align:'right'});y+=18;
+      doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(grey[0],grey[1],grey[2]);
+      var meta=[r.overallScore||r.overall_score||'',sessLabel,task].filter(Boolean).join('  ·  ');
+      var ml=doc.splitTextToSize(meta,pw-m*2);doc.text(ml,m,y);y+=ml.length*12+6;
+      doc.setDrawColor(235,232,226);doc.line(m,y,pw-m,y);y+=18;
+      (r.criteria||[]).forEach(function(c){
+        need(18);var nm=(c.name||'').split('—')[0].trim();var s=parseInt(c.score)||0;
+        doc.setTextColor(ink[0],ink[1],ink[2]);doc.setFontSize(10);doc.text('•  '+nm,m+6,y);
+        doc.setTextColor(grey[0],grey[1],grey[2]);doc.text(s+'/5',pw-m,y,{align:'right'});y+=15;
+        if(c.comment){doc.setTextColor(110,110,110);doc.setFontSize(9);var cl=doc.splitTextToSize(c.comment,pw-m*2-14);need(cl.length*11);doc.text(cl,m+14,y);y+=cl.length*11+3;doc.setFontSize(10)}
+      });
+      var strengths=r.strengths||r.improve1||'';
+      var steps=r.nextSteps||(r.improve2?[r.improve2]:[]);
+      if(strengths){y+=6;need(16);doc.setTextColor(green[0],green[1],green[2]);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text('STRENGTHS',m+6,y);y+=13;doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(80,80,80);var sl=doc.splitTextToSize(strengths,pw-m*2-12);need(sl.length*13);doc.text(sl,m+6,y);y+=sl.length*13+4}
+      if(steps&&steps.length){y+=4;need(16);doc.setTextColor(gold[0],gold[1],gold[2]);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text('NEXT STEPS',m+6,y);y+=13;doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(80,80,80);steps.forEach(function(t){var tl=doc.splitTextToSize('– '+t,pw-m*2-12);need(tl.length*13+4);doc.text(tl,m+6,y);y+=tl.length*13+2})}
+    });
+    var fname=sessLabel.split('·')[0].trim().replace(/\s+/g,'-')||'class';
+    doc.save(fname+'-report-cards.pdf');
+    showToast('Exported '+v.length+' report card'+(v.length!==1?'s':''),'ok');
+  }catch(e){showToast('Could not generate PDF: '+(e.message||e),'err')}
+  if(btn){btn.disabled=false;btn.innerHTML=ic('download')+'Download all report cards'}
+}
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+var SHORTCUTS=[
+  {keys:['1'],label:'Go to Mark',act:function(){showTab('mark')}},
+  {keys:['2'],label:'Go to Dashboard',act:function(){showTab('dashboard')}},
+  {keys:['3'],label:'Go to History',act:function(){showTab('history')}},
+  {keys:['4'],label:'Go to Comments',act:function(){showTab('comments')}},
+  {keys:['5'],label:'Go to Compare',act:function(){showTab('compare')}},
+  {keys:['6'],label:'Go to Class',act:function(){showTab('class')}},
+  {keys:['m'],label:'Mark all uploaded files',act:function(){var b=document.getElementById('markbtn');if(b&&!b.disabled)b.click()}},
+  {keys:['g'],label:'Build / open dashboard export',act:function(){showTab('dashboard');setTimeout(exportAllReportCards,150)}},
+  {keys:['?'],label:'Show this help',act:function(){openShortcuts()}},
+  {keys:['Escape'],label:'Close any open dialog',act:null}
+];
+function openShortcuts(){
+  var body=document.getElementById('shortcuts-body');
+  body.innerHTML='<div style="display:flex;flex-direction:column;gap:8px">'+SHORTCUTS.map(function(s){return'<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="color:var(--text2)">'+esc(s.label)+'</span>'+s.keys.map(function(k){return'<kbd style="font-family:monospace;font-size:12px;background:var(--bg2);border:.5px solid var(--border2);border-radius:5px;padding:2px 8px;min-width:22px;text-align:center">'+esc(k==='Escape'?'Esc':k)+'</kbd>'}).join('')+'</div>'}).join('')+'</div>';
+  openModal('shortcuts-modal');
+}
+document.addEventListener('keydown',function(e){
+  // Never hijack typing in fields, and respect modifier combos (browser shortcuts)
+  var t=e.target,tag=(t&&t.tagName||'').toLowerCase();
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  if(tag==='input'||tag==='textarea'||tag==='select'||(t&&t.isContentEditable))return;
+  if(e.key==='Escape'){document.querySelectorAll('.modal-bg.open').forEach(function(mb){mb.classList.remove('open')});return}
+  var k=e.key;
+  var match=SHORTCUTS.filter(function(s){return s.act}).find(function(s){return s.keys.indexOf(k)!==-1});
+  if(match){e.preventDefault();match.act()}
+});
+
 (function(){var nv=document.querySelector('nav');if(!nv)return;window.addEventListener('scroll',function(){nv.classList.toggle('scrolled',window.scrollY>4)},{passive:true})})();
 if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){})}
 </script>
