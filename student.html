@@ -432,7 +432,7 @@ function renderSessions(){
         +((i1||i2)?'<div class="slbl">How to improve</div>':'')
         +(i1?'<div class="sbox improve" style="margin-bottom:6px">💡 '+esc(i1)+'</div>':'')
         +(i2?'<div class="sbox improve">💡 '+esc(i2)+'</div>':'')
-        +(r.pdf_path?'<button class="btn btn-green view-work" onclick="viewPDF(''+esc(r.pdf_path||'')+'',this)">📄 View your work</button>':'')
+        +(r.pdf_path?'<button class="btn btn-green view-work" onclick="viewPDF(\''+esc(r.pdf_path||'')+'\',this)">📄 View your work</button>':'')
       +'</div>'
     +'</div>';
   }).join('');

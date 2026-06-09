@@ -566,8 +566,7 @@ async function buildRubric(){
     'CRITERION 2 — [Name] (5 marks)',
     '1 — [descriptor]',
     '...and so on for all 5 criteria'
-  ].join('
-');
+  ].join('\n');
   try{
     var raw=await gemini(key,[{text:prompt}]);
     document.getElementById('rubric').value=raw.trim();
