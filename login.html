@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Māka — Sign in</title>
+<script>
+(function(){try{
+  var t=localStorage.getItem('maka-theme');
+  if(!t)t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+  if(t==='dark')document.documentElement.setAttribute('data-theme','dark');
+}catch(e){}})();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -15,6 +22,16 @@
   --danger:#a32d2d;--danger-bg:#fcebeb;
   --border:rgba(15,14,12,0.14);
   --ease:cubic-bezier(0.25,0.46,0.45,0.94);--ease-spring:cubic-bezier(.16,1,.3,1)}
+[data-theme="dark"]{
+  --green:#7fb87a;--green-bg:#23302180;
+  --paper:#161513;--paper-dark:#242220;
+  --ink:#ece9e3;--ink-light:#c9c5bd;--text2:#a9a49b;
+  --gold:#e0a52a;--gold-soft:rgba(224,165,42,0.16);
+  --danger:#e89a9a;--danger-bg:#3a2020;
+  --border:rgba(255,255,255,0.16);
+}
+[data-theme="dark"] .logo>span{color:#ece9e3!important}
+[data-theme="dark"] .logo span span span{background:#ece9e3!important}
 html{scroll-behavior:smooth}
 body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 1.25rem;position:relative}
 

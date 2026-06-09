@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Māka — NZC Student Work Marker</title>
+<script>
+(function(){try{
+  var t=localStorage.getItem('maka-theme');
+  if(!t)t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+  if(t==='dark')document.documentElement.setAttribute('data-theme','dark');
+}catch(e){}})();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -17,13 +24,29 @@
   --info-bg:#e6f1fb;--info-text:#185fa5;
   --gold:#c8840a;--gold-soft:rgba(200,132,10,0.12);
   --r:10px;--rs:6px;
+  --nav-bg:rgba(245,240,232,0.72);--shadow:rgba(15,14,12,0.12);--scrim:rgba(0,0,0,0.4);
 }
+[data-theme="dark"]{
+  --bg:#1c1b19;--bg2:#242220;--bg3:#161513;
+  --text:#ece9e3;--text2:#a9a49b;--text3:#7d7972;
+  --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.18);
+  --green:#7fb87a;--green-bg:#23302180;
+  --warn-bg:#3a2e1a;--warn-text:#e0b878;
+  --danger-bg:#3a2020;--danger-text:#e89a9a;
+  --info-bg:#1d2c3a;--info-text:#7fb0e0;
+  --gold:#e0a52a;--gold-soft:rgba(224,165,42,0.16);
+  --nav-bg:rgba(22,21,19,0.78);--shadow:rgba(0,0,0,0.5);--scrim:rgba(0,0,0,0.6);
+}
+/* Recolour the locked logo text + macron for dark surfaces (CSS only, HTML untouched) */
+[data-theme="dark"] .logo>span{color:#ece9e3!important}
+[data-theme="dark"] .logo span span span{background:#ece9e3!important}
+[data-theme="dark"] .modal{background:var(--bg2)!important}
 body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg3);color:var(--text);min-height:100vh}
 :root{--ease:cubic-bezier(.25,.8,.25,1);--ease-spring:cubic-bezier(.16,1,.3,1)}
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 @keyframes riseIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes popIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
-nav{background:rgba(245,240,232,0.72);backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);border-bottom:1px solid rgba(15,14,12,0.06);padding:0 1.25rem;height:56px;display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;z-index:10;transition:box-shadow .3s var(--ease),background .3s var(--ease)}
+nav{background:var(--nav-bg);backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);border-bottom:1px solid var(--border);padding:0 1.25rem;height:56px;display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;z-index:10;transition:box-shadow .3s var(--ease),background .3s var(--ease)}
 nav.scrolled{box-shadow:0 8px 30px -12px rgba(15,14,12,0.12)}
 .logo{font-family:'Fraunces',serif;font-size:20px;font-weight:800;color:#0f0e0c;text-decoration:none;letter-spacing:-.02em;flex-shrink:0}
 .logo span{color:var(--green)}
@@ -120,8 +143,15 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .sbox{font-size:13px;color:var(--text2);line-height:1.6;padding:10px 12px;background:var(--bg2);border-radius:var(--rs)}
 .assign-row{display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:12px;border-top:.5px solid var(--border);flex-wrap:wrap}
 .assign-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);flex-shrink:0}
-.assign-sel{font-size:13px;padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--rs);background:var(--bg);color:var(--text);flex:1;min-width:160px;max-width:280px;cursor:pointer}
 .assign-hint{font-size:11px;color:var(--text3)}
+.combo{position:relative;flex:1;min-width:180px;max-width:300px}
+.combo-input{width:100%;font-size:13px;padding:8px 28px 8px 10px;border:.5px solid var(--border2);border-radius:var(--rs);background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif}
+.combo-input:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold)}
+.combo-clear{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:20px;height:20px;border:none;background:var(--bg2);color:var(--text2);border-radius:50%;cursor:pointer;font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center}
+.combo-clear:hover{background:var(--border);color:var(--text)}
+.combo-list{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:60;list-style:none;margin:0;padding:4px;background:var(--bg);border:.5px solid var(--border);border-radius:var(--rs);box-shadow:0 12px 32px -8px var(--shadow);max-height:220px;overflow-y:auto}
+.combo-opt{padding:8px 10px;font-size:13px;border-radius:4px;cursor:pointer;color:var(--text)}
+.combo-opt.active,.combo-opt:hover{background:var(--gold-soft);color:var(--text)}
 .nslist{list-style:none}.nslist li{font-size:13px;padding:4px 0 4px 16px;position:relative;color:var(--text);line-height:1.5}.nslist li::before{content:"→";position:absolute;left:0;color:var(--text3)}
 .remark-btn{font-size:11px;padding:4px 10px;border-radius:100px;border:.5px solid var(--border2);background:var(--bg);cursor:pointer;color:var(--text2);font-family:'DM Sans',sans-serif;margin-left:6px}.remark-btn:hover{background:var(--bg2)}
 .editable{cursor:pointer;border-radius:4px;padding:2px 4px}.editable:hover{background:var(--bg2)}
@@ -156,7 +186,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .delta{font-size:11px;font-weight:600;padding:3px 9px;border-radius:100px}
 .d-up{background:var(--green-bg);color:var(--green)}.d-dn{background:var(--danger-bg);color:var(--danger-text)}.d-eq{background:var(--bg2);color:var(--text3)}
 .rubric-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--rs);border:.5px solid var(--border);margin-bottom:8px}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem}
+.modal-bg{position:fixed;inset:0;background:var(--scrim);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem}
 .modal-bg.open{display:flex;animation:bgIn .25s var(--ease)}
 @keyframes bgIn{from{opacity:0}to{opacity:1}}
 .modal{background:#fff;border-radius:var(--r);padding:1.5rem;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,0.2);animation:modalIn .35s var(--ease-spring)}
@@ -231,6 +261,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         <div class="dd-email" id="dd-email"></div>
         <div class="dd-sep"></div>
         <button class="dd-btn" onclick="showTab('settings');toggleDD()">⚙️ Settings</button>
+        <button class="dd-btn" id="theme-btn" onclick="toggleTheme()" aria-label="Toggle dark mode">🌙 Dark mode</button>
         <div class="dd-sep"></div>
         <button class="dd-btn" id="dd-auth-btn" onclick="handleAuthBtn()">Sign in / Sign up</button>
       </div>
@@ -297,7 +328,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <div class="divider"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:1rem">
         <div><div style="font-weight:600;font-size:16px">Marking results</div><div style="font-size:12px;color:var(--text2);margin-top:2px" id="session-label"></div></div>
-        <div class="btn-row"><button class="btn btn-sm" id="csvbtn">📥 CSV</button><button class="btn btn-sm" id="printbtn">🖨 Print</button><button class="btn btn-sm btn-green" onclick="showTab('dashboard')">📊 Dashboard →</button></div>
+        <div class="btn-row"><button class="btn btn-sm btn-p" id="saveallbtn" onclick="saveAllToProfiles()">💾 Save all to profiles</button><button class="btn btn-sm" id="csvbtn">📥 CSV</button><button class="btn btn-sm" id="printbtn">🖨 Print</button><button class="btn btn-sm btn-green" onclick="showTab('dashboard')">📊 Dashboard →</button></div>
       </div>
       <div id="results"></div>
     </div>
@@ -453,8 +484,58 @@ function showStatus(id,msg,type){var el=document.getElementById(id);if(el){el.te
 function openModal(id){document.getElementById(id).classList.add('open')}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
 
+// ── Dark mode ──────────────────────────────────────────────────────────────
+function applyThemeLabel(){var b=document.getElementById('theme-btn');if(!b)return;var dark=document.documentElement.getAttribute('data-theme')==='dark';b.textContent=dark?'☀️ Light mode':'🌙 Dark mode'}
+function toggleTheme(){
+  var dark=document.documentElement.getAttribute('data-theme')==='dark';
+  if(dark){document.documentElement.removeAttribute('data-theme');try{localStorage.setItem('maka-theme','light')}catch(e){}}
+  else{document.documentElement.setAttribute('data-theme','dark');try{localStorage.setItem('maka-theme','dark')}catch(e){}}
+  applyThemeLabel();
+}
+applyThemeLabel();
+
+// ── Local persistence: remembered settings + crash-safe results ──────────────
+function rememberSettings(){
+  try{localStorage.setItem('maka-settings',JSON.stringify({
+    la:document.getElementById('la').value,
+    cl:document.getElementById('cl').value
+  }))}catch(e){}
+}
+function restoreSettings(){
+  try{
+    var s=JSON.parse(localStorage.getItem('maka-settings')||'null');if(!s)return;
+    if(s.la){var la=document.getElementById('la');if([].some.call(la.options,function(o){return o.value===s.la||o.text===s.la}))la.value=s.la}
+    if(s.cl)document.getElementById('cl').value=s.cl;
+  }catch(e){}
+}
+function persistResults(){
+  try{
+    if(!results.length){localStorage.removeItem('maka-results');return}
+    var slim=results.map(function(r){var o={};for(var k in r){if(k!=='_file')o[k]=r[k]}return o});
+    localStorage.setItem('maka-results',JSON.stringify({when:Date.now(),sessId:currentSessId,label:document.getElementById('session-label').textContent,results:slim}));
+  }catch(e){}
+}
+function restoreResults(){
+  try{
+    var d=JSON.parse(localStorage.getItem('maka-results')||'null');if(!d||!d.results||!d.results.length)return;
+    if(Date.now()-d.when>86400000){localStorage.removeItem('maka-results');return} // expire after 24h
+    results=d.results;currentSessId=d.sessId||null;
+    document.getElementById('rsec').style.display='block';
+    document.getElementById('session-label').textContent=(d.label||'Restored session')+' · restored';
+    renderResults(results);
+    showToast('Restored your last marking results','ok');
+  }catch(e){}
+}
+
 // Supabase: init after page load, completely non-blocking
 window.addEventListener('load',function(){
+  try{
+    restoreSettings();restoreResults();
+    var la=document.getElementById('la'),cl=document.getElementById('cl');
+    if(la)la.addEventListener('change',rememberSettings);
+    if(cl)cl.addEventListener('change',rememberSettings);
+    if('Notification'in window&&Notification.permission==='default'){/* request lazily on first mark */}
+  }catch(e){}
   try{
     sb=supabase.createClient(SURL,SKEY);
     sb.auth.getSession().then(function(res){
@@ -621,7 +702,17 @@ function renderFiles(){
   el.querySelectorAll('.xbtn').forEach(function(b){b.onclick=function(){files.splice(parseInt(b.dataset.i),1);renderFiles();updMark()}});
 }
 function updMark(){document.getElementById('markbtn').disabled=files.length===0}
-function addFiles(list){Array.from(list).forEach(function(f){if(!['application/pdf','image/jpeg','image/png'].includes(f.type))return;if(!files.some(function(x){return x.name===f.name}))files.push(f)});renderFiles();updMark()}
+function addFiles(list){
+  var added=0,dupes=0,bad=0;
+  Array.from(list).forEach(function(f){
+    if(!['application/pdf','image/jpeg','image/png'].includes(f.type)){bad++;return}
+    if(files.some(function(x){return x.name===f.name})){dupes++;return}
+    files.push(f);added++;
+  });
+  renderFiles();updMark();persistResults();
+  if(dupes)showToast(dupes+' duplicate file'+(dupes!==1?'s':'')+' skipped (already added)','warn');
+  if(bad)showToast(bad+' file'+(bad!==1?'s':'')+' skipped — only PDF, JPG and PNG are supported','warn');
+}
 
 document.getElementById('pickbtn').onclick=function(e){e.preventDefault();document.getElementById('fileinput').click()};
 document.getElementById('fileinput').onchange=function(){if(this.files&&this.files.length)addFiles(Array.from(this.files));this.value=''};
@@ -643,7 +734,7 @@ var dz=document.getElementById('dropzone');
 dz.ondragover=function(e){e.preventDefault();e.stopPropagation();dz.classList.add('dragover')};
 dz.ondragleave=function(){dz.classList.remove('dragover')};
 dz.ondrop=function(e){e.preventDefault();e.stopPropagation();dz.classList.remove('dragover');addFiles(e.dataTransfer.files)};
-document.getElementById('clearbtn').onclick=function(){files=[];results=[];currentSessId=null;renderFiles();updMark();document.getElementById('rsec').style.display='none';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='none';document.getElementById('save-status').innerHTML=''};
+document.getElementById('clearbtn').onclick=function(){files=[];results=[];currentSessId=null;try{localStorage.removeItem('maka-results')}catch(e){}renderFiles();updMark();document.getElementById('rsec').style.display='none';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='none';document.getElementById('save-status').innerHTML=''};
 document.getElementById('csvbtn').onclick=exportCSV;
 document.getElementById('printbtn').onclick=printSheets;
 document.getElementById('markbtn').onclick=runMarking;
@@ -739,6 +830,7 @@ async function remarkStu(idx){
 
 async function runMarking(){
   var key=getKey();if(!key||!files.length)return;
+  ensureNotifyPermission();
   if(sb&&USER&&key!==(PROFILE.gemini_key||''))sb.from('profiles').update({gemini_key:key}).eq('id',USER.id).then(function(){PROFILE.gemini_key=key}).catch(function(){});
   var area=document.getElementById('la').value,level=document.getElementById('cl').value,task=document.getElementById('task').value;
   var rub=document.getElementById('rubric').value.trim()||DEFAULT_RUBRIC,style=getStyle();
@@ -750,10 +842,24 @@ async function runMarking(){
   for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(4000);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markOne(key,files[i],rub,area,level,task,style,i)}));fail.forEach(function(i,j){out[i]=ret[j]})}
   out.forEach(function(r,i){r._file=files[i]});
   results=out;document.getElementById('progress').style.display='none';renderResults(out);
-  document.getElementById('session-label').textContent=sname+' · '+out.filter(function(r){return!r._error}).length+' students';
+  var okCount=out.filter(function(r){return!r._error}).length;
+  document.getElementById('session-label').textContent=sname+' · '+okCount+' students';
   document.getElementById('rsec').scrollIntoView({behavior:'smooth',block:'start'});
   document.getElementById('cmp-a').textContent=out.length+' students — '+sname;
+  persistResults();
+  notifyDone('Marking complete','Māka finished marking '+okCount+' piece'+(okCount!==1?'s':'')+' of work.');
   if(sb&&USER)saveSess(sname,area,level,task,rub,out);
+}
+// Browser notification when a long task finishes (only if the tab is in the background).
+function notifyDone(title,body){
+  try{
+    if(!('Notification'in window))return;
+    if(document.visibilityState==='visible')return;
+    if(Notification.permission==='granted'){new Notification(title,{body:body})}
+  }catch(e){}
+}
+function ensureNotifyPermission(){
+  try{if('Notification'in window&&Notification.permission==='default')Notification.requestPermission()}catch(e){}
 }
 
 async function uploadPDF(file,teacherId){
@@ -794,8 +900,39 @@ function saveSess(name,area,level,task,rubric,res){
       });
     }
     ss.innerHTML='';showToast('Saved — '+valid.length+' students in "'+name+'"','ok');
-    loadDashSessions();loadCompareSessions();
+    persistResults();loadDashSessions();loadCompareSessions();
   }).catch(function(e){ss.innerHTML='';showToast('Could not save: '+e.message,'err')});
+}
+
+// Re-sync every result to its assigned student profile in one click (respects the dropdown).
+function saveAllToProfiles(){
+  if(!sb||!USER){showToast('Sign in to save to student profiles','warn');return}
+  var valid=results.filter(function(r){return!r._error});
+  if(!valid.length){showToast('Nothing to save yet','warn');return}
+  var btn=document.getElementById('saveallbtn');if(btn){btn.disabled=true;btn.textContent='Saving…'}
+  function done(ok,msg){if(btn){btn.disabled=false;btn.textContent='💾 Save all to profiles'}showToast(msg,ok?'ok':'err')}
+  if(!currentSessId){
+    var area=document.getElementById('la').value,level=document.getElementById('cl').value,task=document.getElementById('task').value;
+    var rub=document.getElementById('rubric').value.trim()||DEFAULT_RUBRIC;
+    var sname=document.getElementById('session-name').value.trim()||('Session '+new Date().toLocaleDateString('en-NZ'));
+    saveSess(sname,area,level,task,rub,results);if(btn){btn.disabled=false;btn.textContent='💾 Save all to profiles'}return;
+  }
+  // Existing session: carry forward stored PDFs, then replace rows with current assignments.
+  sb.from('student_results').select('file_name,pdf_path').eq('session_id',currentSessId).then(function(ex){
+    var rows=(ex&&ex.data)||[];
+    function findPdf(r){var base=r.fileName||r.file_name||'';var m=rows.find(function(x){return x.file_name&&base&&x.file_name.indexOf(base)!==-1});return m?m.pdf_path:null}
+    return sb.from('student_results').delete().eq('session_id',currentSessId).then(function(){
+      return Promise.all(valid.map(function(r){var existing=findPdf(r);return existing?Promise.resolve(existing):(r._file?uploadPDF(r._file,USER.id):Promise.resolve(null))}));
+    }).then(function(paths){
+      return sb.from('student_results').insert(valid.map(function(r,i){return{
+        session_id:currentSessId,teacher_id:USER.id,file_name:resultSaveName(r),
+        overall_score:r.overallScore,criteria_total:r.criteriaTotal,criteria:r.criteria,
+        strengths:r.improve1||r.strengths||'',next_steps:r.improve2?[r.improve2]:(r.nextSteps||[]),
+        nzc_reference:r.nzcReference,pdf_path:paths[i]||null
+      }}));
+    });
+  }).then(function(){done(true,'Saved to '+valid.length+' student profile'+(valid.length!==1?'s':'')+' ✓')})
+    .catch(function(e){done(false,'Could not save: '+(e.message||e))});
 }
 
 function pillCls(pct){return pct>=75?'ph':pct>=50?'pm':'pl'}
@@ -834,9 +971,14 @@ function renderResultCard(r,idx,editable){
   }
   if(editable){
     var assigned=assignedStudentFor(r);
-    var opts='<option value="">— Auto-match by file name —</option>'+CLASS_STUDENTS.map(function(s){return'<option value="'+esc(s.name)+'"'+(assigned===s.name?' selected':'')+'>'+esc(s.name)+'</option>'}).join('');
     var hint=CLASS_STUDENTS.length?'':' (add students in the Class tab first)';
-    html+='<div class="assign-row"><span class="assign-lbl">Save to profile</span><select class="assign-sel" onchange="assignResult('+idx+',this.value)">'+opts+'</select><span class="assign-hint">'+hint+'</span></div>';
+    html+='<div class="assign-row"><span class="assign-lbl" id="assign-lbl-'+idx+'">Save to profile</span>'+
+      '<div class="combo" data-idx="'+idx+'">'+
+        '<input class="combo-input" type="text" role="combobox" aria-expanded="false" aria-controls="combo-list-'+idx+'" aria-autocomplete="list" aria-labelledby="assign-lbl-'+idx+'" autocomplete="off" placeholder="Auto-match by file name" value="'+esc(assigned)+'">'+
+        '<button type="button" class="combo-clear" tabindex="-1" aria-label="Clear assignment"'+(assigned?'':' style="display:none"')+'>×</button>'+
+        '<ul class="combo-list" id="combo-list-'+idx+'" role="listbox" hidden></ul>'+
+      '</div>'+
+      '<span class="assign-hint">'+hint+'</span></div>';
   }
   html+='</div>';
   return html;
@@ -855,7 +997,46 @@ function resultSaveName(r){
   if(base.toLowerCase().indexOf(r.assignTo.toLowerCase())!==-1)return base;
   return r.assignTo+' — '+base;
 }
-function assignResult(idx,name){if(results[idx]){results[idx].assignTo=name||''}}
+function assignResult(idx,name){if(results[idx]){results[idx].assignTo=name||'';persistResults()}}
+
+// ── Accessible searchable combobox for "Save to profile" (WAI-ARIA 1.2) ──────
+(function(){
+  var active=null,activeIdx=-1,items=[];
+  function comboOf(el){return el.closest?el.closest('.combo'):null}
+  function close(combo){if(!combo)return;var inp=combo.querySelector('.combo-input'),list=combo.querySelector('.combo-list');inp.setAttribute('aria-expanded','false');inp.removeAttribute('aria-activedescendant');list.hidden=true;list.innerHTML='';active=null;activeIdx=-1;items=[]}
+  function filtered(q){q=(q||'').trim().toLowerCase();var base=[{name:'',label:'Auto-match by file name'}].concat(CLASS_STUDENTS.map(function(s){return{name:s.name,label:s.name}}));return q?base.filter(function(o){return o.label.toLowerCase().indexOf(q)!==-1}):base}
+  function render(combo){
+    var list=combo.querySelector('.combo-list'),idx=combo.dataset.idx;
+    list.innerHTML=items.map(function(o,i){return'<li role="option" id="combo-opt-'+idx+'-'+i+'" class="combo-opt'+(i===activeIdx?' active':'')+'" data-name="'+esc(o.name)+'">'+esc(o.label)+'</li>'}).join('');
+    var inp=combo.querySelector('.combo-input');
+    if(activeIdx>=0){inp.setAttribute('aria-activedescendant','combo-opt-'+idx+'-'+activeIdx);var a=list.children[activeIdx];if(a)a.scrollIntoView({block:'nearest'})}
+    else inp.removeAttribute('aria-activedescendant');
+  }
+  function open(combo){var inp=combo.querySelector('.combo-input');items=filtered(inp.value);activeIdx=-1;inp.setAttribute('aria-expanded','true');combo.querySelector('.combo-list').hidden=false;active=combo;render(combo)}
+  function choose(combo,o){
+    var inp=combo.querySelector('.combo-input');inp.value=o.name;
+    combo.querySelector('.combo-clear').style.display=o.name?'':'none';
+    assignResult(parseInt(combo.dataset.idx),o.name);
+    close(combo);
+  }
+  document.addEventListener('input',function(e){if(!e.target.classList.contains('combo-input'))return;var combo=comboOf(e.target);open(combo);combo.querySelector('.combo-clear').style.display=e.target.value?'':'none'});
+  document.addEventListener('focusin',function(e){if(e.target.classList.contains('combo-input'))open(comboOf(e.target))});
+  document.addEventListener('keydown',function(e){
+    if(!e.target.classList.contains('combo-input'))return;
+    var combo=comboOf(e.target);
+    if(e.key==='ArrowDown'){e.preventDefault();if(active!==combo){open(combo)}activeIdx=Math.min(activeIdx+1,items.length-1);render(combo)}
+    else if(e.key==='ArrowUp'){e.preventDefault();if(active!==combo){open(combo)}activeIdx=Math.max(activeIdx-1,0);render(combo)}
+    else if(e.key==='Enter'){if(active===combo&&activeIdx>=0){e.preventDefault();choose(combo,items[activeIdx])}}
+    else if(e.key==='Escape'){if(active===combo){e.preventDefault();close(combo)}}
+  });
+  document.addEventListener('mousedown',function(e){
+    var opt=e.target.closest&&e.target.closest('.combo-opt');
+    if(opt){e.preventDefault();var combo=comboOf(opt);choose(combo,{name:opt.dataset.name,label:opt.textContent});return}
+    var clr=e.target.closest&&e.target.closest('.combo-clear');
+    if(clr){e.preventDefault();var c=comboOf(clr);var inp=c.querySelector('.combo-input');inp.value='';clr.style.display='none';assignResult(parseInt(c.dataset.idx),'');inp.focus();return}
+    if(active&&!e.target.closest('.combo'))close(active);
+  });
+})();
 function renderResults(res){
   document.getElementById('results').innerHTML=res.map(function(r,i){return renderResultCard(r,i,true)}).join('');
   document.querySelectorAll('#results .rcard').forEach(function(el,i){el.style.animationDelay=(i*0.05)+'s'});

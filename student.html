@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Māka — Student Hub</title>
+<script>
+(function(){try{
+  var t=localStorage.getItem('maka-theme');
+  if(!t)t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+  if(t==='dark')document.documentElement.setAttribute('data-theme','dark');
+}catch(e){}})();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -17,7 +24,23 @@
   --info-bg:#e6f1fb;--info-text:#185fa5;
   --gold:#c8840a;--gold-soft:rgba(200,132,10,0.12);
   --r:10px;--rs:6px;
+  --nav-bg:rgba(245,240,232,0.72);--scrim:rgba(0,0,0,0.4);
 }
+[data-theme="dark"]{
+  --bg:#1c1b19;--bg2:#242220;--bg3:#161513;
+  --text:#ece9e3;--text2:#a9a49b;--text3:#7d7972;
+  --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.18);
+  --green:#7fb87a;--green-bg:#23302180;
+  --warn-bg:#3a2e1a;--warn-text:#e0b878;
+  --danger-bg:#3a2020;--danger-text:#e89a9a;
+  --info-bg:#1d2c3a;--info-text:#7fb0e0;
+  --gold:#e0a52a;--gold-soft:rgba(224,165,42,0.16);
+  --nav-bg:rgba(22,21,19,0.78);--scrim:rgba(0,0,0,0.6);
+}
+[data-theme="dark"] .logo>span{color:#ece9e3!important}
+[data-theme="dark"] .logo span span span{background:#ece9e3!important}
+[data-theme="dark"] .btn-p{background:#ece9e3;color:#1a1a1a;border-color:#ece9e3}
+[data-theme="dark"] .btn-p:hover{background:#fff}
 body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg3);color:var(--text);min-height:100vh}
 :root{--ease:cubic-bezier(.25,.8,.25,1);--ease-spring:cubic-bezier(.16,1,.3,1)}
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
@@ -27,12 +50,16 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg3);color:
 .stats-grid .stat-box:nth-child(3){animation-delay:.13s}.stats-grid .stat-box:nth-child(4){animation-delay:.18s}
 
 /* NAV */
-nav{background:rgba(245,240,232,0.72);backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);border-bottom:1px solid rgba(15,14,12,0.06);padding:0 1.5rem;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;transition:box-shadow .3s var(--ease),background .3s var(--ease)}
+nav{background:var(--nav-bg);backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);border-bottom:1px solid var(--border);padding:0 1.5rem;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;transition:box-shadow .3s var(--ease),background .3s var(--ease)}
 nav.scrolled{box-shadow:0 8px 30px -12px rgba(15,14,12,0.12)}
 .logo{font-family:'Fraunces',serif;font-size:20px;font-weight:800;color:#0f0e0c;text-decoration:none;letter-spacing:-.02em}
 .logo span{color:var(--green)}
 .nav-back{font-size:13px;color:var(--text2);text-decoration:none}
 .nav-back:hover{color:var(--text)}
+.pdf-modal{position:fixed;inset:0;background:var(--scrim);z-index:600;display:none;align-items:center;justify-content:center;padding:1rem}
+.pdf-modal.open{display:flex;animation:riseIn .25s var(--ease)}
+.pdf-modal-inner{background:var(--bg);border-radius:var(--r);width:100%;max-width:900px;height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,0.4)}
+.pdf-modal-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:.5px solid var(--border);gap:8px;flex-wrap:wrap}
 
 /* LAYOUT */
 .main{max-width:860px;margin:0 auto;padding:2rem 1rem}
@@ -65,6 +92,13 @@ nav.scrolled{box-shadow:0 8px 30px -12px rgba(15,14,12,0.12)}
 
 /* CHART */
 .chart-wrap{position:relative;height:200px;margin-top:8px}
+.chart-toggle{display:inline-flex;gap:2px;background:var(--bg2);border-radius:100px;padding:3px}
+.chart-tab{font-size:12px;font-weight:500;padding:5px 12px;border:none;background:none;border-radius:100px;cursor:pointer;color:var(--text2);font-family:'DM Sans',sans-serif}
+.chart-tab.active{background:var(--bg);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,0.12)}
+.chart-tab:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.chart-legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:14px;font-size:12px;color:var(--text2)}
+.chart-legend .lg{display:flex;align-items:center;gap:6px}
+.chart-legend .sw{width:12px;height:3px;border-radius:2px;flex-shrink:0}
 canvas{width:100%!important}
 
 /* CRITERION BARS */
@@ -182,8 +216,24 @@ textarea{resize:vertical;min-height:60px;line-height:1.5}
   <path d="M 1 11 C 0.5 10, 0 9.5, 0 9" fill="none" stroke="#f5f0e8" stroke-width="1.5" stroke-linecap="round"/>
 </svg>
   </a>
-  <a href="tool.html" class="nav-back">← Back to Māka</a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <button id="theme-btn" onclick="toggleTheme()" aria-label="Toggle dark mode" style="background:none;border:none;cursor:pointer;font-size:16px;line-height:1;padding:6px">🌙</button>
+    <a href="tool.html" class="nav-back">← Back to Māka</a>
+  </div>
 </nav>
+
+<div class="pdf-modal" id="pdf-modal" role="dialog" aria-modal="true" aria-label="Student work preview">
+  <div class="pdf-modal-inner">
+    <div class="pdf-modal-bar">
+      <span style="font-weight:600;font-size:14px">Student work</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <a id="pdf-open-new" class="btn btn-sm" href="#" target="_blank" rel="noopener">↗ Open in new tab</a>
+        <button class="btn btn-sm" onclick="closePdfModal()" aria-label="Close preview">✕ Close</button>
+      </div>
+    </div>
+    <iframe id="pdf-frame" title="Student work preview" style="flex:1;width:100%;border:none;background:#fff"></iframe>
+  </div>
+</div>
 
 <!-- Page renders immediately — check sessionStorage before Supabase even loads -->
 <div class="main" id="main">
@@ -243,10 +293,19 @@ function dots(sc){var h='';for(var i=1;i<=5;i++)h+='<span style="display:inline-
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function showErr(msg){document.getElementById('main').innerHTML='<div class="card" style="max-width:860px;margin:2rem auto;padding:0 1rem"><div class="err">'+esc(msg)+'</div><div style="margin-top:1rem"><a href="tool.html" class="btn">← Back to Māka</a></div></div>'}
 function closeModal(){document.getElementById('edit-modal').classList.remove('open')}
+function applyThemeLabel(){var b=document.getElementById('theme-btn');if(!b)return;b.textContent=document.documentElement.getAttribute('data-theme')==='dark'?'☀️':'🌙'}
+function toggleTheme(){
+  var dark=document.documentElement.getAttribute('data-theme')==='dark';
+  if(dark){document.documentElement.removeAttribute('data-theme');try{localStorage.setItem('maka-theme','light')}catch(e){}}
+  else{document.documentElement.setAttribute('data-theme','dark');try{localStorage.setItem('maka-theme','dark')}catch(e){}}
+  applyThemeLabel();if(ALL_RESULTS.length>=2)setTimeout(drawChart,30);
+}
+window.addEventListener('DOMContentLoaded',applyThemeLabel);
 
 // initSupabase is called by the Supabase script onload (defined below after all functions)
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
 
 // ── LOAD ALL DATA ─────────────────────────────────────────────────────────────
@@ -310,6 +369,7 @@ function renderPage(){
       </div>
       <div class="btn-row">
         <button class="btn btn-sm" onclick="openEdit()">✏️ Edit</button>
+        <button class="btn btn-sm" onclick="downloadReportPDF()">📄 Download report PDF</button>
         <button class="btn btn-sm btn-danger" onclick="deleteStudent()">Remove</button>
       </div>
     </div>
@@ -326,8 +386,10 @@ function renderPage(){
 
     <!-- PROGRESS CHART -->
     <div class="card" id="chart-card">
-      <div class="card-title">Progress over time</div>
-      ${ALL_RESULTS.length<2?'<div class="empty">Mark at least 2 sessions to see the progress chart.</div>':'<div class="chart-wrap"><canvas id="progress-chart"></canvas></div>'}
+      <div class="card-title">Progress over time
+        ${ALL_RESULTS.length<2?'':'<div class="chart-toggle" role="tablist"><button role="tab" id="ct-total" class="chart-tab active" onclick="setChartMode(\'total\')">Total</button><button role="tab" id="ct-crit" class="chart-tab" onclick="setChartMode(\'criteria\')">By criterion</button></div>'}
+      </div>
+      ${ALL_RESULTS.length<2?'<div class="empty">Mark at least 2 sessions to see the progress chart.</div>':'<div class="chart-wrap"><canvas id="progress-chart"></canvas></div><div id="chart-legend" class="chart-legend"></div>'}
     </div>
 
     <!-- CRITERION AVERAGES -->
@@ -452,7 +514,7 @@ async function viewPDF(path,btn){
   try{
     var res=await sb.storage.from('student-pdfs').createSignedUrl(path,3600);
     if(res.error)throw new Error(res.error.message);
-    window.open(res.data.signedUrl,'_blank');
+    openPdfModal(res.data.signedUrl);
   }catch(e){
     btn.textContent='Could not load PDF';
     setTimeout(function(){btn.disabled=false;btn.textContent='📄 View your work'},2000);
@@ -460,6 +522,19 @@ async function viewPDF(path,btn){
   }
   btn.disabled=false;btn.textContent='📄 View your work';
 }
+function openPdfModal(url){
+  var m=document.getElementById('pdf-modal');
+  document.getElementById('pdf-frame').src=url;
+  document.getElementById('pdf-open-new').href=url;
+  m.classList.add('open');
+  document.addEventListener('keydown',pdfEsc);
+}
+function closePdfModal(){
+  var m=document.getElementById('pdf-modal');m.classList.remove('open');
+  document.getElementById('pdf-frame').src='';
+  document.removeEventListener('keydown',pdfEsc);
+}
+function pdfEsc(e){if(e.key==='Escape')closePdfModal()}
 
 // ── COMMENTS LIST ─────────────────────────────────────────────────────────────
 function renderComments(){
@@ -473,6 +548,16 @@ function renderComments(){
 }
 
 // ── CHART ─────────────────────────────────────────────────────────────────────
+var CHART_MODE='total';
+var CRIT_COLORS=['#2d5a27','#c8840a','#185fa5','#8b1a5e','#5a564e','#1e7a6b','#a14d12'];
+function setChartMode(m){
+  CHART_MODE=m;
+  var t=document.getElementById('ct-total'),c=document.getElementById('ct-crit');
+  if(t)t.classList.toggle('active',m==='total');
+  if(c)c.classList.toggle('active',m==='criteria');
+  drawChart();
+}
+function isDark(){return document.documentElement.getAttribute('data-theme')==='dark'}
 function drawChart(){
   var canvas=document.getElementById('progress-chart');
   if(!canvas)return;
@@ -481,57 +566,108 @@ function drawChart(){
   var W=wrap.clientWidth,H=200;
   canvas.width=W*devicePixelRatio;canvas.height=H*devicePixelRatio;
   canvas.style.width=W+'px';canvas.style.height=H+'px';
-  ctx.scale(devicePixelRatio,devicePixelRatio);
+  ctx.setTransform(1,0,0,1,0,0);ctx.scale(devicePixelRatio,devicePixelRatio);
+  ctx.clearRect(0,0,W,H);
 
-  var data=ALL_RESULTS.map(function(r){return parseInt((r.criteria_total||'0').split('/')[0])||0});
+  var dark=isDark();
+  var gridCol=dark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)';
+  var axisCol=dark?'rgba(236,233,227,0.5)':'rgba(0,0,0,0.4)';
+  var dotFill=dark?'#1c1b19':'#fff';
   var labels=ALL_RESULTS.map(function(r){return r.sessions&&r.sessions.name?(r.sessions.name.substring(0,20)):'Session'});
 
   var pad={t:20,r:20,b:50,l:40};
   var cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
-  var n=data.length;
+  var n=ALL_RESULTS.length;
   var xStep=n>1?cw/(n-1):cw;
-  var maxVal=25;
-
   function xPos(i){return pad.l+(n>1?i*xStep:cw/2)}
-  function yPos(v){return pad.t+ch-(v/maxVal)*ch}
 
-  // Grid lines
-  ctx.strokeStyle='rgba(0,0,0,0.06)';ctx.lineWidth=1;
-  [0,5,10,15,20,25].forEach(function(v){
-    var y=yPos(v);
-    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();
-    ctx.fillStyle='rgba(0,0,0,0.35)';ctx.font='10px DM Sans,sans-serif';ctx.textAlign='right';
-    ctx.fillText(v,pad.l-6,y+3);
-  });
+  var legend=document.getElementById('chart-legend');
 
-  // Line fill
-  ctx.beginPath();
-  ctx.moveTo(xPos(0),yPos(data[0]));
-  data.forEach(function(v,i){if(i>0)ctx.lineTo(xPos(i),yPos(v))});
-  ctx.lineTo(xPos(n-1),pad.t+ch);
-  ctx.lineTo(xPos(0),pad.t+ch);
-  ctx.closePath();
-  ctx.fillStyle='rgba(45,90,39,0.08)';ctx.fill();
+  if(CHART_MODE==='criteria'){
+    // Build per-criterion series (score out of 5) using criterion names from the data.
+    var names=[];
+    ALL_RESULTS.forEach(function(r){(r.criteria||[]).forEach(function(c){var nm=(c.name||'').split('—')[0].trim();if(nm&&names.indexOf(nm)===-1)names.push(nm)})});
+    if(!names.length){setChartMode('total');return}
+    var maxV=5;
+    function yPos(v){return pad.t+ch-(v/maxV)*ch}
+    ctx.strokeStyle=gridCol;ctx.lineWidth=1;
+    [0,1,2,3,4,5].forEach(function(v){var y=yPos(v);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();ctx.fillStyle=axisCol;ctx.font='10px DM Sans,sans-serif';ctx.textAlign='right';ctx.fillText(v,pad.l-6,y+3)});
+    names.forEach(function(nm,si){
+      var col=CRIT_COLORS[si%CRIT_COLORS.length];
+      var series=ALL_RESULTS.map(function(r){var found=(r.criteria||[]).find(function(c){return(c.name||'').split('—')[0].trim()===nm});return found?(parseInt(found.score)||0):null});
+      ctx.beginPath();ctx.strokeStyle=col;ctx.lineWidth=2.2;ctx.lineJoin='round';ctx.lineCap='round';
+      var started=false;
+      series.forEach(function(v,i){if(v===null)return;var x=xPos(i),y=yPos(v);started?ctx.lineTo(x,y):ctx.moveTo(x,y);started=true});
+      ctx.stroke();
+      series.forEach(function(v,i){if(v===null)return;var x=xPos(i),y=yPos(v);ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);ctx.fillStyle=dotFill;ctx.fill();ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke()});
+    });
+    // X labels
+    ctx.fillStyle=axisCol;ctx.font='10px DM Sans,sans-serif';ctx.textAlign='center';
+    ALL_RESULTS.forEach(function(r,i){var lbl=labels[i];if(lbl.length>12)lbl=lbl.substring(0,12)+'…';ctx.save();ctx.translate(xPos(i),pad.t+ch+14);ctx.rotate(-0.4);ctx.fillText(lbl,0,0);ctx.restore()});
+    if(legend)legend.innerHTML=names.map(function(nm,si){return'<span class="lg"><span class="sw" style="background:'+CRIT_COLORS[si%CRIT_COLORS.length]+'"></span>'+esc(nm)+'</span>'}).join('');
+  }else{
+    var data=ALL_RESULTS.map(function(r){return parseInt((r.criteria_total||'0').split('/')[0])||0});
+    var maxVal=25,green=dark?'#7fb87a':'#2d5a27';
+    function yPosT(v){return pad.t+ch-(v/maxVal)*ch}
+    ctx.strokeStyle=gridCol;ctx.lineWidth=1;
+    [0,5,10,15,20,25].forEach(function(v){var y=yPosT(v);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();ctx.fillStyle=axisCol;ctx.font='10px DM Sans,sans-serif';ctx.textAlign='right';ctx.fillText(v,pad.l-6,y+3)});
+    ctx.beginPath();ctx.moveTo(xPos(0),yPosT(data[0]));data.forEach(function(v,i){if(i>0)ctx.lineTo(xPos(i),yPosT(v))});ctx.lineTo(xPos(n-1),pad.t+ch);ctx.lineTo(xPos(0),pad.t+ch);ctx.closePath();ctx.fillStyle=dark?'rgba(127,184,122,0.12)':'rgba(45,90,39,0.08)';ctx.fill();
+    ctx.beginPath();ctx.strokeStyle=green;ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.lineCap='round';data.forEach(function(v,i){i===0?ctx.moveTo(xPos(i),yPosT(v)):ctx.lineTo(xPos(i),yPosT(v))});ctx.stroke();
+    data.forEach(function(v,i){var x=xPos(i),y=yPosT(v);ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fillStyle=dotFill;ctx.fill();ctx.strokeStyle=green;ctx.lineWidth=2;ctx.stroke();ctx.fillStyle=green;ctx.font='bold 11px DM Sans,sans-serif';ctx.textAlign='center';ctx.fillText(v+'/25',x,y-10);ctx.fillStyle=axisCol;ctx.font='10px DM Sans,sans-serif';var lbl=labels[i];if(lbl.length>12)lbl=lbl.substring(0,12)+'…';ctx.save();ctx.translate(x,pad.t+ch+14);ctx.rotate(-0.4);ctx.fillText(lbl,0,0);ctx.restore()});
+    if(legend)legend.innerHTML='';
+  }
+}
 
-  // Line
-  ctx.beginPath();ctx.strokeStyle='#2d5a27';ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.lineCap='round';
-  data.forEach(function(v,i){i===0?ctx.moveTo(xPos(i),yPos(v)):ctx.lineTo(xPos(i),yPos(v))});
-  ctx.stroke();
-
-  // Dots + labels
-  data.forEach(function(v,i){
-    var x=xPos(i),y=yPos(v);
-    ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);
-    ctx.fillStyle='#fff';ctx.fill();
-    ctx.strokeStyle='#2d5a27';ctx.lineWidth=2;ctx.stroke();
-    // Score label
-    ctx.fillStyle='#2d5a27';ctx.font='bold 11px DM Sans,sans-serif';ctx.textAlign='center';
-    ctx.fillText(v+'/25',x,y-10);
-    // X axis label
-    ctx.fillStyle='rgba(0,0,0,0.4)';ctx.font='10px DM Sans,sans-serif';
-    var lbl=labels[i];if(lbl.length>12)lbl=lbl.substring(0,12)+'…';
-    ctx.save();ctx.translate(x,pad.t+ch+14);ctx.rotate(-0.4);ctx.fillText(lbl,0,0);ctx.restore();
-  });
+// ── PDF REPORT EXPORT (jsPDF) ────────────────────────────────────────────────
+function downloadReportPDF(){
+  try{
+    var jsPDFns=window.jspdf||window.jsPDF;var JSP=jsPDFns&&(jsPDFns.jsPDF||jsPDFns);
+    if(!JSP){alert('PDF library still loading — try again in a moment.');return}
+    var doc=new JSP({unit:'pt',format:'a4'});
+    var pw=doc.internal.pageSize.getWidth(),m=48,y=56;
+    var gold=[200,132,10],ink=[26,26,26],grey=[107,107,107],green=[45,90,39];
+    function line(){doc.setDrawColor(220,216,210);doc.line(m,y,pw-m,y);y+=18}
+    function need(h){if(y+h>doc.internal.pageSize.getHeight()-48){doc.addPage();y=56}}
+    // Header
+    doc.setFont('helvetica','bold');doc.setFontSize(22);doc.setTextColor(ink[0],ink[1],ink[2]);
+    doc.text('Māka',m,y);
+    doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(grey[0],grey[1],grey[2]);
+    doc.text('Student progress report',pw-m,y,{align:'right'});
+    y+=10;line();
+    // Student name
+    doc.setFont('helvetica','bold');doc.setFontSize(18);doc.setTextColor(ink[0],ink[1],ink[2]);
+    doc.text(STUDENT.name||'Student',m,y);y+=20;
+    doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(grey[0],grey[1],grey[2]);
+    var meta=[STUDENT.year_level||'',new Date().toLocaleDateString('en-NZ',{day:'numeric',month:'long',year:'numeric'})].filter(Boolean).join('  ·  ');
+    doc.text(meta,m,y);y+=12;line();
+    if(!ALL_RESULTS.length){doc.setFontSize(11);doc.text('No marking results yet.',m,y);doc.save((STUDENT.name||'student')+'-report.pdf');return}
+    // Each result
+    ALL_RESULTS.slice().reverse().forEach(function(r){
+      need(110);
+      doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(ink[0],ink[1],ink[2]);
+      doc.text((r.sessions&&r.sessions.name)||'Session',m,y);
+      doc.setTextColor(green[0],green[1],green[2]);
+      doc.text((r.overall_score||'')+'   '+(r.criteria_total||''),pw-m,y,{align:'right'});
+      y+=8;doc.setDrawColor(235,232,226);doc.line(m,y,pw-m,y);y+=16;
+      doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(ink[0],ink[1],ink[2]);
+      (r.criteria||[]).forEach(function(c){
+        need(18);
+        var nm=(c.name||'').split('—')[0].trim();
+        doc.setTextColor(ink[0],ink[1],ink[2]);doc.text('•  '+nm,m+6,y);
+        doc.setTextColor(grey[0],grey[1],grey[2]);doc.text((c.score||0)+'/5',pw-m,y,{align:'right'});
+        y+=15;
+      });
+      var tips=[r.strengths,(r.next_steps&&r.next_steps[0])].filter(Boolean);
+      if(tips.length){
+        y+=4;doc.setTextColor(gold[0],gold[1],gold[2]);doc.setFont('helvetica','bold');doc.setFontSize(9);
+        need(16);doc.text('HOW TO IMPROVE',m+6,y);y+=13;
+        doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(80,80,80);
+        tips.forEach(function(t){var lines=doc.splitTextToSize('– '+t,pw-m*2-12);need(lines.length*13+4);doc.text(lines,m+6,y);y+=lines.length*13+2});
+      }
+      y+=14;
+    });
+    doc.save((STUDENT.name||'student').replace(/\s+/g,'-')+'-report.pdf');
+  }catch(e){alert('Could not generate PDF: '+(e.message||e))}
 }
 
 // ── REPORT GENERATOR ─────────────────────────────────────────────────────────
