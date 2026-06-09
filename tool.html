@@ -94,6 +94,11 @@ nav.scrolled{box-shadow:0 8px 30px -12px rgba(15,14,12,0.12)}
 .step-n{width:22px;height:22px;border-radius:50%;background:var(--bg2);font-size:11px;font-weight:600;color:var(--text2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-variant-numeric:tabular-nums;transition:background .25s var(--ease),color .25s var(--ease),transform .3s var(--ease-spring)}
 .step-n.done{background:var(--green);color:#fff;transform:scale(1.06)}
 .step-n.done .ico{font-size:13px}
+/* Mark tab: two-pane cockpit on desktop, single-column stack on mobile */
+.mark-grid{display:block}
+@media(min-width:900px){
+  .mark-grid{display:grid;grid-template-columns:1.05fr .95fr;column-gap:1.25rem;align-items:start}
+}
 .step-title{font-weight:600;font-size:15px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .field{margin-bottom:12px}.field:last-child{margin-bottom:0}
@@ -335,6 +340,8 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 
   <!-- MARK -->
   <div class="panel active" id="panel-mark">
+    <div class="mark-grid">
+    <div class="mark-col-setup">
     <div class="card">
       <div class="step-row"><span class="step-n" id="step-n-0" data-n="0">0</span><span class="step-title">Gemini API key</span></div>
       <div class="field">
@@ -363,6 +370,8 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 </div>
       <div class="field"><label class="lbl">Session name</label><input type="text" id="session-name" placeholder="e.g. 7B Writing — Kaitiakitanga — Term 2"></div>
     </div>
+    </div><!-- /mark-col-setup -->
+    <div class="mark-col-action">
     <div class="card">
       <div class="step-row"><span class="step-n" id="step-n-2" data-n="2">2</span><span class="step-title">Upload student work</span></div>
       <div class="upload-box empty-pulse" id="dropzone">
@@ -386,6 +395,8 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <div id="progress" style="display:none;margin-top:12px"></div>
       <div id="save-status"></div>
     </div>
+    </div><!-- /mark-col-action -->
+    </div><!-- /mark-grid -->
     <div id="rsec" style="display:none">
       <div class="divider"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:1rem">
