@@ -508,6 +508,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 </div>
 
 <div class="modal-bg" id="rename-modal"><div class="modal"><div class="modal-title">Rename session</div><input type="text" id="rename-input" placeholder="Session name"><div class="modal-footer"><button class="btn" onclick="closeModal('rename-modal')">Cancel</button><button class="btn btn-p" onclick="confirmRename()">Rename</button></div></div></div>
+<div class="modal-bg" id="photo-assign-modal"><div class="modal" style="max-width:480px"><div class="modal-title">Who took these photos?</div><p style="font-size:13px;color:var(--text2);margin-bottom:1rem">Match each photo to a student so their result saves to their profile.</p><div id="photo-assign-rows" style="display:flex;flex-direction:column;gap:.6rem;max-height:55vh;overflow-y:auto;margin-bottom:1rem"></div><div class="modal-footer"><button class="btn" onclick="skipPhotoAssign()">Skip for now</button><button class="btn btn-p" onclick="confirmPhotoAssign()">Mark now</button></div></div></div>
 <div class="modal-bg" id="add-stu-modal"><div class="modal"><div class="modal-title">Add student</div><div class="field"><label class="lbl">Name</label><input type="text" id="new-stu-name" placeholder="Student name"></div><div class="grid2" style="margin-bottom:0"><div class="field"><label class="lbl">Year level</label><select id="new-stu-year"><option value="">Select</option><option>Year 1</option><option>Year 2</option><option>Year 3</option><option>Year 4</option><option>Year 5</option><option>Year 6</option><option>Year 7</option><option>Year 8</option><option>Year 9</option><option>Year 10</option></select></div><div class="field"><label class="lbl">Gender</label><select id="new-stu-gender"><option value="">Select</option><option value="boy">Boy (he/him)</option><option value="girl">Girl (she/her)</option><option value="nonbinary">Non-binary (they/them)</option></select></div></div><div class="modal-footer"><button class="btn" onclick="closeModal('add-stu-modal')">Cancel</button><button class="btn btn-p" onclick="addStu()">Add</button></div></div></div>
 <div class="print-out" id="print-out"></div>
 <div id="toast-wrap" aria-live="polite" aria-atomic="false"></div>
@@ -928,6 +929,23 @@ async function remarkStu(idx){
   if(currentSessId&&!res._error&&sb&&USER)sb.from('student_results').upsert({session_id:currentSessId,teacher_id:USER.id,file_name:resultSaveName(res),overall_score:res.overallScore,criteria_total:res.criteriaTotal,criteria:res.criteria,strengths:res.improve1||res.strengths||'',next_steps:res.improve2?[res.improve2]:(res.nextSteps||[]),nzc_reference:res.nzcReference},{onConflict:'session_id,file_name'}).then(function(){}).catch(function(){});
 }
 
+var _photoAssignResolve=null;
+function openPhotoAssignModal(photoFiles){
+  var rows=document.getElementById('photo-assign-rows');
+  rows.innerHTML=photoFiles.map(function(f,i){
+    var opts='<option value="">— unassigned —</option>'+CLASS_STUDENTS.map(function(s){return'<option value="'+esc(s.name)+'">'+esc(s.name)+'</option>'}).join('');
+    return'<div style="display:flex;align-items:center;gap:10px;font-size:13px"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)" title="'+esc(f.name)+'">'+ic('file')+''+esc(f.name)+'</span><select data-photo-idx="'+i+'" style="width:160px;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--rs);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px">'+opts+'</select></div>';
+  }).join('');
+  openModal('photo-assign-modal');
+  return new Promise(function(resolve){_photoAssignResolve=resolve});
+}
+function confirmPhotoAssign(){
+  var sels=document.querySelectorAll('[data-photo-idx]');
+  var map={};sels.forEach(function(s){var i=parseInt(s.getAttribute('data-photo-idx'));map[i]=s.value});
+  closeModal('photo-assign-modal');if(_photoAssignResolve)_photoAssignResolve(map);_photoAssignResolve=null;
+}
+function skipPhotoAssign(){closeModal('photo-assign-modal');if(_photoAssignResolve)_photoAssignResolve({});_photoAssignResolve=null;}
+
 async function runMarking(){
   var key=getKey();if(!key||!files.length)return;
   ensureNotifyPermission();
@@ -935,6 +953,18 @@ async function runMarking(){
   var area=document.getElementById('la').value,level=document.getElementById('cl').value,task=document.getElementById('task').value;
   var rub=document.getElementById('rubric').value.trim()||DEFAULT_RUBRIC,style=getStyle();
   var sname=document.getElementById('session-name').value.trim()||('Session '+new Date().toLocaleDateString('en-NZ'));
+  // For photo files with no auto-matched student, ask the teacher to assign them now.
+  if(CLASS_STUDENTS.length){
+    var unmatched=files.map(function(f,i){return{f:f,i:i}}).filter(function(x){
+      if(x.f.type==='application/pdf')return false;
+      var fn=x.f.name.toLowerCase();
+      return!CLASS_STUDENTS.find(function(s){var first=(s.name||'').split(' ')[0].toLowerCase();return first&&fn.indexOf(first)!==-1});
+    });
+    if(unmatched.length){
+      var map=await openPhotoAssignModal(unmatched.map(function(x){return x.f}));
+      Object.keys(map).forEach(function(k){var name=map[k];if(name){var globalIdx=unmatched[parseInt(k)].i;var tmp=files[globalIdx];files[globalIdx]=new File([tmp],name+' — '+tmp.name,{type:tmp.type})}});
+    }
+  }
   document.getElementById('rsec').style.display='block';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='block';document.getElementById('save-status').innerHTML='';
   progressItems=files.map(function(f){return{name:f.name,status:'pending',phase:'',err:''}});renderProg();
   var out=[];
