@@ -938,7 +938,7 @@ async function runMarking(){
   document.getElementById('rsec').style.display='block';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='block';document.getElementById('save-status').innerHTML='';
   progressItems=files.map(function(f){return{name:f.name,status:'pending',phase:'',err:''}});renderProg();
   var out=[];
-  for(var b=0;b<files.length;b+=6){var br=await Promise.all(files.slice(b,b+6).map(function(f,j){return markOne(key,f,rub,area,level,task,style,b+j)}));out=out.concat(br);if(b+6<files.length)await sleep(1000)}
+  out=await Promise.all(files.map(function(f,j){return markOne(key,f,rub,area,level,task,style,j)}));
   for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(2000);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markOne(key,files[i],rub,area,level,task,style,i)}));fail.forEach(function(i,j){out[i]=ret[j]})}
   out.forEach(function(r,i){r._file=files[i]});
   results=out;document.getElementById('progress').style.display='none';renderResults(out);
