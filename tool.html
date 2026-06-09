@@ -917,21 +917,28 @@ function saveAllToProfiles(){
     var sname=document.getElementById('session-name').value.trim()||('Session '+new Date().toLocaleDateString('en-NZ'));
     saveSess(sname,area,level,task,rub,results);if(btn){btn.disabled=false;btn.textContent='💾 Save all to profiles'}return;
   }
-  // Existing session: carry forward stored PDFs, then replace rows with current assignments.
+  // Existing session: upsert current rows first (no data loss if it fails), then prune orphans.
+  var newNames={};valid.forEach(function(r){newNames[resultSaveName(r)]=true});
   sb.from('student_results').select('file_name,pdf_path').eq('session_id',currentSessId).then(function(ex){
     var rows=(ex&&ex.data)||[];
-    function findPdf(r){var base=r.fileName||r.file_name||'';var m=rows.find(function(x){return x.file_name&&base&&x.file_name.indexOf(base)!==-1});return m?m.pdf_path:null}
-    return sb.from('student_results').delete().eq('session_id',currentSessId).then(function(){
-      return Promise.all(valid.map(function(r){var existing=findPdf(r);return existing?Promise.resolve(existing):(r._file?uploadPDF(r._file,USER.id):Promise.resolve(null))}));
-    }).then(function(paths){
-      return sb.from('student_results').insert(valid.map(function(r,i){return{
+    // Carry forward an already-stored PDF by EXACT saved-name match (no substring collisions).
+    function findPdf(r){var nm=resultSaveName(r);var m=rows.find(function(x){return x.file_name===nm});return m?m.pdf_path:null}
+    return Promise.all(valid.map(function(r){var existing=findPdf(r);return existing?Promise.resolve(existing):(r._file?uploadPDF(r._file,USER.id):Promise.resolve(null))}))
+    .then(function(paths){
+      return sb.from('student_results').upsert(valid.map(function(r,i){return{
         session_id:currentSessId,teacher_id:USER.id,file_name:resultSaveName(r),
         overall_score:r.overallScore,criteria_total:r.criteriaTotal,criteria:r.criteria,
         strengths:r.improve1||r.strengths||'',next_steps:r.improve2?[r.improve2]:(r.nextSteps||[]),
         nzc_reference:r.nzcReference,pdf_path:paths[i]||null
-      }}));
+      }}),{onConflict:'session_id,file_name'});
+    }).then(function(up){
+      if(up&&up.error)throw new Error(up.error.message);
+      // Only after a successful upsert, delete rows from this session that are no longer present.
+      var orphans=rows.filter(function(x){return!newNames[x.file_name]}).map(function(x){return x.file_name});
+      if(!orphans.length)return null;
+      return sb.from('student_results').delete().eq('session_id',currentSessId).in('file_name',orphans);
     });
-  }).then(function(){done(true,'Saved to '+valid.length+' student profile'+(valid.length!==1?'s':'')+' ✓')})
+  }).then(function(){persistResults();done(true,'Saved to '+valid.length+' student profile'+(valid.length!==1?'s':'')+' ✓')})
     .catch(function(e){done(false,'Could not save: '+(e.message||e))});
 }
 
