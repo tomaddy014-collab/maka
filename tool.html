@@ -76,7 +76,7 @@ nav.scrolled{box-shadow:0 8px 30px -12px rgba(15,14,12,0.12)}
 .nav-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .avatar{width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:transform .25s var(--ease-spring),box-shadow .25s var(--ease)}
 .avatar:hover{transform:scale(1.08);box-shadow:0 4px 14px rgba(45,90,39,0.35)}
-.dropdown{position:absolute;top:36px;right:0;background:#fff;border:.5px solid var(--border);border-radius:var(--r);padding:6px;min-width:190px;box-shadow:0 8px 24px rgba(0,0,0,0.1);display:none;z-index:200;opacity:0;transform:translateY(-6px) scale(.97);transition:opacity .2s var(--ease),transform .2s var(--ease-spring)}
+.dropdown{position:absolute;top:36px;right:0;background:var(--bg);border:.5px solid var(--border);border-radius:var(--r);padding:6px;min-width:190px;box-shadow:0 8px 24px rgba(0,0,0,0.1);display:none;z-index:200;opacity:0;transform:translateY(-6px) scale(.97);transition:opacity .2s var(--ease),transform .2s var(--ease-spring)}
 .dropdown.open{display:block;animation:ddOpen .22s var(--ease-spring) forwards}
 @keyframes ddOpen{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
 .dd-name{font-size:13px;font-weight:500;padding:8px 12px 4px}
@@ -91,7 +91,9 @@ nav.scrolled{box-shadow:0 8px 30px -12px rgba(15,14,12,0.12)}
 .card{background:var(--bg);border:.5px solid var(--border);border-radius:var(--r);padding:1.5rem;margin-bottom:1.25rem;transition:box-shadow .3s var(--ease),transform .3s var(--ease)}
 .card-title{font-weight:600;font-size:15px;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .step-row{display:flex;align-items:center;gap:8px;margin-bottom:14px}
-.step-n{width:22px;height:22px;border-radius:50%;background:var(--bg2);font-size:11px;font-weight:600;color:var(--text2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step-n{width:22px;height:22px;border-radius:50%;background:var(--bg2);font-size:11px;font-weight:600;color:var(--text2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-variant-numeric:tabular-nums;transition:background .25s var(--ease),color .25s var(--ease),transform .3s var(--ease-spring)}
+.step-n.done{background:var(--green);color:#fff;transform:scale(1.06)}
+.step-n.done .ico{font-size:13px}
 .step-title{font-weight:600;font-size:15px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .field{margin-bottom:12px}.field:last-child{margin-bottom:0}
@@ -137,7 +139,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .rcard:hover{box-shadow:0 10px 32px rgba(0,0,0,0.06);transform:translateY(-2px)}
 .rhead{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap}
 .rname{font-weight:600;font-size:14px;line-height:1.4}
-.pill{font-size:12px;font-weight:600;padding:4px 12px;border-radius:100px;flex-shrink:0;animation:popIn .35s var(--ease-spring) backwards}
+.pill{font-size:12px;font-weight:600;padding:4px 12px;border-radius:100px;flex-shrink:0;animation:popIn .35s var(--ease-spring) backwards;font-variant-numeric:tabular-nums}
 .ph{background:var(--green-bg);color:var(--green)}.pm{background:var(--warn-bg);color:var(--warn-text)}.pl{background:var(--danger-bg);color:var(--danger-text)}
 .ctable{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px;table-layout:fixed}
 .ctable th{text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);padding:4px 0 6px;border-bottom:.5px solid var(--border)}
@@ -167,7 +169,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .stat-box:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,0.06)}
 .dash-grid .stat-box:nth-child(1){animation-delay:.02s}.dash-grid .stat-box:nth-child(2){animation-delay:.07s}
 .dash-grid .stat-box:nth-child(3){animation-delay:.12s}.dash-grid .stat-box:nth-child(4){animation-delay:.17s}
-.stat-num{font-family:'Fraunces',serif;font-size:2rem;font-weight:800;color:var(--green);line-height:1}
+.stat-num{font-family:'Fraunces',serif;font-size:2rem;font-weight:800;color:var(--green);line-height:1;font-variant-numeric:tabular-nums}
 .stat-lbl{font-size:11px;color:var(--text2);margin-top:4px}
 .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .bar-lbl{width:150px;font-size:12px;color:var(--text2);flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -303,19 +305,19 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
   <path d="M 1 11 C 0.5 10, 0 9.5, 0 9" fill="none" stroke="#f5f0e8" stroke-width="1.5" stroke-linecap="round"/>
 </svg>
   </a>
-  <div class="nav-tabs">
+  <div class="nav-tabs" role="tablist" aria-label="Sections">
     <div class="nav-ind" id="nav-ind"></div>
-    <button class="ntab active" onclick="showTab('mark')"><span class="ti" data-ic="edit"></span><span class="tl">Mark</span></button>
-    <button class="ntab" onclick="showTab('dashboard')"><span class="ti" data-ic="chart"></span><span class="tl">Dashboard</span></button>
-    <button class="ntab" onclick="showTab('history')"><span class="ti" data-ic="layers"></span><span class="tl">History</span></button>
-    <button class="ntab" onclick="showTab('comments')"><span class="ti" data-ic="message"></span><span class="tl">Comments</span></button>
-    <button class="ntab" onclick="showTab('compare')"><span class="ti" data-ic="trending"></span><span class="tl">Compare</span></button>
-    <button class="ntab" onclick="showTab('class')"><span class="ti" data-ic="users"></span><span class="tl">Class</span></button>
+    <button class="ntab active" role="tab" aria-selected="true" onclick="showTab('mark')"><span class="ti" data-ic="edit"></span><span class="tl">Mark</span></button>
+    <button class="ntab" role="tab" aria-selected="false" onclick="showTab('dashboard')"><span class="ti" data-ic="chart"></span><span class="tl">Dashboard</span></button>
+    <button class="ntab" role="tab" aria-selected="false" onclick="showTab('history')"><span class="ti" data-ic="layers"></span><span class="tl">History</span></button>
+    <button class="ntab" role="tab" aria-selected="false" onclick="showTab('comments')"><span class="ti" data-ic="message"></span><span class="tl">Comments</span></button>
+    <button class="ntab" role="tab" aria-selected="false" onclick="showTab('compare')"><span class="ti" data-ic="trending"></span><span class="tl">Compare</span></button>
+    <button class="ntab" role="tab" aria-selected="false" onclick="showTab('class')"><span class="ti" data-ic="users"></span><span class="tl">Class</span></button>
   </div>
   <div class="nav-right">
-    <div class="avatar" id="avatar-btn" onclick="toggleDD()">
+    <div class="avatar" id="avatar-btn" role="button" tabindex="0" aria-haspopup="menu" aria-expanded="false" aria-label="Account menu" onclick="toggleDD()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDD()}">
       <span id="av-init">T</span>
-      <div class="dropdown" id="dropdown">
+      <div class="dropdown" id="dropdown" role="menu">
         <div class="dd-name" id="dd-name">Teacher</div>
         <div class="dd-email" id="dd-email"></div>
         <div class="dd-sep"></div>
@@ -334,14 +336,14 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
   <!-- MARK -->
   <div class="panel active" id="panel-mark">
     <div class="card">
-      <div class="step-row"><span class="step-n">0</span><span class="step-title">Gemini API key</span></div>
+      <div class="step-row"><span class="step-n" id="step-n-0" data-n="0">0</span><span class="step-title">Gemini API key</span></div>
       <div class="field">
         <div class="key-row"><input type="password" id="apikey" placeholder="AIza…" autocomplete="off"><button class="eye-btn" onclick="var f=document.getElementById('apikey');f.type=f.type=='password'?'text':'password'"><span data-ic="eye"></span></button></div>
         <div class="hint">Free at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com</a> — saved to your account when signed in.</div>
       </div>
     </div>
     <div class="card">
-      <div class="step-row"><span class="step-n">1</span><span class="step-title">Marking criteria</span></div>
+      <div class="step-row"><span class="step-n" id="step-n-1" data-n="1">1</span><span class="step-title">Marking criteria</span></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
         <select id="rubric-select" style="width:auto;font-size:13px;padding:6px 10px;flex:1;max-width:280px" onchange="loadRubric()"><option value="">— Load a saved rubric —</option></select>
         <button class="btn btn-sm" onclick="saveRubric()"><span data-ic="save"></span>Save current</button>
@@ -362,7 +364,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <div class="field"><label class="lbl">Session name</label><input type="text" id="session-name" placeholder="e.g. 7B Writing — Kaitiakitanga — Term 2"></div>
     </div>
     <div class="card">
-      <div class="step-row"><span class="step-n">2</span><span class="step-title">Upload student work</span></div>
+      <div class="step-row"><span class="step-n" id="step-n-2" data-n="2">2</span><span class="step-title">Upload student work</span></div>
       <div class="upload-box empty-pulse" id="dropzone">
         <div class="upload-ico" style="margin-bottom:10px"><span data-ic="file"></span></div>
         <div style="font-size:14px;font-weight:500;margin-bottom:4px">Drag and drop files here</div>
@@ -565,7 +567,8 @@ var ICONS={
   target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
   grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
   keyboard:'<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
-  external:'<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/>'
+  external:'<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/>',
+  image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>'
 };
 function ic(name){return'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[name]||'')+'</svg>'}
 function showToast(msg,type,dur,undoLabel,undoCb){
@@ -674,7 +677,7 @@ function loadProfileBg(){
         if(PROFILE.writing_style)document.getElementById('set-style').value=PROFILE.writing_style;
         updateNavForUser();
       }else{sb.from('profiles').upsert({id:USER.id,email:USER.email,display_name:''}).then(function(){}).catch(function(){})}
-      loadRubrics();loadDashSessions();loadCompareSessions();loadClassStudents();
+      loadRubrics();loadDashSessions();loadCompareSessions();loadClassStudents();updateStepState();
     }catch(e){}
   }).catch(function(){});
 }
@@ -690,7 +693,7 @@ function loadClassStudents(){
 
 var TABS=['mark','dashboard','history','comments','compare','class','settings'];
 function showTab(id){
-  document.querySelectorAll('.ntab').forEach(function(t,i){t.classList.toggle('active',TABS[i]===id)});
+  document.querySelectorAll('.ntab').forEach(function(t,i){var on=TABS[i]===id;t.classList.toggle('active',on);t.setAttribute('aria-selected',on?'true':'false')});
   document.querySelectorAll('.panel').forEach(function(p){p.classList.toggle('active',p.id==='panel-'+id)});
   document.getElementById('dropdown').classList.remove('open');
   if(id==='dashboard'){loadDashSessions();renderDashboard(results)}
@@ -710,8 +713,8 @@ function moveNavInd(){
 window.addEventListener('resize',moveNavInd);
 window.addEventListener('load',function(){setTimeout(moveNavInd,60)});
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){setTimeout(moveNavInd,30)});
-function toggleDD(){document.getElementById('dropdown').classList.toggle('open')}
-document.addEventListener('click',function(e){if(document.getElementById('avatar-btn')&&!document.getElementById('avatar-btn').contains(e.target))document.getElementById('dropdown').classList.remove('open')});
+function toggleDD(){var open=document.getElementById('dropdown').classList.toggle('open');var b=document.getElementById('avatar-btn');if(b)b.setAttribute('aria-expanded',open?'true':'false')}
+document.addEventListener('click',function(e){if(document.getElementById('avatar-btn')&&!document.getElementById('avatar-btn').contains(e.target)){document.getElementById('dropdown').classList.remove('open');document.getElementById('avatar-btn').setAttribute('aria-expanded','false')}});
 
 function saveName(){if(!sb||!USER)return;var n=document.getElementById('set-name').value.trim();if(!n)return;sb.from('profiles').update({display_name:n}).eq('id',USER.id).then(function(){PROFILE.display_name=n;document.getElementById('dd-name').textContent=n;document.getElementById('av-init').textContent=n[0].toUpperCase();showStatus('name-status','Saved','ok')}).catch(function(){})}
 function saveKey(){if(!sb||!USER)return;var k=document.getElementById('set-key').value.trim();if(!k)return;sb.from('profiles').update({gemini_key:k}).eq('id',USER.id).then(function(){PROFILE.gemini_key=k;document.getElementById('apikey').value=k;showStatus('key-status','Saved','ok')}).catch(function(){})}
@@ -793,19 +796,35 @@ function delRubric(id){if(!confirm('Delete?'))return;sb.from('rubrics').delete()
 
 function autoSessName(){var task=document.getElementById('task').value.trim();var sn=document.getElementById('session-name');if(sn._userEdited||!task)return;var area=document.getElementById('la').value.split(' ')[0];var t=task.length>40?task.substring(0,40).replace(/\s+\S*$/,'')+'…':task;var date=new Date().toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});sn.value=area+' — '+t+' — '+date}
 document.getElementById('session-name').addEventListener('input',function(){this._userEdited=true});
+document.getElementById('task').addEventListener('input',updateStepState);
+document.getElementById('apikey').addEventListener('input',updateStepState);
 
-function fileIcon(f){return f.type==='application/pdf'?'📕':'🖼️'}
+function fileIcon(f){return f.type==='application/pdf'?ic('file'):ic('image')}
 function fileTag(f){return f.type==='application/pdf'?'<span class="ftag ftag-pdf">PDF</span>':'<span class="ftag ftag-img">Image</span>'}
 function renderFiles(){
   var el=document.getElementById('flist'),cnt=document.getElementById('upload-count');
   var dze=document.getElementById('dropzone');if(dze)dze.classList.toggle('empty-pulse',!files.length);
-  if(!files.length){el.innerHTML='';cnt.style.display='none';return}
-  el.innerHTML=files.map(function(f,i){return'<li class="fitem"><span style="font-size:15px">'+fileIcon(f)+'</span><span class="fname">'+esc(f.name)+'</span>'+fileTag(f)+'<span class="fsize">'+fmt(f.size)+'</span><button class="xbtn" data-i="'+i+'">×</button></li>'}).join('');
+  if(!files.length){el.innerHTML='';cnt.style.display='none';updateStepState();return}
+  el.innerHTML=files.map(function(f,i){return'<li class="fitem"><span style="font-size:16px;color:var(--text3);display:inline-flex">'+fileIcon(f)+'</span><span class="fname">'+esc(f.name)+'</span>'+fileTag(f)+'<span class="fsize">'+fmt(f.size)+'</span><button class="xbtn" data-i="'+i+'" aria-label="Remove '+esc(f.name)+'">×</button></li>'}).join('');
   cnt.textContent=files.length+' file'+(files.length!==1?'s':'')+' ready';
   cnt.style.display='block';
   el.querySelectorAll('.xbtn').forEach(function(b){b.onclick=function(){files.splice(parseInt(b.dataset.i),1);renderFiles();updMark()}});
+  updateStepState();
 }
 function updMark(){document.getElementById('markbtn').disabled=files.length===0}
+// Reflect progress through the numbered Mark steps: a step shows a check once satisfied.
+function updateStepState(){
+  var done={
+    0:!!((document.getElementById('apikey')||{}).value||(PROFILE&&PROFILE.gemini_key)),
+    1:!!((document.getElementById('task')||{}).value||'').trim(),
+    2:files.length>0
+  };
+  [0,1,2].forEach(function(n){
+    var el=document.getElementById('step-n-'+n);if(!el)return;
+    if(done[n]){if(!el.classList.contains('done')){el.classList.add('done');el.innerHTML=ic('check')}}
+    else if(el.classList.contains('done')){el.classList.remove('done');el.textContent=el.dataset.n}
+  });
+}
 function addFiles(list){
   var added=0,dupes=0,bad=0;
   Array.from(list).forEach(function(f){
@@ -842,7 +861,7 @@ document.getElementById('clearbtn').onclick=function(){files=[];results=[];curre
 document.getElementById('csvbtn').onclick=exportCSV;
 document.getElementById('printbtn').onclick=printSheets;
 document.getElementById('markbtn').onclick=runMarking;
-updMark();
+updMark();updateStepState();
 
 function toB64(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1])};r.onerror=rej;r.readAsDataURL(file)})}
 async function gemini(key,parts,onRetry){
