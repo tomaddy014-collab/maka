@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Māka — NZC Student Work Marker</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2e7d32">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Maka">
+<link rel="apple-touch-icon" href="icon-192.svg">
 <script>
 (function(){try{
   var t=localStorage.getItem('maka-theme');
@@ -212,6 +218,59 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 @keyframes toastOut{to{opacity:0;transform:translateY(100%)}}
 @media(max-width:600px){#toast-wrap{right:12px;left:12px;bottom:96px;align-items:stretch}.toast{min-width:0;max-width:none}}
 .ntab:focus-visible,.btn:focus-visible,.copy-btn:focus-visible,.dd-btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+/* SVG icon system (matches student hub) */
+.ico{width:1em;height:1em;display:inline-block;vertical-align:-0.14em;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.btn .ico,.dd-btn .ico,.copy-btn .ico,.remark-btn .ico,.eye-btn .ico{font-size:15px}
+.ntab .ti .ico{font-size:20px}
+.card-title .ico,.step-title .ico{font-size:16px;vertical-align:-0.16em;margin-right:1px;color:var(--text2)}
+.sbox.improve .ico{font-size:15px;color:var(--gold);margin-right:3px;vertical-align:-0.16em}
+.upload-ico .ico,.empty-ico .ico{font-size:30px;color:var(--text3)}
+.tick .ico{font-size:15px}
+.dd-btn{display:flex;align-items:center;gap:8px}
+.dd-btn:hover{padding-left:16px}
+
+/* Skeleton loaders */
+.skel{position:relative;overflow:hidden;background:var(--bg2)}
+.skel::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(127,127,127,0.13),transparent);animation:shimmer 1.3s infinite}
+@keyframes shimmer{100%{transform:translateX(100%)}}
+.skel-card{height:60px;margin-bottom:8px;border-radius:var(--r)}
+@media(prefers-reduced-motion:reduce){.skel::after{animation:none}}
+
+/* Batch progress bar */
+.batch-bar{margin-bottom:12px}
+.batch-lbl{font-size:12px;color:var(--text2);margin-bottom:6px;display:flex;justify-content:space-between;font-weight:500}
+.batch-track{height:6px;background:var(--bg2);border-radius:100px;overflow:hidden}
+.batch-fill{height:100%;background:var(--green);border-radius:100px;width:0;transition:width .4s var(--ease-spring)}
+
+/* Cohort insight banner + criterion heatmap */
+.cohort-insight{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:var(--r);background:var(--green-bg);border:.5px solid var(--border);font-size:13px;line-height:1.55;color:var(--text);margin-bottom:1.25rem}
+.cohort-insight .ico{font-size:18px;flex-shrink:0;margin-top:1px;color:var(--green)}
+.cohort-insight strong{font-weight:600}
+.heat-scroll{overflow-x:auto}
+.heat-grid{min-width:max-content}
+.heat-row{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.heat-name{width:130px;font-size:12px;color:var(--text2);flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.heat-name.head{color:var(--text3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.heat-cells{display:flex;gap:4px}
+.heat-cell{width:30px;height:26px;border-radius:5px;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0}
+.heat-cell.head{background:none!important;color:var(--text3);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;height:auto;align-items:flex-end;padding-bottom:3px;text-align:center;line-height:1.1}
+.heat-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--text2)}
+.heat-legend span{display:flex;align-items:center;gap:5px}
+.heat-key{width:13px;height:13px;border-radius:3px;display:inline-block}
+
+/* Undo toast action */
+.toast-undo{margin-left:auto;background:rgba(255,255,255,0.22);border:none;color:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:5px 13px;border-radius:100px;cursor:pointer;flex-shrink:0}
+.toast-undo:hover{background:rgba(255,255,255,0.36)}
+.ci-badge{display:inline-flex;align-items:center;padding:4px 12px;border-radius:100px;font-size:12px;font-weight:600;gap:4px}
+.ci-weak{background:#fde8e8;color:#9c2b2b}[data-theme=dark] .ci-weak{background:#3d1515;color:#f09090}
+.ci-strong{background:#e5f5e0;color:#1f6b1c}[data-theme=dark] .ci-strong{background:#143314;color:#7ecf7a}
+.hm-wrap{overflow-x:auto;margin-top:.5rem}
+.hm-table{border-collapse:collapse;font-size:12px;width:100%}
+.hm-table th,.hm-table td{padding:4px 6px;text-align:center;border:.5px solid var(--border)}
+.hm-name{text-align:left!important;font-weight:500;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.hm-head{font-weight:600;color:var(--text2);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hm-cell{color:#fff;font-weight:700;font-size:11px}
 </style>
 </head>
 <body>
@@ -246,12 +305,12 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
   </a>
   <div class="nav-tabs">
     <div class="nav-ind" id="nav-ind"></div>
-    <button class="ntab active" onclick="showTab('mark')"><span class="ti">✏️</span><span class="tl">Mark</span></button>
-    <button class="ntab" onclick="showTab('dashboard')"><span class="ti">📊</span><span class="tl">Dashboard</span></button>
-    <button class="ntab" onclick="showTab('history')"><span class="ti">🗂</span><span class="tl">History</span></button>
-    <button class="ntab" onclick="showTab('comments')"><span class="ti">📝</span><span class="tl">Comments</span></button>
-    <button class="ntab" onclick="showTab('compare')"><span class="ti">📈</span><span class="tl">Compare</span></button>
-    <button class="ntab" onclick="showTab('class')"><span class="ti">👥</span><span class="tl">Class</span></button>
+    <button class="ntab active" onclick="showTab('mark')"><span class="ti" data-ic="edit"></span><span class="tl">Mark</span></button>
+    <button class="ntab" onclick="showTab('dashboard')"><span class="ti" data-ic="chart"></span><span class="tl">Dashboard</span></button>
+    <button class="ntab" onclick="showTab('history')"><span class="ti" data-ic="layers"></span><span class="tl">History</span></button>
+    <button class="ntab" onclick="showTab('comments')"><span class="ti" data-ic="message"></span><span class="tl">Comments</span></button>
+    <button class="ntab" onclick="showTab('compare')"><span class="ti" data-ic="trending"></span><span class="tl">Compare</span></button>
+    <button class="ntab" onclick="showTab('class')"><span class="ti" data-ic="users"></span><span class="tl">Class</span></button>
   </div>
   <div class="nav-right">
     <div class="avatar" id="avatar-btn" onclick="toggleDD()">
@@ -260,8 +319,8 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         <div class="dd-name" id="dd-name">Teacher</div>
         <div class="dd-email" id="dd-email"></div>
         <div class="dd-sep"></div>
-        <button class="dd-btn" onclick="showTab('settings');toggleDD()">⚙️ Settings</button>
-        <button class="dd-btn" id="theme-btn" onclick="toggleTheme()" aria-label="Toggle dark mode">🌙 Dark mode</button>
+        <button class="dd-btn" onclick="showTab('settings');toggleDD()"><span data-ic="settings"></span>Settings</button>
+        <button class="dd-btn" id="theme-btn" onclick="toggleTheme()" aria-label="Toggle dark mode"><span data-ic="moon"></span>Dark mode</button>
         <div class="dd-sep"></div>
         <button class="dd-btn" id="dd-auth-btn" onclick="handleAuthBtn()">Sign in / Sign up</button>
       </div>
@@ -276,7 +335,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
     <div class="card">
       <div class="step-row"><span class="step-n">0</span><span class="step-title">Gemini API key</span></div>
       <div class="field">
-        <div class="key-row"><input type="password" id="apikey" placeholder="AIza…" autocomplete="off"><button class="eye-btn" onclick="var f=document.getElementById('apikey');f.type=f.type=='password'?'text':'password'">👁</button></div>
+        <div class="key-row"><input type="password" id="apikey" placeholder="AIza…" autocomplete="off"><button class="eye-btn" onclick="var f=document.getElementById('apikey');f.type=f.type=='password'?'text':'password'"><span data-ic="eye"></span></button></div>
         <div class="hint">Free at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com</a> — saved to your account when signed in.</div>
       </div>
     </div>
@@ -284,7 +343,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <div class="step-row"><span class="step-n">1</span><span class="step-title">Marking criteria</span></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
         <select id="rubric-select" style="width:auto;font-size:13px;padding:6px 10px;flex:1;max-width:280px" onchange="loadRubric()"><option value="">— Load a saved rubric —</option></select>
-        <button class="btn btn-sm" onclick="saveRubric()">💾 Save current</button>
+        <button class="btn btn-sm" onclick="saveRubric()"><span data-ic="save"></span>Save current</button>
       </div>
       <div class="grid2">
         <div class="field"><label class="lbl">Learning area</label><select id="la"><option>English / Literacy</option><option>Mathematics / Pāngarau</option><option>Science</option><option>Social sciences</option><option>Technology</option><option>Arts</option><option>Health and PE</option><option>Te Reo Māori</option></select></div>
@@ -294,7 +353,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <div class="field">
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:5px">
     <label class="lbl" style="margin-bottom:0">Rubric <span style="font-weight:500;text-transform:none;letter-spacing:0">(one per line — leave blank for NZC defaults)</span></label>
-    <button class="btn btn-sm" id="build-rub-btn" onclick="buildRubric()" style="font-size:12px;padding:5px 10px">✨ Build rubric with AI</button>
+    <button class="btn btn-sm" id="build-rub-btn" onclick="buildRubric()" style="font-size:12px;padding:5px 10px"><span data-ic="sparkle"></span>Build rubric with AI</button>
   </div>
   <div id="build-rub-status" style="font-size:12px;color:var(--text2);margin-bottom:6px;display:none"></div>
   <textarea id="rubric" placeholder="e.g.&#10;Ideas — clearly states a position&#10;Structure — TIDE paragraph&#10;Language — persuasive devices&#10;Conventions — spelling, punctuation, grammar&#10;Clarity — flows logically"></textarea>
@@ -304,12 +363,12 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
     <div class="card">
       <div class="step-row"><span class="step-n">2</span><span class="step-title">Upload student work</span></div>
       <div class="upload-box empty-pulse" id="dropzone">
-        <div style="font-size:32px;margin-bottom:10px">📄</div>
+        <div class="upload-ico" style="margin-bottom:10px"><span data-ic="file"></span></div>
         <div style="font-size:14px;font-weight:500;margin-bottom:4px">Drag and drop files here</div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:14px">PDF, JPG and PNG — or snap a photo. Scanned handwriting works too</div>
         <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
           <button class="btn" id="pickbtn">Browse files</button>
-          <button class="btn" id="camerabtn">📷 Take photo</button>
+          <button class="btn" id="camerabtn"><span data-ic="camera"></span>Take photo</button>
         </div>
         <input type="file" id="fileinput" accept=".pdf,.jpg,.jpeg,.png" multiple style="display:none">
         <input type="file" id="camerainput" accept="image/*" capture="environment" multiple style="display:none">
@@ -320,7 +379,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
     <div class="card">
       <div class="step-row"><span class="step-n">3</span><span class="step-title">Mark</span></div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.5">Gemini marks, moderates, rewrites in your voice. Results save automatically when signed in. Click any score or comment to edit.</p>
-      <div class="btn-row"><button class="btn btn-p" id="markbtn">✨ Mark all uploaded files</button><button class="btn" id="clearbtn">↺ Clear</button></div>
+      <div class="btn-row"><button class="btn btn-p" id="markbtn"><span data-ic="sparkle"></span>Mark all uploaded files</button><button class="btn" id="clearbtn"><span data-ic="refresh"></span>Clear</button></div>
       <div id="progress" style="display:none;margin-top:12px"></div>
       <div id="save-status"></div>
     </div>
@@ -328,7 +387,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <div class="divider"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:1rem">
         <div><div style="font-weight:600;font-size:16px">Marking results</div><div style="font-size:12px;color:var(--text2);margin-top:2px" id="session-label"></div></div>
-        <div class="btn-row"><button class="btn btn-sm btn-p" id="saveallbtn" onclick="saveAllToProfiles()">💾 Save all to profiles</button><button class="btn btn-sm" id="csvbtn">📥 CSV</button><button class="btn btn-sm" id="printbtn">🖨 Print</button><button class="btn btn-sm btn-green" onclick="showTab('dashboard')">📊 Dashboard →</button></div>
+        <div class="btn-row"><button class="btn btn-sm btn-p" id="saveallbtn" onclick="saveAllToProfiles()"><span data-ic="save"></span>Save all to profiles</button><button class="btn btn-sm" id="csvbtn"><span data-ic="download"></span>CSV</button><button class="btn btn-sm" id="printbtn"><span data-ic="printer"></span>Print</button><button class="btn btn-sm btn-green" onclick="showTab('dashboard')"><span data-ic="chart"></span>Dashboard</button></div>
       </div>
       <div id="results"></div>
     </div>
@@ -340,12 +399,14 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <div style="font-weight:600;font-size:14px" id="dash-sess-label">Current session</div>
       <select id="dash-sess-sel" style="font-size:13px;padding:6px 10px;width:auto" onchange="loadDashSess()"><option value="current">Current session</option></select>
     </div>
-    <div id="dash-empty" class="card" style="text-align:center;padding:3rem;color:var(--text2)"><div style="font-size:32px;margin-bottom:12px">📊</div><div style="font-weight:500;margin-bottom:6px">No results yet</div><div style="font-size:13px">Mark some student work first.</div></div>
+    <div id="dash-empty" class="card" style="text-align:center;padding:3rem;color:var(--text2)"><div class="empty-ico" style="margin-bottom:12px"><span data-ic="chart"></span></div><div style="font-weight:500;margin-bottom:6px">No results yet</div><div style="font-size:13px">Mark some student work first.</div></div>
     <div id="dash-content" style="display:none">
+      <div id="dash-insight"></div>
       <div class="dash-grid" id="dash-stats"></div>
       <div class="card"><div class="card-title">Average score per criterion</div><div id="dash-bars"></div></div>
+      <div class="card"><div class="card-title">Criterion heatmap <span style="font-size:12px;font-weight:400;color:var(--text2)">(every student × criterion)</span></div><div id="dash-heat" style="margin-top:12px"></div></div>
       <div class="card"><div class="card-title">Students by band</div><div id="dash-bands"></div></div>
-      <div class="card"><div class="card-title">⚠️ Students needing support <span style="font-size:12px;font-weight:400;color:var(--text2)">(avg below 2.5/5)</span></div><div id="dash-support" style="margin-top:12px"></div></div>
+      <div class="card"><div class="card-title"><span data-ic="alert" style="color:var(--warn-text)"></span>Students needing support <span style="font-size:12px;font-weight:400;color:var(--text2)">(avg below 2.5/5)</span></div><div id="dash-support" style="margin-top:12px"></div></div>
     </div>
   </div>
 
@@ -353,7 +414,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
   <div class="panel" id="panel-history">
     <div id="hist-list-view"><div class="card"><div class="card-title">Past marking sessions</div><div id="hist-list"><div style="font-size:13px;color:var(--text2)">Sign in to see your history.</div></div></div></div>
     <div id="hist-detail-view" style="display:none">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap"><button class="btn btn-sm" onclick="closeHistDetail()">← Back</button><div style="font-weight:600;font-size:16px" id="hist-detail-name"></div></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap"><button class="btn btn-sm" onclick="closeHistDetail()"><span data-ic="back"></span>Back</button><div style="font-weight:600;font-size:16px" id="hist-detail-name"></div></div>
       <div id="hist-detail-results"></div>
     </div>
   </div>
@@ -363,15 +424,15 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
     <div class="card">
       <div class="card-title">Comment generator</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-        <div id="ctype-report" onclick="setCType('report')" style="padding:14px;border-radius:var(--r);border:2px solid var(--green);background:var(--green-bg);cursor:pointer"><div style="font-size:18px;margin-bottom:4px">📋</div><div style="font-weight:600;font-size:14px;color:var(--green)">Report comment</div><div style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.5">Full end-of-term paragraph from all past sessions.</div></div>
-        <div id="ctype-weekly" onclick="setCType('weekly')" style="padding:14px;border-radius:var(--r);border:2px solid var(--border2);background:var(--bg);cursor:pointer"><div style="font-size:18px;margin-bottom:4px">📅</div><div style="font-weight:600;font-size:14px">Weekly post</div><div style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.5">Short update from all subjects this week.</div></div>
+        <div id="ctype-report" onclick="setCType('report')" style="padding:14px;border-radius:var(--r);border:2px solid var(--green);background:var(--green-bg);cursor:pointer"><div style="font-size:18px;margin-bottom:4px;color:var(--green)" data-ic="clipboard"></div><div style="font-weight:600;font-size:14px;color:var(--green)">Report comment</div><div style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.5">Full end-of-term paragraph from all past sessions.</div></div>
+        <div id="ctype-weekly" onclick="setCType('weekly')" style="padding:14px;border-radius:var(--r);border:2px solid var(--border2);background:var(--bg);cursor:pointer"><div style="font-size:18px;margin-bottom:4px;color:var(--text2)" data-ic="calendar"></div><div style="font-weight:600;font-size:14px">Weekly post</div><div style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.5">Short update from all subjects this week.</div></div>
       </div>
       <div id="copts-report">
         <div class="field"><label class="lbl">Term / context <span style="font-weight:500;text-transform:none;letter-spacing:0">(optional)</span></label><input type="text" id="rep-term" placeholder="e.g. End of Term 2, 2026"></div>
         <div class="field"><label class="lbl">Students</label><select id="rep-stu-sel"><option value="all">All students in class list</option><option value="current">Current session only</option></select></div>
       </div>
       <div id="copts-weekly" style="display:none"><div class="field"><label class="lbl">Week context <span style="font-weight:500;text-transform:none;letter-spacing:0">(optional)</span></label><input type="text" id="weekly-ctx" placeholder="e.g. Week 4 — persuasive writing unit"></div></div>
-      <button class="btn btn-p" onclick="genComments()">📝 Generate comments</button>
+      <button class="btn btn-p" onclick="genComments()"><span data-ic="message"></span>Generate comments</button>
       <div id="comment-progress" style="display:none;margin-top:12px"></div>
     </div>
     <div id="comment-empty" style="text-align:center;padding:2rem;color:var(--text2);font-size:13px">Mark some student work first.</div>
@@ -391,7 +452,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
           <input type="file" id="cmp-csv" accept=".csv" style="font-size:13px;padding:9px 11px;border:.5px solid var(--border2);border-radius:var(--rs);background:var(--bg);width:100%">
         </div>
       </div>
-      <button class="btn btn-p" id="cmpbtn" style="margin-top:12px">📈 Compare</button>
+      <button class="btn btn-p" id="cmpbtn" style="margin-top:12px"><span data-ic="trending"></span>Compare</button>
     </div>
     <div id="cmp-results"></div>
   </div>
@@ -399,7 +460,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
   <!-- CLASS -->
   <div class="panel" id="panel-class">
     <div class="card">
-      <div class="card-title">Class list <button class="btn btn-sm btn-green" onclick="openAddStu()">+ Add student</button></div>
+      <div class="card-title">Class list <button class="btn btn-sm btn-green" onclick="openAddStu()"><span data-ic="plus"></span>Add student</button></div>
       <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.5">Pronouns (he/she/they) are used automatically in comments.</div>
       <div id="class-list-content"><div style="font-size:13px;color:var(--text2)">Sign in to manage your class list.</div></div>
     </div>
@@ -407,7 +468,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <div class="card-title">Import class list</div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.5">Upload a CSV with columns: <strong>Name</strong>, <strong>Year Level</strong>, optionally <strong>Gender</strong> (boy/girl/nonbinary)</p>
       <input type="file" id="class-csv" accept=".csv" style="font-size:13px;padding:9px 11px;border:.5px solid var(--border2);border-radius:var(--rs);background:var(--bg);width:100%;margin-bottom:10px">
-      <button class="btn btn-p" onclick="importClassCSV()">📥 Import CSV</button>
+      <button class="btn btn-p" onclick="importClassCSV()"><span data-ic="download"></span>Import CSV</button>
       <div id="import-status" style="margin-top:8px"></div>
     </div>
   </div>
@@ -428,7 +489,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         </div>
         <div style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:.5px solid var(--border)">
           <div class="lbl">Gemini API key</div>
-          <div class="key-row"><input type="password" id="set-key" placeholder="AIza…" autocomplete="off"><button class="eye-btn" onclick="var f=document.getElementById('set-key');f.type=f.type=='password'?'text':'password'">👁</button><button class="btn" onclick="saveKey()">Save</button></div>
+          <div class="key-row"><input type="password" id="set-key" placeholder="AIza…" autocomplete="off"><button class="eye-btn" onclick="var f=document.getElementById('set-key');f.type=f.type=='password'?'text':'password'"><span data-ic="eye"></span></button><button class="btn" onclick="saveKey()">Save</button></div>
           <div id="key-status"></div>
         </div>
         <div style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:.5px solid var(--border)">
@@ -467,17 +528,50 @@ function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function stripExt(n){return String(n).replace(/\.[^.]+$/,'')}
 function getStyle(){return(PROFILE&&PROFILE.writing_style&&PROFILE.writing_style.trim())||DEFAULT_STYLE}
 function getKey(){var k=(document.getElementById('apikey').value||'').trim()||(PROFILE&&PROFILE.gemini_key)||'';if(!k){alert('Please enter your Gemini API key.');return null}return k}
-function showToast(msg,type){
+var ICONS={
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  chart:'<path d="M3 3v18h18"/><path d="M7 16v-5"/><path d="M12 16V8"/><path d="M17 16v-9"/>',
+  layers:'<path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>',
+  message:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/>',
+  trending:'<path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>',
+  moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  save:'<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/>',
+  sparkle:'<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z"/>',
+  file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/>',
+  camera:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/>',
+  refresh:'<path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>',
+  printer:'<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/>',
+  arrow:'<path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>',
+  back:'<path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>',
+  alert:'<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  bulb:'<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z"/>',
+  clipboard:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
+  calendar:'<path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/>',
+  plus:'<path d="M12 5v14"/><path d="M5 12h14"/>',
+  eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  x:'<path d="M18 6 6 18"/><path d="M6 6l12 12"/>',
+  circle:'<circle cx="12" cy="12" r="9"/>',
+  target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>'
+};
+function ic(name){return'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[name]||'')+'</svg>'}
+function showToast(msg,type,dur,undoLabel,undoCb){
   var wrap=document.getElementById('toast-wrap');if(!wrap)return;
   var t=document.createElement('div');
   t.className='toast'+(type==='ok'?' ok':type==='warn'?' warn':type==='err'?' err':'');
-  var dot=type==='ok'?'✓':type==='err'?'✕':type==='warn'?'!':'';
-  t.innerHTML=(dot?'<span class="tdot">'+dot+'</span>':'')+'<span>'+esc(msg)+'</span>';
+  var dot=type==='ok'?ic('check'):type==='err'?ic('x'):type==='warn'?ic('alert'):'';
+  t.innerHTML=(dot?'<span class="tdot">'+dot+'</span>':'')+'<span>'+msg+'</span>';
   var killed=false;
   function kill(){if(killed)return;killed=true;t.classList.add('out');setTimeout(function(){t.remove()},220)}
+  if(undoLabel&&undoCb){var ub=document.createElement('button');ub.className='toast-undo';ub.textContent=undoLabel;ub.addEventListener('click',function(e){e.stopPropagation();undoCb();kill()});t.appendChild(ub)}
   t.addEventListener('click',kill);
   wrap.appendChild(t);
-  setTimeout(kill,3000);
+  setTimeout(kill,dur||3000);
 }
 // Status messages now surface as toasts (inline element cleared for safety)
 function showStatus(id,msg,type){var el=document.getElementById(id);if(el){el.textContent='';el.className=''}showToast(msg,type==='ok'?'ok':'err')}
@@ -485,7 +579,7 @@ function openModal(id){document.getElementById(id).classList.add('open')}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
 
 // ── Dark mode ──────────────────────────────────────────────────────────────
-function applyThemeLabel(){var b=document.getElementById('theme-btn');if(!b)return;var dark=document.documentElement.getAttribute('data-theme')==='dark';b.textContent=dark?'☀️ Light mode':'🌙 Dark mode'}
+function applyThemeLabel(){var b=document.getElementById('theme-btn');if(!b)return;var dark=document.documentElement.getAttribute('data-theme')==='dark';b.innerHTML=dark?(ic('sun')+'Light mode'):(ic('moon')+'Dark mode')}
 function toggleTheme(){
   var dark=document.documentElement.getAttribute('data-theme')==='dark';
   if(dark){document.documentElement.removeAttribute('data-theme');try{localStorage.setItem('maka-theme','light')}catch(e){}}
@@ -493,6 +587,8 @@ function toggleTheme(){
   applyThemeLabel();
 }
 applyThemeLabel();
+// Hydrate all data-ic spans in static HTML
+document.querySelectorAll('[data-ic]').forEach(function(el){el.innerHTML=ic(el.getAttribute('data-ic'))});
 
 // ── Local persistence: remembered settings + crash-safe results ──────────────
 function rememberSettings(){
@@ -609,9 +705,9 @@ if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){set
 function toggleDD(){document.getElementById('dropdown').classList.toggle('open')}
 document.addEventListener('click',function(e){if(document.getElementById('avatar-btn')&&!document.getElementById('avatar-btn').contains(e.target))document.getElementById('dropdown').classList.remove('open')});
 
-function saveName(){if(!sb||!USER)return;var n=document.getElementById('set-name').value.trim();if(!n)return;sb.from('profiles').update({display_name:n}).eq('id',USER.id).then(function(){PROFILE.display_name=n;document.getElementById('dd-name').textContent=n;document.getElementById('av-init').textContent=n[0].toUpperCase();showStatus('name-status','Saved ✓','ok')}).catch(function(){})}
-function saveKey(){if(!sb||!USER)return;var k=document.getElementById('set-key').value.trim();if(!k)return;sb.from('profiles').update({gemini_key:k}).eq('id',USER.id).then(function(){PROFILE.gemini_key=k;document.getElementById('apikey').value=k;showStatus('key-status','Saved ✓','ok')}).catch(function(){})}
-function saveStyle(){if(!sb||!USER)return;var s=document.getElementById('set-style').value.trim();sb.from('profiles').update({writing_style:s||null}).eq('id',USER.id).then(function(){PROFILE.writing_style=s;showStatus('style-status','Saved ✓','ok')}).catch(function(){})}
+function saveName(){if(!sb||!USER)return;var n=document.getElementById('set-name').value.trim();if(!n)return;sb.from('profiles').update({display_name:n}).eq('id',USER.id).then(function(){PROFILE.display_name=n;document.getElementById('dd-name').textContent=n;document.getElementById('av-init').textContent=n[0].toUpperCase();showStatus('name-status','Saved','ok')}).catch(function(){})}
+function saveKey(){if(!sb||!USER)return;var k=document.getElementById('set-key').value.trim();if(!k)return;sb.from('profiles').update({gemini_key:k}).eq('id',USER.id).then(function(){PROFILE.gemini_key=k;document.getElementById('apikey').value=k;showStatus('key-status','Saved','ok')}).catch(function(){})}
+function saveStyle(){if(!sb||!USER)return;var s=document.getElementById('set-style').value.trim();sb.from('profiles').update({writing_style:s||null}).eq('id',USER.id).then(function(){PROFILE.writing_style=s;showStatus('style-status','Saved','ok')}).catch(function(){})}
 function deleteAcct(){if(!sb||!USER||!confirm('Delete your account and ALL data? Cannot be undone.'))return;sb.from('profiles').delete().eq('id',USER.id).then(function(){sb.auth.signOut().then(function(){window.location.href='login.html'})}).catch(function(){})}
 
 function loadRubrics(){
@@ -635,7 +731,7 @@ async function buildRubric(){
   if(!task){alert('Please enter a task description first so the rubric can be tailored to it.');return}
   var btn=document.getElementById('build-rub-btn');
   var status=document.getElementById('build-rub-status');
-  btn.disabled=true;btn.textContent='✨ Building…';
+  btn.disabled=true;btn.innerHTML=ic('sparkle')+'Building…';
   status.style.display='block';status.textContent='Generating rubric for '+area+' Level '+level+'…';
   var prompt=[
     'You are an experienced New Zealand Years 7-8 teacher.',
@@ -668,13 +764,13 @@ async function buildRubric(){
   try{
     var raw=await gemini(key,[{text:prompt}],function(a,max){status.textContent='Gemini busy — retrying ('+a+'/'+(max-1)+')…';status.style.color='var(--text2)'});
     document.getElementById('rubric').value=raw.trim();
-    status.textContent='✓ Rubric built! Review it below, then mark as normal or save it for later.';
+    status.textContent='Rubric built! Review it below, then mark as normal or save it for later.';
     status.style.color='var(--green)';
   }catch(e){
     status.textContent='Could not build rubric: '+(e.message||'Unknown error');
     status.style.color='var(--danger-text)';
   }
-  btn.disabled=false;btn.textContent='✨ Build rubric with AI';
+  btn.disabled=false;btn.innerHTML=ic('sparkle')+'Build rubric with AI';
 }
 function saveRubric(){if(!sb||!USER){alert('Sign in to save rubrics.');return}var n=prompt('Name for this rubric:');if(!n)return;sb.from('rubrics').insert({teacher_id:USER.id,name:n,learning_area:document.getElementById('la').value,level:document.getElementById('cl').value,criteria:document.getElementById('rubric').value.trim()}).then(function(){loadRubrics()}).catch(function(){})}
 function loadRubricsSettings(){
@@ -780,11 +876,14 @@ async function gemini(key,parts,onRetry){
 function parseJSON(raw){var s=raw.indexOf('{'),e=raw.lastIndexOf('}');if(s===-1||e===-1)throw new Error('No JSON in response');return JSON.parse(raw.slice(s,e+1))}
 
 function renderProg(){
-  document.getElementById('progress').innerHTML='<ul class="plist">'+progressItems.map(function(p){
-    var ic=p.status==='done'?'<span class="tick">✓</span>':p.status==='error'?'<span style="color:var(--danger-text)">✗</span>':p.status==='working'?'<div class="spinner"></div>':'<span style="color:var(--text3)">○</span>';
+  var done=progressItems.filter(function(p){return p.status==='done'||p.status==='error'}).length,tot=progressItems.length;
+  var pct=tot?Math.round(done/tot*100):0;
+  var bar=tot>1?'<div class="batch-bar"><div class="batch-lbl"><span>'+done+' of '+tot+' marked</span><span>'+pct+'%</span></div><div class="batch-track"><div class="batch-fill" style="width:'+pct+'%"></div></div></div>':'';
+  document.getElementById('progress').innerHTML=bar+'<ul class="plist">'+progressItems.map(function(p){
+    var mk=p.status==='done'?'<span class="tick">'+ic('check')+'</span>':p.status==='error'?'<span style="color:var(--danger-text)">'+ic('x')+'</span>':p.status==='working'?'<div class="spinner"></div>':'<span style="color:var(--text3)">'+ic('circle')+'</span>';
     var ph=p.phase?'<span style="font-size:11px;color:var(--text3);margin-left:4px">'+esc(p.phase)+'</span>':'';
     var er=p.err?'<span style="font-size:11px;color:var(--danger-text);margin-left:4px">'+esc(p.err)+'</span>':'';
-    return'<li>'+ic+'<span style="color:var(--text2)">'+esc(p.name)+'</span>'+ph+er+'</li>';
+    return'<li>'+mk+'<span style="color:var(--text2)">'+esc(p.name)+'</span>'+ph+er+'</li>';
   }).join('')+'</ul>';
 }
 
@@ -939,12 +1038,12 @@ function saveAllToProfiles(){
   var valid=results.filter(function(r){return!r._error});
   if(!valid.length){showToast('Nothing to save yet','warn');return}
   var btn=document.getElementById('saveallbtn');if(btn){btn.disabled=true;btn.textContent='Saving…'}
-  function done(ok,msg){if(btn){btn.disabled=false;btn.textContent='💾 Save all to profiles'}showToast(msg,ok?'ok':'err')}
+  function done(ok,msg){if(btn){btn.disabled=false;btn.innerHTML=ic('save')+'Save all to profiles'}showToast(msg,ok?'ok':'err')}
   if(!currentSessId){
     var area=document.getElementById('la').value,level=document.getElementById('cl').value,task=document.getElementById('task').value;
     var rub=document.getElementById('rubric').value.trim()||DEFAULT_RUBRIC;
     var sname=document.getElementById('session-name').value.trim()||('Session '+new Date().toLocaleDateString('en-NZ'));
-    saveSess(sname,area,level,task,rub,results);if(btn){btn.disabled=false;btn.textContent='💾 Save all to profiles'}return;
+    saveSess(sname,area,level,task,rub,results);if(btn){btn.disabled=false;btn.innerHTML=ic('save')+'Save all to profiles'}return;
   }
   // Existing session: upsert current rows first (no data loss if it fails), then prune orphans.
   var newNames={};valid.forEach(function(r){newNames[resultSaveName(r)]=true});
@@ -967,7 +1066,7 @@ function saveAllToProfiles(){
       if(!orphans.length)return null;
       return sb.from('student_results').delete().eq('session_id',currentSessId).in('file_name',orphans);
     });
-  }).then(function(){persistResults();done(true,'Saved to '+valid.length+' student profile'+(valid.length!==1?'s':'')+' ✓')})
+  }).then(function(){persistResults();done(true,'Saved to '+valid.length+' student profile'+(valid.length!==1?'s':''))})
     .catch(function(e){done(false,'Could not save: '+(e.message||e))});
 }
 
@@ -983,12 +1082,12 @@ function makeEditable(el,onSave){
   }
 }
 function renderResultCard(r,idx,editable){
-  if(r._error){var btn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkStu('+idx+')">↺ Retry</button>':'';return'<div class="rcard"><div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span>'+btn+'</div><div class="err">⚠ '+esc(r._error)+'</div></div>'}
+  if(r._error){var btn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkStu('+idx+')">'+ic('refresh')+'Retry</button>':'';return'<div class="rcard"><div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span>'+btn+'</div><div class="err">'+ic('alert')+' '+esc(r._error)+'</div></div>'}
   var crit=r.criteria||[],tot=r.criteriaTotal||r.criteria_total||'';
   var sc=crit.map(function(c){return parseInt(c.score)||0}),total=sc.reduce(function(a,b){return a+b},0);
   var pct=sc.length?Math.round(total/(sc.length*5)*100):0;
   var overall=r.overallScore||r.overall_score||'';
-  var remarkBtn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkStu('+idx+')">↺ Re-mark</button>':'';
+  var remarkBtn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkStu('+idx+')">'+ic('refresh')+'Re-mark</button>':'';
   var i1=r.improve1||r.strengths||'',i2=r.improve2||(r.next_steps&&r.next_steps[0])||'';
   var html='<div class="rcard">';
   html+='<div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span><div style="display:flex;align-items:center;gap:6px"><span class="pill '+pillCls(pct)+'">'+esc(overall)+' · '+esc(tot)+'</span>'+remarkBtn+'</div></div>';
@@ -1002,8 +1101,8 @@ function renderResultCard(r,idx,editable){
   }
   if(i1||i2){
     html+='<div class="slbl">How to improve</div>';
-    if(i1)html+='<div class="sbox improve" style="margin-bottom:6px">💡 '+esc(i1)+'</div>';
-    if(i2)html+='<div class="sbox improve">💡 '+esc(i2)+'</div>';
+    if(i1)html+='<div class="sbox improve" style="margin-bottom:6px">'+ic('bulb')+esc(i1)+'</div>';
+    if(i2)html+='<div class="sbox improve">'+ic('bulb')+esc(i2)+'</div>';
   }
   if(editable){
     var assigned=assignedStudentFor(r);
@@ -1094,6 +1193,7 @@ function loadDashSess(){
   if(!sb||!USER)return;
   sb.from('student_results').select('*').eq('session_id',id).then(function(res){renderDashboard((res.data||[]).map(normResult));document.getElementById('dash-sess-label').textContent=document.getElementById('dash-sess-sel').options[document.getElementById('dash-sess-sel').selectedIndex].text}).catch(function(){});
 }
+function heatColor(s){return s>=5?'#1f6b1c':s>=4?'#3a833a':s>=3?'#936a0a':s>=2?'#a85525':s>=1?'#9c2b2b':'#9a958c'}
 function renderDashboard(res){
   var v=(res||[]).filter(function(r){return!r._error&&(r.criteria||[]).length});
   if(!v.length){document.getElementById('dash-empty').style.display='block';document.getElementById('dash-content').style.display='none';return}
@@ -1111,7 +1211,21 @@ function renderDashboard(res){
   document.getElementById('dash-bands').innerHTML=bd.map(function(b){return'<div class="band-row"><span class="pill '+b.cls+'" style="min-width:28px;text-align:center">'+b.st.length+'</span><span style="font-weight:500;font-size:13px;width:220px;flex-shrink:0">'+b.l+'</span><span style="font-size:12px;color:var(--text2)">'+esc(b.st.map(function(r){return stripExt(r.fileName||r.file_name||'')}).join(', ')||'—')+'</span></div>'}).join('');
   setTimeout(function(){document.querySelectorAll('#dash-bars .bar-fill').forEach(function(el){var w=el.style.width;el.style.width='0';requestAnimationFrame(function(){requestAnimationFrame(function(){el.style.width=w})})})},50);
   var sup=v.filter(function(r){var s=(r.criteria||[]).map(function(c){return parseInt(c.score)||0});return s.length&&s.reduce(function(a,b){return a+b},0)/s.length<2.5});
-  document.getElementById('dash-support').innerHTML=sup.length?sup.map(function(r){var weak=(r.criteria||[]).filter(function(c){return parseInt(c.score)<=2}).map(function(c){return c.name.split('—')[0].trim()}).join(', ');return'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:.5px solid var(--border);font-size:13px"><span style="font-weight:500;flex:1">'+esc(stripExt(r.fileName||r.file_name||''))+'</span><span class="pill pl">'+esc(r.criteriaTotal||r.criteria_total||'')+'</span><span style="font-size:12px;color:var(--text2)">Weak: '+esc(weak)+'</span></div>'}).join(''):'<div style="font-size:13px;color:var(--text2);padding:8px 0">No students flagged 🎉</div>';
+  document.getElementById('dash-support').innerHTML=sup.length?sup.map(function(r){var weak=(r.criteria||[]).filter(function(c){return parseInt(c.score)<=2}).map(function(c){return c.name.split('—')[0].trim()}).join(', ');return'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:.5px solid var(--border);font-size:13px"><span style="font-weight:500;flex:1">'+esc(stripExt(r.fileName||r.file_name||''))+'</span><span class="pill pl">'+esc(r.criteriaTotal||r.criteria_total||'')+'</span><span style="font-size:12px;color:var(--text2)">Weak: '+esc(weak)+'</span></div>'}).join(''):'<div style="font-size:13px;color:var(--text2);padding:8px 0">No students flagged — great work!</div>';
+  // Cohort insight banner
+  var insightEl=document.getElementById('dash-insight');
+  if(insightEl){
+    var crAvgs=cn.map(function(n,ci){return{n:n.split('—')[0].trim(),avg:v.map(function(r){return parseInt((r.criteria[ci]||{}).score)||0}).reduce(function(a,b){return a+b},0)/v.length}});
+    var weakCr=crAvgs.reduce(function(a,b){return a.avg<=b.avg?a:b});
+    var strongCr=crAvgs.reduce(function(a,b){return a.avg>=b.avg?a:b});
+    insightEl.innerHTML='<div class="cohort-insight"><span class="ci-badge ci-weak">Weakest: '+esc(weakCr.n)+' ('+weakCr.avg.toFixed(1)+'/5)</span><span class="ci-badge ci-strong">Strongest: '+esc(strongCr.n)+' ('+strongCr.avg.toFixed(1)+'/5)</span></div>';
+  }
+  // Criterion heatmap
+  var heatEl=document.getElementById('dash-heat');
+  if(heatEl&&cn.length){
+    var hRows=v.map(function(r){return'<tr><td class="hm-name">'+esc(stripExt(r.fileName||r.file_name||'').split(/[\s\-_.]/)[0])+'</td>'+cn.map(function(n,ci){var s=parseInt((r.criteria[ci]||{}).score)||0;return'<td class="hm-cell" style="background:'+heatColor(s)+'" title="'+esc(n.split('—')[0].trim())+': '+s+'/5">'+s+'</td>'}).join('')+'</tr>'}).join('');
+    heatEl.innerHTML='<div class="hm-wrap"><table class="hm-table"><thead><tr><th class="hm-name"></th>'+cn.map(function(n){return'<th class="hm-head" title="'+esc(n)+'">'+esc(n.split('—')[0].trim().substring(0,10))+'</th>'}).join('')+'</tr></thead><tbody>'+hRows+'</tbody></table></div>';
+  }
 }
 
 function loadHistory(){
@@ -1122,7 +1236,7 @@ function loadHistory(){
   sb.from('sessions').select('*').eq('teacher_id',USER.id).order('created_at',{ascending:false}).then(function(res){
     var sessions=res.data||[];
     if(!sessions.length){el.innerHTML='<div style="font-size:13px;color:var(--text2)">No past sessions yet.</div>';return}
-    el.innerHTML=sessions.map(function(s){var d=new Date(s.created_at).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});return'<div class="sess-item"><div style="font-size:26px;flex-shrink:0">📋</div><div class="sess-info"><div class="sess-name">'+esc(s.name||'Untitled')+'</div><div class="sess-meta">'+esc(s.learning_area||'')+(s.level?' · Level '+s.level:'')+' · '+d+'</div></div><div class="btn-row"><button class="btn btn-sm" onclick="loadHistDetail(\''+s.id+'\',\''+esc(s.name||'Session')+'\')">View</button><button class="btn btn-sm" onclick="renameSession(\''+s.id+'\',\''+esc(s.name||'')+'\')">Rename</button><button class="btn btn-sm btn-danger" onclick="delSession(\''+s.id+'\')">Delete</button></div></div>'}).join('');
+    el.innerHTML=sessions.map(function(s){var d=new Date(s.created_at).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});return'<div class="sess-item" id="sess-'+s.id+'"><div class="ico" style="font-size:26px;flex-shrink:0;display:flex;align-items:center">'+ic('clipboard')+'</div><div class="sess-info"><div class="sess-name">'+esc(s.name||'Untitled')+'</div><div class="sess-meta">'+esc(s.learning_area||'')+(s.level?' · Level '+s.level:'')+' · '+d+'</div></div><div class="btn-row"><button class="btn btn-sm" onclick="loadHistDetail(\''+s.id+'\',\''+esc(s.name||'Session')+'\')">View</button><button class="btn btn-sm" onclick="renameSession(\''+s.id+'\',\''+esc(s.name||'')+'\')">Rename</button><button class="btn btn-sm btn-danger" onclick="delSession(\''+s.id+'\',\''+esc(s.name||'Session')+'\')">Delete</button></div></div>'}).join('');
   }).catch(function(e){el.innerHTML='<div class="err">'+esc(e.message)+'</div>'});
 }
 function loadHistDetail(id,name){
@@ -1138,7 +1252,16 @@ function closeHistDetail(){document.getElementById('hist-detail-view').style.dis
 function renameSession(id,name){renameTargetId=id;document.getElementById('rename-input').value=name;openModal('rename-modal');setTimeout(function(){document.getElementById('rename-input').focus();document.getElementById('rename-input').select()},100)}
 function confirmRename(){var n=document.getElementById('rename-input').value.trim();if(!n||!renameTargetId){closeModal('rename-modal');return}sb.from('sessions').update({name:n}).eq('id',renameTargetId).then(function(){closeModal('rename-modal');renameTargetId=null;loadHistory()}).catch(function(){})}
 document.getElementById('rename-input').addEventListener('keydown',function(e){if(e.key==='Enter')confirmRename();if(e.key==='Escape')closeModal('rename-modal')});
-function delSession(id){if(!confirm('Delete this session and all student results?'))return;sb.from('sessions').delete().eq('id',id).then(function(){loadHistory()}).catch(function(){})}
+function delSession(id,name){
+  var el=document.getElementById('sess-'+id);
+  if(el)el.style.opacity='0.4';
+  var undone=false;
+  var timer=setTimeout(function(){
+    if(undone)return;
+    sb.from('sessions').delete().eq('id',id).then(function(){loadHistory()}).catch(function(){if(el)el.style.opacity='';});
+  },4000);
+  showToast(ic('trash')+'Deleted "'+esc(name||'Session')+'"','neutral',5000,'Undo',function(){undone=true;clearTimeout(timer);if(el)el.style.opacity='';});
+}
 
 function setCType(type){
   currentCType=type;
@@ -1256,7 +1379,7 @@ function importClassCSV(){
     if(!students.length){showStatus('import-status','No students found in CSV.','err');return}
     sb.from('students').insert(students).then(function(res){
       if(res.error){showStatus('import-status','Error: '+res.error.message,'err');return}
-      showStatus('import-status',students.length+' students imported ✓','ok');loadClassList();loadClassStudents();
+      showStatus('import-status',students.length+' students imported','ok');loadClassList();loadClassStudents();
     }).catch(function(e){showStatus('import-status',e.message,'err')});
   };reader.readAsText(f);
 }
@@ -1296,6 +1419,7 @@ function exportCSV(){
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(function(r){return r.map(function(v){return'"'+String(v).replace(/"/g,'""')+'"'}).join(',')}).join('\n')],{type:'text/csv'}));a.download='marking_results.csv';a.click();
 }
 (function(){var nv=document.querySelector('nav');if(!nv)return;window.addEventListener('scroll',function(){nv.classList.toggle('scrolled',window.scrollY>4)},{passive:true})})();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){})}
 </script>
 </body>
 </html>
