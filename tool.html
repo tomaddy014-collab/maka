@@ -271,9 +271,13 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <div class="upload-box empty-pulse" id="dropzone">
         <div style="font-size:32px;margin-bottom:10px">📄</div>
         <div style="font-size:14px;font-weight:500;margin-bottom:4px">Drag and drop files here</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:14px">PDF, JPG and PNG — scanned handwriting works too</div>
-        <button class="btn" id="pickbtn">Browse files</button>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:14px">PDF, JPG and PNG — or snap a photo. Scanned handwriting works too</div>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+          <button class="btn" id="pickbtn">Browse files</button>
+          <button class="btn" id="camerabtn">📷 Take photo</button>
+        </div>
         <input type="file" id="fileinput" accept=".pdf,.jpg,.jpeg,.png" multiple style="display:none">
+        <input type="file" id="camerainput" accept="image/*" capture="environment" multiple style="display:none">
       </div>
       <ul class="flist" id="flist"></ul>
       <div id="upload-count" style="font-size:12px;color:var(--text2);margin-top:8px;display:none"></div>
@@ -608,6 +612,20 @@ function addFiles(list){Array.from(list).forEach(function(f){if(!['application/p
 
 document.getElementById('pickbtn').onclick=function(e){e.preventDefault();document.getElementById('fileinput').click()};
 document.getElementById('fileinput').onchange=function(){if(this.files&&this.files.length)addFiles(Array.from(this.files));this.value=''};
+document.getElementById('camerabtn').onclick=function(e){e.preventDefault();document.getElementById('camerainput').click()};
+document.getElementById('camerainput').onchange=function(){
+  if(this.files&&this.files.length){
+    // Camera photos often share a generic name (e.g. "image.jpg") which would
+    // collide on the dedup-by-name check, so give each capture a unique name.
+    var stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+    var renamed=Array.from(this.files).map(function(f,i){
+      var ext=(f.type==='image/png')?'png':'jpg';
+      return new File([f],'photo-'+stamp+'-'+(i+1)+'.'+ext,{type:f.type});
+    });
+    addFiles(renamed);
+  }
+  this.value='';
+};
 var dz=document.getElementById('dropzone');
 dz.ondragover=function(e){e.preventDefault();e.stopPropagation();dz.classList.add('dragover')};
 dz.ondragleave=function(){dz.classList.remove('dragover')};
