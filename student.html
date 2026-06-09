@@ -366,10 +366,24 @@ async function loadAll(){
   STUDENT=sr.data;
   document.title='Māka — '+STUDENT.name;
 
-  var firstName=STUDENT.name.split(' ')[0];
+  var parts=STUDENT.name.trim().split(/\s+/);
+  var firstName=parts[0],lastName=parts.length>1?parts[parts.length-1]:'';
   var rr;
   try{rr=await sb.from('student_results').select('*, sessions(id,name,learning_area,task,created_at,level,rubric)').eq('teacher_id',USER.id).ilike('file_name','%'+firstName+'%').order('created_at',{ascending:true})}catch(e){rr={data:[]}}
-  ALL_RESULTS=(rr&&rr.data)||[];
+  var raw=(rr&&rr.data)||[];
+
+  // Detect whether another student in the class shares this first name — if so,
+  // a bare first-name file match is ambiguous and we require the surname too.
+  var others=[];
+  try{var cl=await sb.from('students').select('name').eq('teacher_id',USER.id);others=((cl&&cl.data)||[]).map(function(s){return s.name})}catch(e){}
+  var fl=firstName.toLowerCase(),ll=lastName.toLowerCase(),fullL=STUDENT.name.toLowerCase();
+  var collision=others.some(function(n){return n!==STUDENT.name&&n.toLowerCase().split(/\s+/)[0]===fl});
+  ALL_RESULTS=raw.filter(function(r){
+    var fn=(' '+(r.file_name||'').toLowerCase()+' ').replace(/[\s\-_.]+/g,' ');
+    if(fn.indexOf(fullL)!==-1)return true;            // exact full name — always keep
+    if(!collision)return true;                         // unique first name — first-name match is safe
+    return ll&&fn.indexOf(' '+ll+' ')!==-1;            // ambiguous — require surname to disambiguate
+  });
 
   var cr;
   try{cr=await sb.from('report_comments').select('*').eq('teacher_id',USER.id).eq('student_name',STUDENT.name).order('created_at',{ascending:false})}catch(e){cr={data:[]}}

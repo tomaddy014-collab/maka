@@ -1127,11 +1127,21 @@ function renderResultCard(r,idx,editable){
   return html;
 }
 // Which class student this result will save to: explicit assignment, else auto-detected from the file name.
+// Matching order (most → least confident): full name, first+last, unambiguous first name.
 function assignedStudentFor(r){
   if(r.assignTo)return r.assignTo;
-  var fn=(r.fileName||r.file_name||'').toLowerCase();
-  var match=CLASS_STUDENTS.find(function(s){var first=(s.name||'').split(' ')[0].toLowerCase();return first&&fn.indexOf(first)!==-1});
-  return match?match.name:'';
+  var fn=(' '+(r.fileName||r.file_name||'').toLowerCase()+' ').replace(/[\s\-_.]+/g,' ');
+  var has=function(w){return w&&fn.indexOf(' '+w+' ')!==-1};
+  // 1. Full name appears in the file name
+  var full=CLASS_STUDENTS.find(function(s){return fn.indexOf((s.name||'').toLowerCase())!==-1});
+  if(full)return full.name;
+  // 2. First name + last name both present (handles "smith_john")
+  var both=CLASS_STUDENTS.find(function(s){var p=(s.name||'').toLowerCase().split(' ');return p.length>1&&has(p[0])&&has(p[p.length-1])});
+  if(both)return both.name;
+  // 3. First name only — but ONLY if exactly one student has that first name (avoid ambiguity)
+  var byFirst=CLASS_STUDENTS.filter(function(s){return has((s.name||'').split(' ')[0].toLowerCase())});
+  if(byFirst.length===1)return byFirst[0].name;
+  return '';
 }
 // The file_name stored in the DB — embeds the chosen student's name so the student hub picks it up.
 function resultSaveName(r){
