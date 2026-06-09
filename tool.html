@@ -99,6 +99,15 @@ nav.scrolled{box-shadow:0 8px 30px -12px rgba(15,14,12,0.12)}
 @media(min-width:900px){
   .mark-grid{display:grid;grid-template-columns:1.05fr .95fr;column-gap:1.25rem;align-items:start}
 }
+/* Collapsible setup card (progressive disclosure) */
+.collapse-head{cursor:pointer;margin-bottom:0!important}
+.collapse-head .step-summary{display:none;margin-left:auto;font-size:12.5px;color:var(--text2);align-items:center;gap:5px}
+.collapse-head .collapse-chev{margin-left:8px;color:var(--text3);display:inline-flex;transition:transform .3s var(--ease-spring)}
+.collapse-head .collapse-chev .ico{font-size:16px}
+.collapse-body{overflow:hidden;transition:max-height .35s var(--ease-spring),opacity .25s var(--ease),margin .25s var(--ease);max-height:600px;opacity:1;margin-top:14px}
+.card.collapsed .collapse-body{max-height:0;opacity:0;margin-top:0}
+.card.collapsed .collapse-head .step-summary{display:inline-flex}
+.card.collapsed .collapse-head .collapse-chev{transform:rotate(-90deg)}
 .step-title{font-weight:600;font-size:15px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .field{margin-bottom:12px}.field:last-child{margin-bottom:0}
@@ -344,10 +353,10 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
   <div class="panel active" id="panel-mark">
     <div class="mark-grid">
     <div class="mark-col-setup">
-    <div class="card">
-      <div class="step-row"><span class="step-n" id="step-n-0" data-n="0">0</span><span class="step-title">Gemini API key</span></div>
-      <div class="field">
-        <div class="key-row"><input type="password" id="apikey" placeholder="AIza…" autocomplete="off"><button class="eye-btn" onclick="var f=document.getElementById('apikey');f.type=f.type=='password'?'text':'password'"><span data-ic="eye"></span></button></div>
+    <div class="card" id="step0-card">
+      <div class="step-row collapse-head" id="step0-head" role="button" tabindex="0" aria-expanded="true" aria-controls="step0-body" onclick="toggleStep0()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleStep0()}"><span class="step-n" id="step-n-0" data-n="0">0</span><span class="step-title">Gemini API key</span><span class="step-summary" id="step0-summary"></span><span class="collapse-chev"><span data-ic="chevron"></span></span></div>
+      <div class="field collapse-body" id="step0-body">
+        <div class="key-row"><input type="password" id="apikey" placeholder="AIza…" autocomplete="off" aria-label="Gemini API key"><button class="eye-btn" aria-label="Show or hide key" onclick="var f=document.getElementById('apikey');f.type=f.type=='password'?'text':'password'"><span data-ic="eye"></span></button></div>
         <div class="hint">Free at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com</a> — saved to your account when signed in.</div>
       </div>
     </div>
@@ -358,19 +367,19 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         <button class="btn btn-sm" onclick="saveRubric()"><span data-ic="save"></span>Save current</button>
       </div>
       <div class="grid2">
-        <div class="field"><label class="lbl">Learning area</label><select id="la"><option>English / Literacy</option><option>Mathematics / Pāngarau</option><option>Science</option><option>Social sciences</option><option>Technology</option><option>Arts</option><option>Health and PE</option><option>Te Reo Māori</option></select></div>
-        <div class="field"><label class="lbl">Curriculum level</label><select id="cl"><option value="4">Level 4 — Years 7–8</option><option value="3">Level 3 — Years 5–6</option><option value="5">Level 5 — Years 9–10</option></select></div>
+        <div class="field"><label class="lbl" for="la">Learning area</label><select id="la"><option>English / Literacy</option><option>Mathematics / Pāngarau</option><option>Science</option><option>Social sciences</option><option>Technology</option><option>Arts</option><option>Health and PE</option><option>Te Reo Māori</option></select></div>
+        <div class="field"><label class="lbl" for="cl">Curriculum level</label><select id="cl"><option value="4">Level 4 — Years 7–8</option><option value="3">Level 3 — Years 5–6</option><option value="5">Level 5 — Years 9–10</option></select></div>
       </div>
-      <div class="field"><label class="lbl">Task / focus</label><input type="text" id="task" placeholder="e.g. Persuasive writing — should school uniforms be compulsory?" oninput="autoSessName()"></div>
+      <div class="field"><label class="lbl" for="task">Task / focus</label><input type="text" id="task" placeholder="e.g. Persuasive writing — should school uniforms be compulsory?" oninput="autoSessName()"></div>
       <div class="field">
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:5px">
-    <label class="lbl" style="margin-bottom:0">Rubric <span style="font-weight:500;text-transform:none;letter-spacing:0">(one per line — leave blank for NZC defaults)</span></label>
+    <label class="lbl" for="rubric" style="margin-bottom:0">Rubric <span style="font-weight:500;text-transform:none;letter-spacing:0">(one per line — leave blank for NZC defaults)</span></label>
     <button class="btn btn-sm" id="build-rub-btn" onclick="buildRubric()" style="font-size:12px;padding:5px 10px"><span data-ic="sparkle"></span>Build rubric with AI</button>
   </div>
   <div id="build-rub-status" style="font-size:12px;color:var(--text2);margin-bottom:6px;display:none"></div>
   <textarea id="rubric" placeholder="e.g.&#10;Ideas — clearly states a position&#10;Structure — TIDE paragraph&#10;Language — persuasive devices&#10;Conventions — spelling, punctuation, grammar&#10;Clarity — flows logically"></textarea>
 </div>
-      <div class="field"><label class="lbl">Session name</label><input type="text" id="session-name" placeholder="e.g. 7B Writing — Kaitiakitanga — Term 2"></div>
+      <div class="field"><label class="lbl" for="session-name">Session name</label><input type="text" id="session-name" placeholder="e.g. 7B Writing — Kaitiakitanga — Term 2"></div>
     </div>
     </div><!-- /mark-col-setup -->
     <div class="mark-col-action">
@@ -585,7 +594,8 @@ var ICONS={
   grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
   keyboard:'<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
   external:'<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/>',
-  image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>'
+  image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
+  chevron:'<path d="M9 18l6-6-6-6"/>'
 };
 function ic(name){return'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[name]||'')+'</svg>'}
 function showToast(msg,type,dur,undoLabel,undoCb){
@@ -694,7 +704,7 @@ function loadProfileBg(){
         if(PROFILE.writing_style)document.getElementById('set-style').value=PROFILE.writing_style;
         updateNavForUser();
       }else{sb.from('profiles').upsert({id:USER.id,email:USER.email,display_name:''}).then(function(){}).catch(function(){})}
-      loadRubrics();loadDashSessions();loadCompareSessions();loadClassStudents();updateStepState();
+      loadRubrics();loadDashSessions();loadCompareSessions();loadClassStudents();updateStepState();autoCollapseStep0();
     }catch(e){}
   }).catch(function(){});
 }
@@ -841,7 +851,13 @@ function updateStepState(){
     if(done[n]){if(!el.classList.contains('done')){el.classList.add('done');el.innerHTML=ic('check')}}
     else if(el.classList.contains('done')){el.classList.remove('done');el.textContent=el.dataset.n}
   });
+  var sum=document.getElementById('step0-summary');
+  if(sum)sum.innerHTML=done[0]?ic('check')+'<span>Key added</span>':'';
 }
+// Collapse the API-key card once a key is present (set-and-forget); header re-expands it.
+var _step0Touched=false;
+function toggleStep0(){_step0Touched=true;var c=document.getElementById('step0-card'),h=document.getElementById('step0-head');if(!c)return;var collapsed=c.classList.toggle('collapsed');h.setAttribute('aria-expanded',collapsed?'false':'true');if(!collapsed)setTimeout(function(){var i=document.getElementById('apikey');if(i)i.focus()},120)}
+function autoCollapseStep0(){var c=document.getElementById('step0-card');if(!c||_step0Touched)return;var hasKey=!!((document.getElementById('apikey')||{}).value||(PROFILE&&PROFILE.gemini_key));if(hasKey&&!c.classList.contains('collapsed')){c.classList.add('collapsed');var h=document.getElementById('step0-head');if(h)h.setAttribute('aria-expanded','false')}}
 function addFiles(list){
   var added=0,dupes=0,bad=0;
   Array.from(list).forEach(function(f){
