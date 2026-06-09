@@ -837,9 +837,9 @@ document.getElementById('markbtn').onclick=runMarking;
 updMark();
 
 function toB64(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1])};r.onerror=rej;r.readAsDataURL(file)})}
-async function gemini(key,parts,onRetry){
+async function gemini(key,parts,onRetry,maxTokens){
   var url='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key;
-  var body=JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0.3,maxOutputTokens:8192}});
+  var body=JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0.3,maxOutputTokens:maxTokens||8192}});
   var maxTries=10,delay=2000,lastErr='Gemini unavailable';
   for(var attempt=1;attempt<=maxTries;attempt++){
     try{
@@ -891,56 +891,28 @@ async function markOne(key,file,rubric,area,level,task,style,idx){
   progressItems[idx].status='working';progressItems[idx].phase='Marking…';renderProg();
   try{
     var mime=file.type==='application/pdf'?'application/pdf':file.type,b64=await toB64(file);
-    var p1=[
+    var prompt=[
       'You are a warm, encouraging NZ Years 7-8 teacher marking student work against the refreshed New Zealand Curriculum.',
       'Learning area: '+area+'. NZC Level: '+level+'. Task: '+(task||'General assessment')+'.',
+      'Teacher writing style (match this voice in feedback): '+style,
       '',
-      'IMPORTANT RULES:',
-      '1. Mark ONLY against the exact criteria listed below. Do NOT invent new criteria or rename them.',
-      '2. Calibrate scores to NZC Level '+level+' expectations — a student working at Level '+level+' who meets expectations should score 3/5 per criterion.',
-      '3. Be encouraging and fair. Avoid harsh or discouraging scores unless the work is clearly incomplete.',
-      '4. Use warm, clear, age-appropriate language (Years 7-8 students, aged 11-13).',
+      'RULES:',
+      '1. Mark ONLY the exact criteria listed. Do NOT invent or rename criteria.',
+      '2. Calibrate to NZC Level '+level+' — meeting expectations = 3/5 per criterion.',
+      '3. Be encouraging and fair. Only score low if work is clearly incomplete.',
+      '4. Self-check: after scoring, verify criteriaTotal = sum of all scores, then set overallScore: 21-25=Exceeds, 16-20=Achieved, 11-15=Approaching, 1-10=Beginning.',
       '',
-      'RUBRIC — mark ONLY these criteria (score each 1-5, total /25):',
+      'RUBRIC (score each 1-5, total /25):',
       rubric,
       '',
-      'OUTPUT FORMAT — return ONLY raw JSON, no markdown, no explanation:',
-      '{',
-      '  "fileName": "filename here",',
-      '  "criteriaTotal": "X/25",',
-      '  "overallScore": "one of: Beginning / Approaching / Achieved / Exceeds",',
-      '  "criteria": [{"name": "exact criterion name from rubric", "score": 1-5}],',
-      '  "improve1": "First warm specific improvement tip written directly to the student (you/your). One clear sentence.",',
-      '  "improve2": "Second warm specific improvement tip written directly to the student (you/your). One clear sentence."',
-      '}'
+      'Return ONLY raw JSON, no markdown fences, no explanation:',
+      '{"fileName":"filename","criteriaTotal":"X/25","overallScore":"Achieved","criteria":[{"name":"exact name","score":3}],"improve1":"Warm tip 1 to student using you/your — one actionable sentence.","improve2":"Warm tip 2 to student using you/your — one actionable sentence."}'
     ].join('\n');
-    var onBusy=function(a,max){progressItems[idx].phase='Gemini busy — retrying ('+a+'/'+(max-1)+')…';renderProg()};
-    var r=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:'File: "'+file.name+'"\n\n'+p1}],onBusy));
+    var onBusy=function(a,max){progressItems[idx].phase='Busy — retry '+a+'/'+(max-1)+'…';renderProg()};
+    var r=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:'File: "'+file.name+'"\n\n'+prompt}],onBusy));
     r.fileName=r.fileName||file.name;
-    await sleep(1000);
-    progressItems[idx].phase='Moderating…';renderProg();
-    var p2=[
-      'You are moderating NZC Level '+level+' student marking. Be fair and encouraging for Years 7-8 students.',
-      '',
-      'Review this marking and:',
-      '1. Check scores are fair for NZC Level '+level+' — adjust only if clearly wrong.',
-      '2. Recalculate criteriaTotal as the sum of all scores formatted as "X/25".',
-      '3. Set overallScore: 21-25=Exceeds, 16-20=Achieved, 11-15=Approaching, 1-10=Beginning.',
-      '4. Rewrite improve1 and improve2 to be warm, specific and actionable for a Year 7-8 student.',
-      '   - Write directly to the student using "you/your".',
-      '   - Each must be one clear sentence focused on HOW to improve.',
-      '   - Do not use harsh or discouraging language.',
-      '',
-      'Teacher writing style to match: '+style,
-      '',
-      'Original marking: '+JSON.stringify(r),
-      '',
-      'Return ONLY updated raw JSON in the same format. No markdown, no explanation.'
-    ].join('\n');
-    var mod=parseJSON(await gemini(key,[{text:p2}],onBusy));
-    mod.fileName=r.fileName;
     progressItems[idx].status='done';progressItems[idx].phase='';renderProg();
-    return mod;
+    return r;
   }catch(e){progressItems[idx].status='error';progressItems[idx].phase='';progressItems[idx].err=e.message;renderProg();return{fileName:file.name,_error:e.message}}
 }
 
@@ -966,8 +938,8 @@ async function runMarking(){
   document.getElementById('rsec').style.display='block';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='block';document.getElementById('save-status').innerHTML='';
   progressItems=files.map(function(f){return{name:f.name,status:'pending',phase:'',err:''}});renderProg();
   var out=[];
-  for(var b=0;b<files.length;b+=3){var br=await Promise.all(files.slice(b,b+3).map(function(f,j){return markOne(key,f,rub,area,level,task,style,b+j)}));out=out.concat(br);if(b+3<files.length)await sleep(3000)}
-  for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(4000);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markOne(key,files[i],rub,area,level,task,style,i)}));fail.forEach(function(i,j){out[i]=ret[j]})}
+  for(var b=0;b<files.length;b+=6){var br=await Promise.all(files.slice(b,b+6).map(function(f,j){return markOne(key,f,rub,area,level,task,style,b+j)}));out=out.concat(br);if(b+6<files.length)await sleep(1000)}
+  for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(2000);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markOne(key,files[i],rub,area,level,task,style,i)}));fail.forEach(function(i,j){out[i]=ret[j]})}
   out.forEach(function(r,i){r._file=files[i]});
   results=out;document.getElementById('progress').style.display='none';renderResults(out);
   var okCount=out.filter(function(r){return!r._error}).length;
@@ -1289,8 +1261,8 @@ async function genComments(){
     if(!stuList.length){cprog.style.display='none';alert('No students found for this week.');return}
     cprog.innerHTML='<div style="font-size:13px;color:var(--text2);display:flex;align-items:center;gap:8px"><div class="spinner"></div>Generating weekly posts for '+stuList.length+' students…</div>';
     var out=[];
-    for(var b=0;b<stuList.length;b+=4){
-      var br=await Promise.all(stuList.slice(b,b+4).map(async function(stu){
+    for(var b=0;b<stuList.length;b+=6){
+      var br=await Promise.all(stuList.slice(b,b+6).map(async function(stu){
         try{
           var pro={subject:'they',object:'them',possessive:'their'};
           if(sb&&USER){var gr;try{gr=await sb.from('students').select('gender').eq('teacher_id',USER.id).ilike('name',stu.name+'%').maybeSingle()}catch(e){gr={data:null}};if(gr.data){if(gr.data.gender==='boy')pro={subject:'he',object:'him',possessive:'his'};else if(gr.data.gender==='girl')pro={subject:'she',object:'her',possessive:'her'}}}
@@ -1299,7 +1271,7 @@ async function genComments(){
           return{fileName:stu.name,comment:txt.trim()};
         }catch(e){return{fileName:stu.name,comment:'Error: '+e.message}}
       }));
-      out=out.concat(br);if(b+4<stuList.length)await sleep(2000);
+      out=out.concat(br);if(b+6<stuList.length)await sleep(1000);
     }
     cprog.style.display='none';renderCommentResults(out,'Weekly post');
   }else{
@@ -1309,26 +1281,26 @@ async function genComments(){
     if(!stuNames.length){cprog.style.display='none';alert('No students found.');return}
     cprog.innerHTML='<div style="font-size:13px;color:var(--text2);display:flex;align-items:center;gap:8px"><div class="spinner"></div>Generating report comments for '+stuNames.length+' students…</div>';
     var out=[];
-    for(var b=0;b<stuNames.length;b+=3){
-      var batch=stuNames.slice(b,b+3);
+    for(var b=0;b<stuNames.length;b+=6){
+      var batch=stuNames.slice(b,b+6);
       var br=await Promise.all(batch.map(async function(name){
         try{
           var hist='No prior results',latest=null;
           if(sb&&USER){var ar;try{ar=await sb.from('student_results').select('overall_score,criteria_total,strengths,next_steps,sessions(name,learning_area)').eq('teacher_id',USER.id).ilike('file_name','%'+name+'%').order('created_at',{ascending:true})}catch(e){ar={data:[]}};if(ar.data&&ar.data.length){hist=ar.data.map(function(r){return((r.sessions&&r.sessions.name)||'Session')+': '+r.overall_score+' ('+r.criteria_total+')'}).join(' | ');latest=ar.data[ar.data.length-1]}}
           var pro={subject:'they',object:'them',possessive:'their'};
           if(sb&&USER){var gr2;try{gr2=await sb.from('students').select('gender').eq('teacher_id',USER.id).ilike('name',name+'%').maybeSingle()}catch(e){gr2={data:null}};if(gr2.data){if(gr2.data.gender==='boy')pro={subject:'he',object:'him',possessive:'his'};else if(gr2.data.gender==='girl')pro={subject:'she',object:'her',possessive:'her'}}}
-          var txt=await gemini(key,[{text:['Write a full school report comment for a NZ Years 7–8 student named '+name+'. Single paragraph, 4–6 sentences, third person.','Use pronouns: '+pro.subject+'/'+pro.object+'/'+pro.possessive+'.',term?'Report context: '+term:'','Match this teacher style:',style,'','Assessment history:',hist,'','Most recent:'+(latest?JSON.stringify(latest):'Not available'),'','Use name, third person, reference growth, one next step, match teacher voice, 4–6 sentences. Return ONLY the paragraph.'].join('\n')}]);
+          var txt=await gemini(key,[{text:['Write a comprehensive NZ school report comment for a Years 7–8 student named '+name+'.','Use pronouns: '+pro.subject+'/'+pro.object+'/'+pro.possessive+'. Third person throughout.',term?'Report period/context: '+term:'','Match this teacher writing style exactly: '+style,'','Assessment history across all sessions:',hist,'','Most recent result detail: '+(latest?JSON.stringify(latest):'Not available'),'','Structure: 2–3 paragraphs total.','Paragraph 1 (2–3 sentences): Overall achievement and standout strengths. Reference specific subjects/tasks from history.','Paragraph 2 (2–3 sentences): Growth shown over time, effort, and engagement.','Paragraph 3 (1–2 sentences): One clear, encouraging next step or goal.','Write each paragraph separated by a blank line. Use '+name+'\'s name naturally. Be warm, specific, and professional. Return ONLY the comment text, no headings, no labels.'].join('\n')}],null,16000);
           return{fileName:name,comment:txt.trim()};
         }catch(e){return{fileName:name,comment:'Error: '+e.message}}
       }));
-      out=out.concat(br);if(b+3<stuNames.length)await sleep(2000);
+      out=out.concat(br);if(b+6<stuNames.length)await sleep(1000);
     }
     cprog.style.display='none';renderCommentResults(out,'Report comment');
   }
 }
 function renderCommentResults(out,label){
   var cres=document.getElementById('comment-results');
-  cres.innerHTML='<div style="font-weight:600;font-size:14px;margin-bottom:1rem;color:var(--text2)">'+esc(label)+'s — '+out.length+' students</div>'+out.map(function(r){return'<div class="rep-card"><div class="rep-hd"><span>'+esc(r.fileName)+'</span><button class="copy-btn" data-t="'+esc(r.comment)+'">Copy</button></div><div class="rep-body">'+esc(r.comment)+'</div></div>'}).join('');
+  cres.innerHTML='<div style="font-weight:600;font-size:14px;margin-bottom:1rem;color:var(--text2)">'+esc(label)+'s — '+out.length+' students</div>'+out.map(function(r){var body=esc(r.comment).replace(/\n\n/g,'</p><p style="margin:0 0 .75em">').replace(/\n/g,'<br>');return'<div class="rep-card"><div class="rep-hd"><span>'+esc(r.fileName)+'</span><button class="copy-btn" data-t="'+esc(r.comment)+'">Copy</button></div><div class="rep-body"><p style="margin:0 0 .75em">'+body+'</p></div></div>'}).join('');
   document.querySelectorAll('#comment-results .rep-card').forEach(function(el,i){el.style.animationDelay=(i*0.05)+'s'});
   document.querySelectorAll('.copy-btn').forEach(function(b){b.onclick=function(){navigator.clipboard.writeText(b.dataset.t).then(function(){b.textContent='Copied!';setTimeout(function(){b.textContent='Copy'},1500)})}});
 }
