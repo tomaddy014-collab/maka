@@ -1146,7 +1146,7 @@ function makeEditable(el,onSave){
   el.classList.add('editable');el.title='Click or press Enter to edit';
   if(!el.hasAttribute('tabindex'))el.setAttribute('tabindex','0');
   el.setAttribute('role','button');
-  if(!el.getAttribute('aria-label'))el.setAttribute('aria-label','Edit score, currently '+el.textContent.trim());
+  el.setAttribute('aria-label','Edit score, currently '+el.textContent.trim());
   function begin(){
     var orig=el.textContent,inp=document.createElement('input');inp.type='text';inp.inputMode='numeric';inp.value=orig;inp.className='editing';inp.setAttribute('aria-label','Score 1 to 5');
     el.innerHTML='';el.appendChild(inp);inp.focus();inp.select();
@@ -1365,7 +1365,7 @@ function delSession(id,name){
     if(undone)return;
     sb.from('sessions').delete().eq('id',id).then(function(){loadHistory()}).catch(function(){if(el)el.style.opacity='';});
   },4000);
-  showToast(ic('trash')+'Deleted "'+esc(name||'Session')+'"','neutral',5000,'Undo',function(){undone=true;clearTimeout(timer);if(el)el.style.opacity='';});
+  showToast(ic('trash')+'Deleted "'+esc(name||'Session')+'"','',5000,'Undo',function(){undone=true;clearTimeout(timer);if(el)el.style.opacity='';});
 }
 
 function setCType(type){
@@ -1489,7 +1489,7 @@ function delStu(id,name){
       loadClassList();loadClassStudents();
     }).catch(function(e){if(row)row.style.opacity='';showToast(e.message,'err')});
   },4000);
-  showToast(ic('trash')+'Removed '+esc(name||'student')+' — marking history kept','neutral',5000,'Undo',function(){undone=true;clearTimeout(timer);if(row)row.style.opacity=''});
+  showToast(ic('trash')+'Removed '+esc(name||'student')+' — marking history kept','',5000,'Undo',function(){undone=true;clearTimeout(timer);if(row)row.style.opacity=''});
 }
 function importClassCSV(){
   var f=document.getElementById('class-csv').files[0];if(!f){alert('Please select a CSV file.');return}
