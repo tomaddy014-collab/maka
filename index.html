@@ -333,25 +333,42 @@ footer{padding:2.5rem;display:flex;align-items:center;justify-content:space-betw
 .reveal.visible{opacity:1;transform:none}
 .reveal-1{transition-delay:.08s}.reveal-2{transition-delay:.16s}.reveal-3{transition-delay:.24s}
 
-/* ── SPLASH ── */
+/* ── SPLASH (theatrical) ── */
 #splash{
   position:fixed;inset:0;z-index:9999;background:var(--bg);
-  display:flex;align-items:center;justify-content:center;
-  transition:opacity .7s var(--ease),transform .9s var(--spring),filter .7s var(--ease);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  transition:opacity .8s var(--ease),filter .8s var(--ease);
 }
-#splash.done{opacity:0;transform:scale(1.12);filter:blur(10px);pointer-events:none}
-.splash-aura{position:absolute;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(45,90,39,.14),transparent 65%);animation:auraBreath 2.4s var(--ease) infinite;pointer-events:none}
-@keyframes auraBreath{0%,100%{transform:scale(.92);opacity:.7}50%{transform:scale(1.08);opacity:1}}
-.splash-logo{transform:scale(2.5);transform-origin:center;position:relative}
+#splash.done{opacity:0;filter:blur(14px);pointer-events:none}
+/* layered ambient field */
+.splash-aura{position:absolute;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(45,90,39,.16),transparent 65%);animation:auraBreath 2.4s var(--ease) infinite;pointer-events:none}
+.splash-aura.gold{width:380px;height:380px;background:radial-gradient(circle,rgba(200,132,10,.12),transparent 65%);animation-delay:.4s;animation-duration:2.8s}
+@keyframes auraBreath{0%,100%{transform:scale(.9);opacity:.65}50%{transform:scale(1.1);opacity:1}}
+/* expanding shockwave at hand-off */
+.splash-ring{position:absolute;width:46px;height:46px;border-radius:50%;border:2px solid rgba(45,90,39,.55);opacity:0;pointer-events:none}
+.splash-ring.blast{animation:ringBlast 1s var(--ease) forwards}
+.splash-ring.r2{border-color:rgba(200,132,10,.4)}
+.splash-ring.r2.blast{animation-delay:.08s}
+@keyframes ringBlast{0%{opacity:.8;transform:scale(.35)}100%{opacity:0;transform:scale(40)}}
+.splash-logo{transform:scale(2.5);transform-origin:center;position:relative;z-index:2}
 .splash-logo>span{opacity:0}
 .splash-logo.show-word>span{opacity:1;transition:opacity .5s var(--ease)}
 .splash-logo.pulse{animation:splashPulse .5s var(--ease)}
 @keyframes splashPulse{0%{transform:scale(2.5)}45%{transform:scale(2.66)}100%{transform:scale(2.5)}}
-html.no-splash #splash{display:none}
+/* wordmark flies toward the camera as the page takes over */
+.splash-logo.fly{transition:transform 1s var(--spring),opacity .8s var(--ease);transform:scale(4.4) translateY(-6px);opacity:0}
+/* one-pass light sweep across the reveal */
+#sweep{position:fixed;inset:0;z-index:9998;pointer-events:none;opacity:0;
+  background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.55) 50%,transparent 58%);
+  transform:translateX(-120%)}
+#sweep.go{opacity:1;animation:sweep 1.1s var(--ease) forwards}
+@keyframes sweep{to{transform:translateX(120%)}}
+html.no-splash #splash,html.no-splash #sweep{display:none}
 #page{opacity:1}
-html:not(.no-splash) #page{opacity:0;transform:scale(.985)}
-html:not(.no-splash) #page.ready{opacity:1;transform:none;transition:opacity .8s var(--ease),transform 1s var(--spring)}
-@media (prefers-reduced-motion: reduce){#splash{display:none}#page{opacity:1!important;transform:none!important}}
+/* camera pulls back: page eases from a slight zoom-in down to rest */
+html:not(.no-splash) #page{opacity:0;transform:scale(1.045);transform-origin:50% 42%}
+html:not(.no-splash) #page.ready{opacity:1;transform:none;transition:opacity .9s var(--ease),transform 1.2s var(--spring)}
+@media (prefers-reduced-motion: reduce){#splash,#sweep{display:none}#page{opacity:1!important;transform:none!important}}
 
 /* ── RESPONSIVE ── */
 @media(max-width:900px){
@@ -378,6 +395,9 @@ html:not(.no-splash) #page.ready{opacity:1;transform:none;transition:opacity .8s
 
 <div id="splash" aria-hidden="true">
   <div class="splash-aura"></div>
+  <div class="splash-aura gold"></div>
+  <div class="splash-ring" id="ring1"></div>
+  <div class="splash-ring r2" id="ring2"></div>
   <a href="#" id="splash-logo" class="splash-logo" tabindex="-1" style="text-decoration:none;display:inline-block;position:relative;padding-bottom:7px">
     <span style="font-family:'Fraunces',Georgia,serif;font-size:28px;font-weight:900;color:#0f0e0c;letter-spacing:-0.02em;line-height:1;white-space:nowrap">m<span style="position:relative;display:inline-block"><span style="position:absolute;top:2px;left:50%;transform:translateX(-50%);width:55%;height:2.5px;background:#0f0e0c;border-radius:1px"></span>a</span>ka</span>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190 20" style="position:absolute;bottom:-3px;left:0;width:100%;height:20px;pointer-events:none">
@@ -406,6 +426,8 @@ html:not(.no-splash) #page.ready{opacity:1;transform:none;transition:opacity .8s
 </svg>
   </a>
 </div>
+
+<div id="sweep" aria-hidden="true"></div>
 
 <div id="page">
 
@@ -673,11 +695,18 @@ html:not(.no-splash) #page.ready{opacity:1;transform:none;transition:opacity .8s
     paths.forEach(function(p){ p.style.transition='stroke-dashoffset .9s ease-in-out'; p.style.strokeDashoffset='0'; });
   },700);
   setTimeout(function(){ logo.classList.add('pulse'); },1800);
+  // Hand-off: shockwave rings, wordmark flies at the camera, light sweep, page pulls back into view
   setTimeout(function(){
-    splash.classList.add('done');
-    reveal();
-    try{ sessionStorage.setItem('maka-splash-seen','1'); }catch(e){}
-    setTimeout(function(){ if(splash)splash.remove(); },900);
+    var r1=document.getElementById('ring1'),r2=document.getElementById('ring2'),sweep=document.getElementById('sweep');
+    if(r1)r1.classList.add('blast'); if(r2)r2.classList.add('blast');
+    logo.classList.remove('pulse'); logo.classList.add('fly');
+    if(sweep)sweep.classList.add('go');
+    setTimeout(function(){
+      splash.classList.add('done');
+      reveal();
+      try{ sessionStorage.setItem('maka-splash-seen','1'); }catch(e){}
+      setTimeout(function(){ if(splash)splash.remove(); if(sweep)sweep.remove(); },1000);
+    },340);
   },2150);
 })();
 
