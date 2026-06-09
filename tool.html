@@ -460,7 +460,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         <div class="field"><label class="lbl">Students</label><select id="rep-stu-sel"><option value="all">All students in class list</option><option value="current">Current session only</option></select></div>
       </div>
       <div id="copts-weekly" style="display:none"><div class="field"><label class="lbl">Week context <span style="font-weight:500;text-transform:none;letter-spacing:0">(optional)</span></label><input type="text" id="weekly-ctx" placeholder="e.g. Week 4 — persuasive writing unit"></div></div>
-      <button class="btn btn-p" onclick="genComments()"><span data-ic="message"></span>Generate comments</button>
+      <button class="btn btn-p" id="gencomments-btn" onclick="genComments()"><span data-ic="message"></span>Generate comments</button>
       <div id="comment-progress" style="display:none;margin-top:12px"></div>
     </div>
     <div id="comment-empty" class="empty-state"><span data-ic="message"></span><div>Generate report or weekly comments above. They'll appear here, ready to copy into your reporting system.</div></div>
@@ -1016,27 +1016,37 @@ async function remarkStu(idx){
   if(currentSessId&&!res._error&&sb&&USER)sb.from('student_results').upsert({session_id:currentSessId,teacher_id:USER.id,file_name:resultSaveName(res),overall_score:res.overallScore,criteria_total:res.criteriaTotal,criteria:res.criteria,strengths:res.improve1||res.strengths||'',next_steps:res.improve2?[res.improve2]:(res.nextSteps||[]),nzc_reference:res.nzcReference},{onConflict:'session_id,file_name'}).then(function(){}).catch(function(){});
 }
 
+var MARKING=false;
 async function runMarking(){
+  if(MARKING)return; // guard against double-submit during a long run
   var key=getKey();if(!key||!files.length)return;
-  ensureNotifyPermission();
-  if(sb&&USER&&key!==(PROFILE.gemini_key||''))sb.from('profiles').update({gemini_key:key}).eq('id',USER.id).then(function(){PROFILE.gemini_key=key}).catch(function(){});
-  var area=document.getElementById('la').value,level=document.getElementById('cl').value,task=document.getElementById('task').value;
-  var rub=document.getElementById('rubric').value.trim()||DEFAULT_RUBRIC,style=getStyle();
-  var sname=document.getElementById('session-name').value.trim()||('Session '+new Date().toLocaleDateString('en-NZ'));
-  document.getElementById('rsec').style.display='block';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='block';document.getElementById('save-status').innerHTML='';
-  progressItems=files.map(function(f){return{name:f.name,status:'pending',phase:'',err:''}});renderProg();
-  var out=[];
-  for(var b=0;b<files.length;b+=3){var br=await Promise.all(files.slice(b,b+3).map(function(f,j){return markOne(key,f,rub,area,level,task,style,b+j)}));out=out.concat(br);if(b+3<files.length)await sleep(3000)}
-  for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(4000);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markOne(key,files[i],rub,area,level,task,style,i)}));fail.forEach(function(i,j){out[i]=ret[j]})}
-  out.forEach(function(r,i){r._file=files[i]});
-  results=out;document.getElementById('progress').style.display='none';renderResults(out);
-  var okCount=out.filter(function(r){return!r._error}).length;
-  document.getElementById('session-label').textContent=sname+' · '+okCount+' students';
-  document.getElementById('rsec').scrollIntoView({behavior:'smooth',block:'start'});
-  document.getElementById('cmp-a').textContent=out.length+' students — '+sname;
-  persistResults();
-  notifyDone('Marking complete','Māka finished marking '+okCount+' piece'+(okCount!==1?'s':'')+' of work.');
-  if(sb&&USER)saveSess(sname,area,level,task,rub,out);
+  var mb=document.getElementById('markbtn'),mbHTML=mb?mb.innerHTML:'';
+  MARKING=true;
+  if(mb){mb.disabled=true;mb.setAttribute('aria-busy','true');mb.innerHTML='<span class="spinner" style="border-top-color:#fff"></span>Marking…'}
+  try{
+    ensureNotifyPermission();
+    if(sb&&USER&&key!==(PROFILE.gemini_key||''))sb.from('profiles').update({gemini_key:key}).eq('id',USER.id).then(function(){PROFILE.gemini_key=key}).catch(function(){});
+    var area=document.getElementById('la').value,level=document.getElementById('cl').value,task=document.getElementById('task').value;
+    var rub=document.getElementById('rubric').value.trim()||DEFAULT_RUBRIC,style=getStyle();
+    var sname=document.getElementById('session-name').value.trim()||('Session '+new Date().toLocaleDateString('en-NZ'));
+    document.getElementById('rsec').style.display='block';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='block';document.getElementById('save-status').innerHTML='';
+    progressItems=files.map(function(f){return{name:f.name,status:'pending',phase:'',err:''}});renderProg();
+    var out=[];
+    for(var b=0;b<files.length;b+=3){var br=await Promise.all(files.slice(b,b+3).map(function(f,j){return markOne(key,f,rub,area,level,task,style,b+j)}));out=out.concat(br);if(b+3<files.length)await sleep(3000)}
+    for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(4000);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markOne(key,files[i],rub,area,level,task,style,i)}));fail.forEach(function(i,j){out[i]=ret[j]})}
+    out.forEach(function(r,i){r._file=files[i]});
+    results=out;document.getElementById('progress').style.display='none';renderResults(out);
+    var okCount=out.filter(function(r){return!r._error}).length;
+    document.getElementById('session-label').textContent=sname+' · '+okCount+' students';
+    document.getElementById('rsec').scrollIntoView({behavior:'smooth',block:'start'});
+    document.getElementById('cmp-a').textContent=out.length+' students — '+sname;
+    persistResults();
+    notifyDone('Marking complete','Māka finished marking '+okCount+' piece'+(okCount!==1?'s':'')+' of work.');
+    if(sb&&USER)saveSess(sname,area,level,task,rub,out);
+  }finally{
+    MARKING=false;
+    if(mb){mb.disabled=files.length===0;mb.removeAttribute('aria-busy');mb.innerHTML=mbHTML}
+  }
 }
 // Browser notification when a long task finishes (only if the tab is in the background).
 function notifyDone(title,body){
@@ -1133,13 +1143,19 @@ function saveAllToProfiles(){
 function pillCls(pct){return pct>=75?'ph':pct>=50?'pm':'pl'}
 function dots(sc){var h='';for(var i=1;i<=5;i++)h+='<span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:2px;background:'+(i<=sc?'#2d5a27':'#d8d5cf')+'"></span>';return h+'<span style="font-size:11px;color:var(--text2);margin-left:2px">'+sc+'/5</span>'}
 function makeEditable(el,onSave){
-  el.classList.add('editable');el.title='Click to edit';
-  el.onclick=function(){
-    var orig=el.textContent,inp=document.createElement('input');inp.type='text';inp.value=orig;inp.className='editing';
+  el.classList.add('editable');el.title='Click or press Enter to edit';
+  if(!el.hasAttribute('tabindex'))el.setAttribute('tabindex','0');
+  el.setAttribute('role','button');
+  if(!el.getAttribute('aria-label'))el.setAttribute('aria-label','Edit score, currently '+el.textContent.trim());
+  function begin(){
+    var orig=el.textContent,inp=document.createElement('input');inp.type='text';inp.inputMode='numeric';inp.value=orig;inp.className='editing';inp.setAttribute('aria-label','Score 1 to 5');
     el.innerHTML='';el.appendChild(inp);inp.focus();inp.select();
-    function done(){var v=inp.value.trim();el.innerHTML=orig;onSave(v||orig);el.onclick=null;makeEditable(el,onSave)}
-    inp.onblur=done;inp.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();done()}if(e.key==='Escape'){el.innerHTML=orig;el.onclick=null;makeEditable(el,onSave)}};
+    el.onclick=null;el.onkeydown=null;
+    function done(){var v=inp.value.trim();el.innerHTML=orig;onSave(v||orig);el.onclick=null;el.onkeydown=null;makeEditable(el,onSave)}
+    inp.onblur=done;inp.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();done()}if(e.key==='Escape'){el.innerHTML=orig;el.onclick=null;el.onkeydown=null;makeEditable(el,onSave)}};
   }
+  el.onclick=begin;
+  el.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();begin()}};
 }
 function renderResultCard(r,idx,editable){
   if(r._error){var btn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkStu('+idx+')">'+ic('refresh')+'Retry</button>':'';return'<div class="rcard"><div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span>'+btn+'</div><div class="err">'+ic('alert')+' '+esc(r._error)+'</div></div>'}
@@ -1359,8 +1375,14 @@ function setCType(type){
   else{we.style.border='2px solid var(--green)';we.style.background='var(--green-bg)';we.querySelector('div:nth-child(2)').style.color='var(--green)';re.style.border='2px solid var(--border2)';re.style.background='var(--bg)';re.querySelector('div:nth-child(2)').style.color='var(--text)';document.getElementById('copts-weekly').style.display='block';document.getElementById('copts-report').style.display='none'}
 }
 
+var GENERATING=false;
 async function genComments(){
   var key=getKey();if(!key)return;
+  if(GENERATING)return; // guard against double-submit
+  var gcb=document.getElementById('gencomments-btn'),gcbHTML=gcb?gcb.innerHTML:'';
+  GENERATING=true;
+  if(gcb){gcb.disabled=true;gcb.setAttribute('aria-busy','true');gcb.innerHTML='<span class="spinner" style="border-top-color:#fff"></span>Generating…'}
+  try{
   var style=getStyle(),cprog=document.getElementById('comment-progress'),cres=document.getElementById('comment-results');
   document.getElementById('comment-empty').style.display='none';cres.innerHTML='';cprog.style.display='block';
   if(currentCType==='weekly'){
@@ -1413,6 +1435,10 @@ async function genComments(){
       out=out.concat(br);if(b+3<stuNames.length)await sleep(2000);
     }
     cprog.style.display='none';renderCommentResults(out,'Report comment');
+  }
+  }finally{
+    GENERATING=false;
+    if(gcb){gcb.disabled=false;gcb.removeAttribute('aria-busy');gcb.innerHTML=gcbHTML}
   }
 }
 function renderCommentResults(out,label){
