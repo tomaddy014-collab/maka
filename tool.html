@@ -675,7 +675,7 @@ function loadProfileBg(){
 // Cache the class list so result cards can offer an "assign to student" dropdown.
 function loadClassStudents(){
   if(!sb||!USER)return;
-  sb.from('students').select('id,name').eq('teacher_id',USER.id).order('name').then(function(res){
+  sb.from('students').select('id,name,login_code').eq('teacher_id',USER.id).order('name').then(function(res){
     CLASS_STUDENTS=(res&&res.data)||[];
     if(results.length)renderResults(results);
   }).catch(function(){});
@@ -926,7 +926,7 @@ async function remarkStu(idx){
   var res=await markOne(key,files[idx],rub,area,level,task,getStyle(),idx);
   res._file=files[idx];if(prev.assignTo)res.assignTo=prev.assignTo;
   results[idx]=res;document.getElementById('progress').style.display='none';renderResults(results);
-  if(currentSessId&&!res._error&&sb&&USER)sb.from('student_results').upsert({session_id:currentSessId,teacher_id:USER.id,file_name:resultSaveName(res),overall_score:res.overallScore,criteria_total:res.criteriaTotal,criteria:res.criteria,strengths:res.improve1||res.strengths||'',next_steps:res.improve2?[res.improve2]:(res.nextSteps||[]),nzc_reference:res.nzcReference},{onConflict:'session_id,file_name'}).then(function(){}).catch(function(){});
+  if(currentSessId&&!res._error&&sb&&USER)sb.from('student_results').upsert({session_id:currentSessId,teacher_id:USER.id,student_id:assignedStudentIdFor(res),file_name:resultSaveName(res),overall_score:res.overallScore,criteria_total:res.criteriaTotal,criteria:res.criteria,strengths:res.improve1||res.strengths||'',next_steps:res.improve2?[res.improve2]:(res.nextSteps||[]),nzc_reference:res.nzcReference},{onConflict:'session_id,file_name'}).then(function(){}).catch(function(){});
 }
 
 var _photoAssignResolve=null;
@@ -1015,18 +1015,30 @@ function saveSess(name,area,level,task,rubric,res){
         var fileObj=r._file||files.find(function(f){return f.name===r.fileName});
         return fileObj?uploadPDF(fileObj,USER.id):Promise.resolve(null);
       })).then(function(paths){
-        sb.from('student_results').insert(valid.map(function(r,i){return{
-          session_id:sres.data.id,
-          teacher_id:USER.id,
-          file_name:resultSaveName(r),
-          overall_score:r.overallScore,
-          criteria_total:r.criteriaTotal,
-          criteria:r.criteria,
-          strengths:r.improve1||r.strengths||'',
-          next_steps:r.improve2?[r.improve2]:(r.nextSteps||[]),
-          nzc_reference:r.nzcReference,
-          pdf_path:paths[i]||null
-        }})).then(function(){}).catch(function(){});
+        return Promise.all(paths.map(signedPdfUrl)).then(function(urls){
+          sb.from('student_results').insert(valid.map(function(r,i){return{
+            session_id:sres.data.id,
+            teacher_id:USER.id,
+            student_id:assignedStudentIdFor(r),
+            file_name:resultSaveName(r),
+            overall_score:r.overallScore,
+            criteria_total:r.criteriaTotal,
+            criteria:r.criteria,
+            strengths:r.improve1||r.strengths||'',
+            next_steps:r.improve2?[r.improve2]:(r.nextSteps||[]),
+            nzc_reference:r.nzcReference,
+            pdf_path:paths[i]||null,
+            pdf_url:urls[i]||null
+          }})).then(function(ins){
+            // Older databases may not have student_id/pdf_url yet — retry without them
+            if(ins&&ins.error)return sb.from('student_results').insert(valid.map(function(r,i){return{
+              session_id:sres.data.id,teacher_id:USER.id,file_name:resultSaveName(r),
+              overall_score:r.overallScore,criteria_total:r.criteriaTotal,criteria:r.criteria,
+              strengths:r.improve1||r.strengths||'',next_steps:r.improve2?[r.improve2]:(r.nextSteps||[]),
+              nzc_reference:r.nzcReference,pdf_path:paths[i]||null
+            }}));
+          }).catch(function(){});
+        });
       });
     }
     ss.innerHTML='';showToast('Saved — '+valid.length+' students in "'+name+'"','ok');
@@ -1049,17 +1061,29 @@ function saveAllToProfiles(){
   }
   // Existing session: upsert current rows first (no data loss if it fails), then prune orphans.
   var newNames={};valid.forEach(function(r){newNames[resultSaveName(r)]=true});
-  sb.from('student_results').select('file_name,pdf_path').eq('session_id',currentSessId).then(function(ex){
+  sb.from('student_results').select('file_name,pdf_path,pdf_url').eq('session_id',currentSessId).then(function(ex){
     var rows=(ex&&ex.data)||[];
     // Carry forward an already-stored PDF by EXACT saved-name match (no substring collisions).
-    function findPdf(r){var nm=resultSaveName(r);var m=rows.find(function(x){return x.file_name===nm});return m?m.pdf_path:null}
-    return Promise.all(valid.map(function(r){var existing=findPdf(r);return existing?Promise.resolve(existing):(r._file?uploadPDF(r._file,USER.id):Promise.resolve(null))}))
-    .then(function(paths){
+    function findRow(r){var nm=resultSaveName(r);return rows.find(function(x){return x.file_name===nm})||null}
+    return Promise.all(valid.map(function(r){
+      var existing=findRow(r);
+      if(existing&&existing.pdf_path)return Promise.resolve({path:existing.pdf_path,url:existing.pdf_url||null});
+      if(r._file)return uploadPDF(r._file,USER.id).then(function(p){return{path:p,url:null}});
+      return Promise.resolve({path:null,url:null});
+    }))
+    .then(function(infos){
+      return Promise.all(infos.map(function(x){
+        if(x.path&&!x.url)return signedPdfUrl(x.path).then(function(u){x.url=u;return x});
+        return Promise.resolve(x);
+      }));
+    })
+    .then(function(infos){
       return sb.from('student_results').upsert(valid.map(function(r,i){return{
         session_id:currentSessId,teacher_id:USER.id,file_name:resultSaveName(r),
+        student_id:assignedStudentIdFor(r),
         overall_score:r.overallScore,criteria_total:r.criteriaTotal,criteria:r.criteria,
         strengths:r.improve1||r.strengths||'',next_steps:r.improve2?[r.improve2]:(r.nextSteps||[]),
-        nzc_reference:r.nzcReference,pdf_path:paths[i]||null
+        nzc_reference:r.nzcReference,pdf_path:infos[i].path||null,pdf_url:infos[i].url||null
       }}),{onConflict:'session_id,file_name'});
     }).then(function(up){
       if(up&&up.error)throw new Error(up.error.message);
@@ -1135,6 +1159,22 @@ function resultSaveName(r){
   return r.assignTo+' — '+base;
 }
 function assignResult(idx,name){if(results[idx]){results[idx].assignTo=name||'';persistResults()}}
+// The students.id this result belongs to — explicit assignment or auto-match by file name.
+function assignedStudentIdFor(r){
+  var name=assignedStudentFor(r);
+  if(!name)return null;
+  var m=CLASS_STUDENTS.find(function(s){return s.name===name});
+  return m?m.id:null;
+}
+// Long-lived signed URL so the student hub can show the stored PDF without
+// opening the storage bucket to anonymous users (expires after 1 year).
+async function signedPdfUrl(path){
+  if(!path||!sb)return null;
+  try{
+    var r=await sb.storage.from('student-pdfs').createSignedUrl(path,31536000);
+    return(r&&r.data&&r.data.signedUrl)||null;
+  }catch(e){return null}
+}
 
 // ── Accessible searchable combobox for "Save to profile" (WAI-ARIA 1.2) ──────
 (function(){
@@ -1343,7 +1383,8 @@ function loadClassList(){
     if(!data.length){el.innerHTML='<div style="font-size:13px;color:var(--text2)">No students added yet.</div>';return}
     var gC={boy:'background:#e6f1fb;color:#185fa5',girl:'background:#fce8f3;color:#8b1a5e',nonbinary:'background:#f0ede8;color:#5a564e'};
     var gL={boy:'He/him',girl:'She/her',nonbinary:'They/them'};
-    el.innerHTML='<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+data.length+' students — click to open hub</div>'+data.map(function(s){var gb=s.gender&&gL[s.gender]?'<span style="font-size:10px;padding:2px 7px;border-radius:100px;font-weight:600;'+gC[s.gender]+'">'+gL[s.gender]+'</span>':'';return'<div class="stu-item" style="cursor:pointer" onclick="openHub(\''+s.id+'\',\''+esc(s.name)+'\')"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0">'+esc(s.name[0].toUpperCase())+'</div><div style="flex:1;min-width:0"><div style="font-weight:500;font-size:14px">'+esc(s.name)+'</div><div style="font-size:12px;color:var(--text2);margin-top:1px">'+esc(s.year_level||'No year set')+'</div></div>'+gb+'<span style="font-size:12px;color:var(--text3)">→</span><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delStu(\''+s.id+'\')" style="margin-left:4px">×</button></div>'}).join('');
+    var loginUrl=location.origin+location.pathname.replace(/[^/]*$/,'')+'student-login.html';
+    el.innerHTML='<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+data.length+' students — click to open hub · students sign in at <a href="student-login.html" target="_blank" rel="noopener" style="color:var(--green)" onclick="event.stopPropagation()">'+esc(loginUrl)+'</a> with their code</div>'+data.map(function(s){var gb=s.gender&&gL[s.gender]?'<span style="font-size:10px;padding:2px 7px;border-radius:100px;font-weight:600;'+gC[s.gender]+'">'+gL[s.gender]+'</span>':'';var codeChip=s.login_code?'<button class="copy-btn" style="font-family:monospace;letter-spacing:.04em" title="Student login code — click to copy" onclick="event.stopPropagation();copyLoginCode(this,\''+esc(s.login_code)+'\')">'+esc(s.login_code)+'</button>':'';return'<div class="stu-item" id="stu-'+s.id+'" style="cursor:pointer" onclick="openHub(\''+s.id+'\',\''+esc(s.name)+'\')"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0">'+esc(s.name[0].toUpperCase())+'</div><div style="flex:1;min-width:0"><div style="font-weight:500;font-size:14px">'+esc(s.name)+'</div><div style="font-size:12px;color:var(--text2);margin-top:1px">'+esc(s.year_level||'No year set')+'</div></div>'+codeChip+gb+'<span style="font-size:12px;color:var(--text3)">→</span><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delStu(\''+s.id+'\',\''+esc(s.name)+'\')" style="margin-left:4px">×</button></div>'}).join('');
   }).catch(function(e){el.innerHTML='<div class="err">'+esc(e.message)+'</div>'});
 }
 function openHub(id,name){
@@ -1365,7 +1406,25 @@ function addStu(){
     })
     .catch(function(e){alert('Could not save: '+e.message);if(btn){btn.disabled=false;btn.textContent='Add'}})
 }
-function delStu(id){if(!confirm('Remove this student?'))return;sb.from('students').delete().eq('id',id).then(function(res){if(res.error){alert('Could not remove: '+res.error.message);return}loadClassList();loadClassStudents()}).catch(function(e){alert(e.message)})}
+function copyLoginCode(btn,code){
+  navigator.clipboard.writeText(code).then(function(){
+    var old=btn.textContent;btn.textContent='Copied!';
+    setTimeout(function(){btn.textContent=old},1500);
+  }).catch(function(){showToast('Could not copy — code is '+code,'warn')});
+}
+function delStu(id,name){
+  var el=document.getElementById('stu-'+id);
+  if(el)el.style.opacity='0.4';
+  var undone=false;
+  var timer=setTimeout(function(){
+    if(undone)return;
+    sb.from('students').delete().eq('id',id).then(function(res){
+      if(res.error){showToast('Could not remove: '+res.error.message,'err');if(el)el.style.opacity='';return}
+      loadClassList();loadClassStudents();
+    }).catch(function(e){showToast(e.message,'err');if(el)el.style.opacity=''});
+  },4000);
+  showToast('Removed "'+esc(name||'student')+'" from your class','neutral',5000,'Undo',function(){undone=true;clearTimeout(timer);if(el)el.style.opacity='';});
+}
 function importClassCSV(){
   var f=document.getElementById('class-csv').files[0];if(!f){alert('Please select a CSV file.');return}
   if(!sb||!USER){alert('Sign in to import students.');return}

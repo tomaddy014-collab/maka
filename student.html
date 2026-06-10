@@ -368,8 +368,19 @@ async function loadAll(){
   document.title='Māka — '+STUDENT.name;
 
   var firstName=STUDENT.name.split(' ')[0];
-  var rr;
-  try{rr=await sb.from('student_results').select('*, sessions(id,name,learning_area,task,created_at,level,rubric)').eq('teacher_id',USER.id).ilike('file_name','%'+firstName+'%').order('created_at',{ascending:true})}catch(e){rr={data:[]}}
+  var rr=null;
+  // Prefer the proper student_id link; legacy rows without one fall back to the
+  // old first-name match. If the student_id column doesn't exist yet (SQL not
+  // run), retry with the old name-only query.
+  try{
+    rr=await sb.from('student_results').select('*, sessions(id,name,learning_area,task,created_at,level,rubric)').eq('teacher_id',USER.id)
+      .or('student_id.eq.'+STUDENT_ID+',and(student_id.is.null,file_name.ilike.%'+firstName+'%)')
+      .order('created_at',{ascending:true});
+    if(rr.error)rr=null;
+  }catch(e){rr=null}
+  if(!rr){
+    try{rr=await sb.from('student_results').select('*, sessions(id,name,learning_area,task,created_at,level,rubric)').eq('teacher_id',USER.id).ilike('file_name','%'+firstName+'%').order('created_at',{ascending:true})}catch(e){rr={data:[]}}
+  }
   ALL_RESULTS=(rr&&rr.data)||[];
 
   var cr;
@@ -415,7 +426,7 @@ function renderPage(){
         <div class="avatar-lg">${esc(STUDENT.name[0].toUpperCase())}</div>
         <div style="min-width:0">
           <h1 class="ident-name">${esc(STUDENT.name)}</h1>
-          <div class="ident-meta">${STUDENT.year_level?esc(STUDENT.year_level):'<span style="color:var(--text3)">No year set</span>'} ${gender}</div>
+          <div class="ident-meta">${STUDENT.year_level?esc(STUDENT.year_level):'<span style="color:var(--text3)">No year set</span>'} ${gender}${STUDENT.login_code?' <button class="copy-btn" style="font-family:monospace;letter-spacing:.04em" title="Student login code — click to copy" onclick="copyLoginCode(this)">'+esc(STUDENT.login_code)+'</button>':''}</div>
         </div>
       </div>
       <div class="btn-row">
@@ -810,11 +821,18 @@ function saveEdit(){
     if(ALL_RESULTS.length>=2)setTimeout(drawChart,50);
   }).catch(function(e){alert(e.message)});
 }
+function copyLoginCode(btn){
+  if(!STUDENT||!STUDENT.login_code)return;
+  navigator.clipboard.writeText(STUDENT.login_code).then(function(){
+    var old=btn.textContent;btn.textContent='Copied!';
+    setTimeout(function(){btn.textContent=old},1500);
+  }).catch(function(){alert('Login code: '+STUDENT.login_code)});
+}
 async function copyStudentLink(){
   var btn=document.getElementById('share-btn');
   try{
-    var r=await sb.from('students').select('share_code').eq('id',STUDENT.id).maybeSingle();
-    var code=r&&r.data?r.data.share_code:null;
+    var r=await sb.from('students').select('share_code,login_code').eq('id',STUDENT.id).maybeSingle();
+    var code=r&&r.data?(r.data.login_code||r.data.share_code):null;
     if(!code){
       // Generate one client-side if the column exists but is empty
       code=btoa(String.fromCharCode.apply(null,crypto.getRandomValues(new Uint8Array(12)))).replace(/\//g,'x').replace(/\+/g,'y');

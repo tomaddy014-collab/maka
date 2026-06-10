@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Māka — Student sign in</title>
+<script>
+(function(){try{
+  var t=localStorage.getItem('maka-theme');
+  if(!t)t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+  if(t==='dark')document.documentElement.setAttribute('data-theme','dark');
+}catch(e){}})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#2d5a27;--green-bg:#e8f0e6;
+  --paper:#f5f0e8;--paper-dark:#ede7d9;
+  --ink:#0f0e0c;--ink-light:#3a3630;--text2:#7a7468;
+  --gold:#c8840a;--gold-soft:rgba(200,132,10,0.12);
+  --danger:#a32d2d;--danger-bg:#fcebeb;
+  --border:rgba(15,14,12,0.14);
+  --ease:cubic-bezier(0.25,0.46,0.45,0.94);--ease-spring:cubic-bezier(.16,1,.3,1)}
+[data-theme="dark"]{
+  --green:#7fb87a;--green-bg:#23302180;
+  --paper:#161513;--paper-dark:#242220;
+  --ink:#ece9e3;--ink-light:#c9c5bd;--text2:#a9a49b;
+  --gold:#e0a52a;--gold-soft:rgba(224,165,42,0.16);
+  --danger:#e89a9a;--danger-bg:#3a2020;
+  --border:rgba(255,255,255,0.16);
+}
+[data-theme="dark"] .logo>span{color:#ece9e3!important}
+[data-theme="dark"] .logo span span span{background:#ece9e3!important}
+body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 1.25rem}
+.logo{display:block;margin:0 auto .5rem;text-align:center}
+.tag{font-size:14px;color:var(--text2);text-align:center;margin-bottom:2.5rem}
+.box{width:100%;max-width:400px;opacity:0;transform:translateY(14px);animation:riseIn .6s .05s var(--ease) forwards;text-align:center}
+@keyframes riseIn{to{opacity:1;transform:translateY(0)}}
+h1{font-family:'Fraunces',serif;font-size:clamp(26px,6vw,32px);font-weight:800;letter-spacing:-.02em;margin-bottom:.5rem}
+h1 em{color:var(--green);font-style:normal}
+.sub{font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:2rem}
+.code-input{width:100%;min-height:58px;padding:14px;border:1.5px solid var(--border);border-radius:14px;font-size:22px;font-weight:600;letter-spacing:.12em;text-align:center;text-transform:uppercase;font-family:'DM Sans',sans-serif;background:var(--paper-dark);color:var(--ink);transition:border-color .15s var(--ease),box-shadow .15s var(--ease)}
+.code-input::placeholder{color:var(--text2);opacity:.5;font-weight:500;letter-spacing:.06em;font-size:16px;text-transform:none}
+.code-input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-soft)}
+.btn{width:100%;min-height:50px;padding:14px;border-radius:100px;border:none;background:var(--ink);color:#fff;font-size:15px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:1rem;transition:background .25s var(--ease),transform .12s var(--ease),box-shadow .25s var(--ease);box-shadow:0 2px 14px rgba(15,14,12,0.16)}
+[data-theme="dark"] .btn{background:#ece9e3;color:#1a1a1a}
+.btn:hover:not(:disabled){background:var(--ink-light);transform:translateY(-1px);box-shadow:0 8px 22px rgba(15,14,12,0.24)}
+[data-theme="dark"] .btn:hover:not(:disabled){background:#fff}
+.btn:active:not(:disabled){transform:scale(.97)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.msg{font-size:13px;line-height:1.5;padding:11px 14px;border-radius:10px;margin-top:1.25rem;display:none;text-align:left}
+.msg.err{color:var(--danger);background:var(--danger-bg);border-left:3px solid var(--danger);animation:slideDown .3s var(--ease)}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.help{font-size:13px;color:var(--text2);line-height:1.6;margin-top:2rem}
+.footer{font-size:12px;color:var(--text2);text-align:center;margin-top:2.5rem}
+.footer a{color:var(--text2)}
+.btn:focus-visible,.code-input:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<div class="logo" style="text-decoration:none;display:inline-block;position:relative;padding-bottom:7px">
+    <span style="font-family:'Fraunces',Georgia,serif;font-size:28px;font-weight:900;color:#0f0e0c;letter-spacing:-0.02em;line-height:1;white-space:nowrap">m<span style="position:relative;display:inline-block"><span style="position:absolute;top:2px;left:50%;transform:translateX(-50%);width:55%;height:2.5px;background:#0f0e0c;border-radius:1px"></span>a</span>ka</span>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190 20" style="position:absolute;bottom:-3px;left:0;width:100%;height:20px;pointer-events:none">
+  <defs><linearGradient id="fg_sl1" x1="100%" y1="0%" x2="0%" y2="0%">
+    <stop offset="0%" style="stop-color:#f0b429;stop-opacity:1"/>
+    <stop offset="65%" style="stop-color:#d4a017;stop-opacity:0.65"/>
+    <stop offset="100%" style="stop-color:#d4a017;stop-opacity:0.03"/>
+  </linearGradient></defs>
+  <path d="M 183 7 C 150 11, 90 15, 30 16 C 12 16, 2 14, 0 12" fill="none" stroke="url(#fg_sl1)" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 176 6 C 171 1, 164 0, 156 1" fill="none" stroke="#f0b429" stroke-width="1" stroke-linecap="round" opacity="0.9"/>
+  <path d="M 162 8 C 156 3, 149 2, 141 3" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.8"/>
+  <path d="M 147 9 C 141 5, 134 4, 126 5" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.72"/>
+  <path d="M 131 10 C 125 7, 118 6, 110 7" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.62"/>
+  <path d="M 114 11 C 108 8, 101 8, 93 8" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.52"/>
+  <path d="M 96 12 C 90 10, 83 9, 75 10" fill="none" stroke="#f0b429" stroke-width="0.7" stroke-linecap="round" opacity="0.42"/>
+  <path d="M 77 12 C 71 11, 64 10, 56 11" fill="none" stroke="#f0b429" stroke-width="0.6" stroke-linecap="round" opacity="0.32"/>
+  <path d="M 174 8 C 169 13, 162 15, 154 14" fill="none" stroke="#f0b429" stroke-width="1" stroke-linecap="round" opacity="0.8"/>
+  <path d="M 159 9 C 154 14, 147 16, 139 15" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.72"/>
+  <path d="M 144 10 C 139 15, 132 17, 124 16" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.64"/>
+  <path d="M 128 11 C 123 16, 116 17, 108 16" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.55"/>
+  <path d="M 111 12 C 106 16, 99 17, 91 16" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.46"/>
+  <path d="M 93 13 C 88 16, 81 17, 73 16" fill="none" stroke="#f0b429" stroke-width="0.7" stroke-linecap="round" opacity="0.36"/>
+  <path d="M 73 13 C 68 16, 61 16, 53 15" fill="none" stroke="#f0b429" stroke-width="0.6" stroke-linecap="round" opacity="0.26"/>
+  <path d="M 3 13 C 2 12, 1 11, 0.5 10" fill="none" stroke="#ede7d9" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 1 11 C 0.5 10, 0 9.5, 0 9" fill="none" stroke="#f5f0e8" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
+  </div>
+<div class="tag">Student sign in</div>
+
+<div class="box">
+  <h1>Kia ora! <em>Ready to see your mahi?</em></h1>
+  <p class="sub">Type in your Māka code — your teacher gave it to you. It looks like <strong>KEA-4912</strong>.</p>
+  <input type="text" id="code" class="code-input" placeholder="Enter your code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" aria-label="Your Māka code">
+  <button class="btn" id="go-btn" onclick="go()">See my learning →</button>
+  <div id="msg" class="msg"></div>
+  <p class="help">Lost your code? Ask your teacher — they can find it on your page in Māka.</p>
+</div>
+
+<div class="footer">Māka · <a href="index.html">For teachers</a></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var SURL='https://agwqenhduoxxeemklmpr.supabase.co';
+var SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnd3FlbmhkdW94eGVlbWtsbXByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MzkxNDAsImV4cCI6MjA5NDAxNTE0MH0.TZkrRgForSDTzQ4vZ9j36WncEAVBx4reG-ADcoohY8o';
+var sb=supabase.createClient(SURL,SKEY);
+
+// Already signed in? Straight to the hub.
+try{
+  if(localStorage.getItem('maka-student-code'))window.location.replace('myhub.html');
+}catch(e){}
+
+function setErr(t){var m=document.getElementById('msg');m.textContent=t;m.className='msg err';m.style.display='block'}
+function clearErr(){document.getElementById('msg').style.display='none'}
+
+async function go(){
+  var code=document.getElementById('code').value.trim();
+  if(!code){setErr('Type in your code first — it looks like KEA-4912.');return}
+  clearErr();
+  var btn=document.getElementById('go-btn');btn.disabled=true;btn.textContent='Checking…';
+  try{
+    var res=await sb.rpc('student_hub',{code:code});
+    if(res.error)throw new Error(res.error.message);
+    if(!res.data||!res.data.student){
+      setErr('Hmm, we couldn’t find that code. Check it matches exactly what your teacher gave you, then try again.');
+      btn.disabled=false;btn.textContent='See my learning →';
+      return;
+    }
+    try{localStorage.setItem('maka-student-code',code)}catch(e){}
+    window.location.href='myhub.html?c='+encodeURIComponent(code);
+  }catch(e){
+    setErr('Something went wrong: '+e.message+' — try again in a moment.');
+    btn.disabled=false;btn.textContent='See my learning →';
+  }
+}
+document.getElementById('code').addEventListener('keydown',function(e){if(e.key==='Enter')go()});
+document.getElementById('code').focus();
+</script>
+</body>
+</html>
