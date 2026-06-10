@@ -17,12 +17,14 @@
   if(t==='dark')document.documentElement.setAttribute('data-theme','dark');
 }catch(e){}})();
 </script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#fff;--bg2:#f7f6f3;--bg3:#f5f0e8;
-  --text:#1a1a1a;--text2:#6b6b6b;--text3:#9a9a9a;
+  --text:#1a1a1a;--text2:#6b6b6b;--text3:#757067;
   --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.18);
   --green:#2d5a27;--green-bg:#e8f0e6;
   --warn-bg:#faeeda;--warn-text:#854f0b;
@@ -34,7 +36,7 @@
 }
 [data-theme="dark"]{
   --bg:#1c1b19;--bg2:#242220;--bg3:#161513;
-  --text:#ece9e3;--text2:#a9a49b;--text3:#7d7972;
+  --text:#ece9e3;--text2:#a9a49b;--text3:#8d887f;
   --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.18);
   --green:#7fb87a;--green-bg:#23302180;
   --warn-bg:#3a2e1a;--warn-text:#e0b878;
@@ -48,6 +50,9 @@
 [data-theme="dark"] .logo span span span{background:#ece9e3!important}
 [data-theme="dark"] .modal{background:var(--bg2)!important}
 body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg3);color:var(--text);min-height:100vh}
+button,a,input,select,textarea{touch-action:manipulation}
+.skip-link{position:absolute;left:-9999px;top:0;z-index:300;background:var(--text);color:var(--bg);padding:10px 18px;border-radius:0 0 10px 0;font-size:13px;font-weight:500;text-decoration:none}
+.skip-link:focus{left:0}
 :root{--ease:cubic-bezier(.25,.8,.25,1);--ease-spring:cubic-bezier(.16,1,.3,1)}
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 @keyframes riseIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
@@ -275,6 +280,8 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 </head>
 <body>
 
+<a class="skip-link" href="#content">Skip to content</a>
+
 <nav>
 <a href="index.html" class="logo" style="text-decoration:none;display:inline-block;position:relative;padding-bottom:7px">
     <span style="font-family:'Fraunces',Georgia,serif;font-size:28px;font-weight:900;color:#0f0e0c;letter-spacing:-0.02em;line-height:1;white-space:nowrap">m<span style="position:relative;display:inline-block"><span style="position:absolute;top:2px;left:50%;transform:translateX(-50%);width:55%;height:2.5px;background:#0f0e0c;border-radius:1px"></span>a</span>ka</span>
@@ -328,7 +335,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
   </div>
 </nav>
 
-<div class="main">
+<div class="main" id="content">
 
   <!-- MARK -->
   <div class="panel active" id="panel-mark">
@@ -336,7 +343,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <div class="step-row"><span class="step-n">0</span><span class="step-title">Gemini API key</span></div>
       <div class="field">
         <div class="key-row"><input type="password" id="apikey" placeholder="AIza…" autocomplete="off"><button class="eye-btn" onclick="var f=document.getElementById('apikey');f.type=f.type=='password'?'text':'password'"><span data-ic="eye"></span></button></div>
-        <div class="hint">Free at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com</a> — saved to your account when signed in.</div>
+        <div class="hint" id="key-hint">Free at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a> — saved to your account when signed in.</div>
       </div>
     </div>
     <div class="card">
@@ -528,7 +535,7 @@ function fmt(b){return b>1048576?(b/1048576).toFixed(1)+' MB':Math.round(b/1024)
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function stripExt(n){return String(n).replace(/\.[^.]+$/,'')}
 function getStyle(){return(PROFILE&&PROFILE.writing_style&&PROFILE.writing_style.trim())||DEFAULT_STYLE}
-function getKey(){var k=(document.getElementById('apikey').value||'').trim()||(PROFILE&&PROFILE.gemini_key)||'';if(!k){alert('Please enter your Gemini API key.');return null}return k}
+function getKey(){var k=(document.getElementById('apikey').value||'').trim()||(PROFILE&&PROFILE.gemini_key)||'';if(!k){showToast('Please enter your Gemini API key.');return null}return k}
 var ICONS={
   edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   chart:'<path d="M3 3v18h18"/><path d="M7 16v-5"/><path d="M12 16V8"/><path d="M17 16v-9"/>',
@@ -558,6 +565,7 @@ var ICONS={
   x:'<path d="M18 6 6 18"/><path d="M6 6l12 12"/>',
   circle:'<circle cx="12" cy="12" r="9"/>',
   target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>',
   grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>'
 };
 function ic(name){return'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[name]||'')+'</svg>'}
@@ -661,7 +669,7 @@ function loadProfileBg(){
     try{
       if(res.data){
         PROFILE=res.data;
-        if(PROFILE.gemini_key)document.getElementById('apikey').value=PROFILE.gemini_key;
+        if(PROFILE.gemini_key){document.getElementById('apikey').value=PROFILE.gemini_key;var kh=document.getElementById('key-hint');if(kh)kh.innerHTML='<span style="color:var(--green);font-weight:600">✓ Loaded from your account.</span> Manage it in Settings.';}
         if(PROFILE.display_name){document.getElementById('av-init').textContent=PROFILE.display_name[0].toUpperCase();document.getElementById('dd-name').textContent=PROFILE.display_name;document.getElementById('set-name').value=PROFILE.display_name}
         if(PROFILE.gemini_key)document.getElementById('set-key').value=PROFILE.gemini_key;
         if(PROFILE.writing_style)document.getElementById('set-style').value=PROFILE.writing_style;
@@ -683,7 +691,7 @@ function loadClassStudents(){
 
 var TABS=['mark','dashboard','history','comments','compare','class','settings'];
 function showTab(id){
-  document.querySelectorAll('.ntab').forEach(function(t,i){t.classList.toggle('active',TABS[i]===id)});
+  document.querySelectorAll('.ntab').forEach(function(t,i){var on=TABS[i]===id;t.classList.toggle('active',on);if(on)t.setAttribute('aria-current','page');else t.removeAttribute('aria-current')});
   document.querySelectorAll('.panel').forEach(function(p){p.classList.toggle('active',p.id==='panel-'+id)});
   document.getElementById('dropdown').classList.remove('open');
   if(id==='dashboard'){loadDashSessions();renderDashboard(results)}
@@ -725,11 +733,11 @@ function loadRubric(){var sel=document.getElementById('rubric-select');var opt=s
 
 async function buildRubric(){
   var key=getKey();
-  if(!key){alert('Please enter your Gemini API key first.');return}
+  if(!key){showToast('Please enter your Gemini API key first.');return}
   var area=document.getElementById('la').value;
   var level=document.getElementById('cl').value;
   var task=document.getElementById('task').value.trim();
-  if(!task){alert('Please enter a task description first so the rubric can be tailored to it.');return}
+  if(!task){showToast('Please enter a task description first so the rubric can be tailored to it.');return}
   var btn=document.getElementById('build-rub-btn');
   var status=document.getElementById('build-rub-status');
   btn.disabled=true;btn.innerHTML=ic('sparkle')+'Building…';
@@ -773,7 +781,7 @@ async function buildRubric(){
   }
   btn.disabled=false;btn.innerHTML=ic('sparkle')+'Build rubric with AI';
 }
-function saveRubric(){if(!sb||!USER){alert('Sign in to save rubrics.');return}var n=prompt('Name for this rubric:');if(!n)return;sb.from('rubrics').insert({teacher_id:USER.id,name:n,learning_area:document.getElementById('la').value,level:document.getElementById('cl').value,criteria:document.getElementById('rubric').value.trim()}).then(function(){loadRubrics()}).catch(function(){})}
+function saveRubric(){if(!sb||!USER){showToast('Sign in to save rubrics.');return}var n=prompt('Name for this rubric:');if(!n)return;sb.from('rubrics').insert({teacher_id:USER.id,name:n,learning_area:document.getElementById('la').value,level:document.getElementById('cl').value,criteria:document.getElementById('rubric').value.trim()}).then(function(){loadRubrics()}).catch(function(){})}
 function loadRubricsSettings(){
   loadRubrics().then(function(data){
     var el=document.getElementById('rubrics-list');
@@ -787,7 +795,7 @@ function delRubric(id){if(!confirm('Delete?'))return;sb.from('rubrics').delete()
 function autoSessName(){var task=document.getElementById('task').value.trim();var sn=document.getElementById('session-name');if(!sn._userEdited&&task)sn.value=document.getElementById('la').value.split(' ')[0]+' — '+task.substring(0,40)}
 document.getElementById('session-name').addEventListener('input',function(){this._userEdited=true});
 
-function fileIcon(f){return f.type==='application/pdf'?'📕':'🖼️'}
+function fileIcon(f){return f.type==='application/pdf'?'<span style="color:var(--danger-text)">'+ic('file')+'</span>':'<span style="color:var(--info-text)">'+ic('image')+'</span>'}
 function fileTag(f){return f.type==='application/pdf'?'<span class="ftag ftag-pdf">PDF</span>':'<span class="ftag ftag-img">Image</span>'}
 function renderFiles(){
   var el=document.getElementById('flist'),cnt=document.getElementById('upload-count');
@@ -1328,7 +1336,7 @@ async function genComments(){
     allWeek.forEach(function(r){var fn=r.file_name?r.file_name.split(/[\s\-_.]/)[0]:'Unknown';if(!byStudent[fn])byStudent[fn]={name:fn,sessions:[]};byStudent[fn].sessions.push({subject:(r.sessions&&r.sessions.learning_area)||'Subject',task:(r.sessions&&r.sessions.task)||'',overallScore:r.overall_score||'',total:r.criteria_total||'',strengths:r.strengths||''})});
     results.filter(function(r){return!r._error}).forEach(function(r){var fn=r.fileName?r.fileName.split(/[\s\-_.]/)[0]:'Unknown';if(!byStudent[fn])byStudent[fn]={name:fn,sessions:[]};byStudent[fn].sessions.push({subject:document.getElementById('la').value,task:document.getElementById('task').value||'',overallScore:r.overallScore||'',total:r.criteriaTotal||'',strengths:r.strengths||''})});
     var stuList=Object.values(byStudent);
-    if(!stuList.length){cprog.style.display='none';alert('No students found for this week.');return}
+    if(!stuList.length){cprog.style.display='none';showToast('No students found for this week.');return}
     cprog.innerHTML='<div style="font-size:13px;color:var(--text2);display:flex;align-items:center;gap:8px"><div class="spinner"></div>Generating weekly posts for '+stuList.length+' students…</div>';
     var out=[];
     for(var b=0;b<stuList.length;b+=6){
@@ -1348,7 +1356,7 @@ async function genComments(){
     var term=document.getElementById('rep-term').value.trim(),studSel=document.getElementById('rep-stu-sel').value,stuNames=[];
     if(studSel==='all'&&sb&&USER){var cr;try{cr=await sb.from('students').select('name').eq('teacher_id',USER.id).order('name')}catch(e){cr={data:[]}};stuNames=(cr.data||[]).map(function(s){return s.name})}
     if(!stuNames.length)stuNames=results.filter(function(r){return!r._error}).map(function(r){return stripExt(r.fileName)});
-    if(!stuNames.length){cprog.style.display='none';alert('No students found.');return}
+    if(!stuNames.length){cprog.style.display='none';showToast('No students found.');return}
     cprog.innerHTML='<div style="font-size:13px;color:var(--text2);display:flex;align-items:center;gap:8px"><div class="spinner"></div>Generating report comments for '+stuNames.length+' students…</div>';
     var out=[];
     for(var b=0;b<stuNames.length;b+=6){
@@ -1391,20 +1399,20 @@ function openHub(id,name){
   var tid=USER?USER.id:'';
   window.open('student.html?sid='+encodeURIComponent(id)+'&tid='+encodeURIComponent(tid)+'&name='+encodeURIComponent(name),'_blank');
 }
-function openAddStu(){if(!sb||!USER){alert('Sign in to add students.');return}document.getElementById('new-stu-name').value='';document.getElementById('new-stu-year').selectedIndex=0;document.getElementById('new-stu-gender').selectedIndex=0;openModal('add-stu-modal');setTimeout(function(){document.getElementById('new-stu-name').focus()},100)}
+function openAddStu(){if(!sb||!USER){showToast('Sign in to add students.');return}document.getElementById('new-stu-name').value='';document.getElementById('new-stu-year').selectedIndex=0;document.getElementById('new-stu-gender').selectedIndex=0;openModal('add-stu-modal');setTimeout(function(){document.getElementById('new-stu-name').focus()},100)}
 function addStu(){
   var name=document.getElementById('new-stu-name').value.trim();
-  if(!name){alert('Please enter a student name.');return}
-  if(!sb||!USER){alert('Sign in to save students.');return}
+  if(!name){showToast('Please enter a student name.');return}
+  if(!sb||!USER){showToast('Sign in to save students.');return}
   var year=document.getElementById('new-stu-year').value,gender=document.getElementById('new-stu-gender').value;
   var btn=document.querySelector('#add-stu-modal .btn-p');
   if(btn){btn.disabled=true;btn.textContent='Saving…'}
   sb.from('students').insert({teacher_id:USER.id,name:name,year_level:year||null,gender:gender||null})
     .then(function(res){
-      if(res.error){alert('Could not save: '+res.error.message);if(btn){btn.disabled=false;btn.textContent='Add'}return}
+      if(res.error){showToast('Could not save: '+res.error.message);if(btn){btn.disabled=false;btn.textContent='Add'}return}
       closeModal('add-stu-modal');loadClassList();loadClassStudents();
     })
-    .catch(function(e){alert('Could not save: '+e.message);if(btn){btn.disabled=false;btn.textContent='Add'}})
+    .catch(function(e){showToast('Could not save: '+e.message);if(btn){btn.disabled=false;btn.textContent='Add'}})
 }
 function copyLoginCode(btn,code){
   navigator.clipboard.writeText(code).then(function(){
@@ -1426,8 +1434,8 @@ function delStu(id,name){
   showToast('Removed "'+esc(name||'student')+'" from your class','neutral',5000,'Undo',function(){undone=true;clearTimeout(timer);if(el)el.style.opacity='';});
 }
 function importClassCSV(){
-  var f=document.getElementById('class-csv').files[0];if(!f){alert('Please select a CSV file.');return}
-  if(!sb||!USER){alert('Sign in to import students.');return}
+  var f=document.getElementById('class-csv').files[0];if(!f){showToast('Please select a CSV file.');return}
+  if(!sb||!USER){showToast('Sign in to import students.');return}
   var reader=new FileReader();reader.onload=function(e){
     var lines=e.target.result.split('\n').filter(function(l){return l.trim()});
     var header=lines[0].toLowerCase(),cols=header.split(',');
@@ -1453,10 +1461,10 @@ function loadCompareSessions(){
   }).catch(function(){});
 }
 document.getElementById('cmpbtn').onclick=async function(){
-  if(!results.length){alert('Mark some students first.');return}
+  if(!results.length){showToast('Mark some students first.');return}
   var prev={},sessId=document.getElementById('cmp-sess-sel').value;
   if(sessId&&sb&&USER){var r;try{r=await sb.from('student_results').select('file_name,criteria_total').eq('session_id',sessId)}catch(e){r={data:[]}};(r.data||[]).forEach(function(x){prev[x.file_name]=x.criteria_total||'0/25'})}
-  else{var f=document.getElementById('cmp-csv').files[0];if(!f){alert('Select a past session or upload a CSV.');return}var text=await new Promise(function(res){var r=new FileReader();r.onload=function(e){res(e.target.result)};r.readAsText(f)});text.split('\n').slice(1).forEach(function(line){var cols=line.match(/"([^"]*)"/g)||[];if(cols.length>=3)prev[cols[0].replace(/"/g,'')]=cols[2].replace(/"/g,'')})}
+  else{var f=document.getElementById('cmp-csv').files[0];if(!f){showToast('Select a past session or upload a CSV.');return}var text=await new Promise(function(res){var r=new FileReader();r.onload=function(e){res(e.target.result)};r.readAsText(f)});text.split('\n').slice(1).forEach(function(line){var cols=line.match(/"([^"]*)"/g)||[];if(cols.length>=3)prev[cols[0].replace(/"/g,'')]=cols[2].replace(/"/g,'')})}
   var v=results.filter(function(r){return!r._error&&prev[r.fileName]!==undefined});
   var el=document.getElementById('cmp-results');
   if(!v.length){el.innerHTML='<div class="err" style="margin-top:1rem">No matching student names found.</div>';return}
@@ -1464,7 +1472,7 @@ document.getElementById('cmpbtn').onclick=async function(){
 };
 
 function printSheets(){
-  if(!results.length){alert('No results to print.');return}
+  if(!results.length){showToast('No results to print.');return}
   var task=document.getElementById('task').value||'Assessment';
   document.getElementById('print-out').innerHTML=results.filter(function(r){return!r._error}).map(function(r,i,arr){
     var sc=(r.criteria||[]).map(function(c){return parseInt(c.score)||0}),tot=sc.reduce(function(a,b){return a+b},0);
@@ -1474,7 +1482,7 @@ function printSheets(){
   }).join('');window.print();
 }
 function exportCSV(){
-  if(!results.length){alert('No results yet.');return}
+  if(!results.length){showToast('No results yet.');return}
   var rows=[['File','Overall','Total','Strengths','Next step 1','Next step 2','Next step 3','NZC']];
   results.forEach(function(r){var ns=r.nextSteps||[];rows.push([r.fileName||'',r.overallScore||'',r.criteriaTotal||'',r.strengths||'',ns[0]||'',ns[1]||'',ns[2]||'',r.nzcReference||''])});
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(function(r){return r.map(function(v){return'"'+String(v).replace(/"/g,'""')+'"'}).join(',')}).join('\n')],{type:'text/csv'}));a.download='marking_results.csv';a.click();

@@ -11,13 +11,15 @@
   if(t==='dark')document.documentElement.setAttribute('data-theme','dark');
 }catch(e){}})();
 </script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --green:#2d5a27;--green-bg:#e8f0e6;
   --paper:#f5f0e8;--paper-dark:#ede7d9;
-  --ink:#0f0e0c;--ink-light:#3a3630;--text2:#7a7468;
+  --ink:#0f0e0c;--ink-light:#3a3630;--text2:#6e6960;
   --gold:#c8840a;--gold-soft:rgba(200,132,10,0.12);
   --danger:#a32d2d;--danger-bg:#fcebeb;
   --border:rgba(15,14,12,0.14);
@@ -33,6 +35,7 @@
 [data-theme="dark"] .logo>span{color:#ece9e3!important}
 [data-theme="dark"] .logo span span span{background:#ece9e3!important}
 body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 1.25rem}
+button,a,input{touch-action:manipulation}
 .logo{display:block;margin:0 auto .5rem;text-align:center}
 .tag{font-size:14px;color:var(--text2);text-align:center;margin-bottom:2.5rem}
 .box{width:100%;max-width:400px;opacity:0;transform:translateY(14px);animation:riseIn .6s .05s var(--ease) forwards;text-align:center}
