@@ -1,4 +1,4 @@
-var CACHE = 'maka-v4';
+var CACHE = 'maka-v5';
 var ASSETS = [
   '/tool.html',
   '/student-login.html',
@@ -6,6 +6,7 @@ var ASSETS = [
   '/myhub.html',
   '/login.html',
   '/index.html',
+  '/privacy.html',
   '/manifest.json',
   '/icon-192.svg',
   '/icon-512.svg'

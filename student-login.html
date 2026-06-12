@@ -95,14 +95,14 @@ h1 em{color:var(--green);font-style:normal}
 
 <div class="box">
   <h1>Kia ora! <em>Ready to see your mahi?</em></h1>
-  <p class="sub">Type in your Māka code — your teacher gave it to you. It looks like <strong>KEA-4912</strong>.</p>
+  <p class="sub">Type in your Māka code — your teacher gave it to you. It’s a bird name and some numbers, like <strong>KEA-491268</strong>.</p>
   <input type="text" id="code" class="code-input" placeholder="Enter your code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" aria-label="Your Māka code">
   <button class="btn" id="go-btn" onclick="go()">See my learning →</button>
   <div id="msg" class="msg"></div>
   <p class="help">Lost your code? Ask your teacher — they can find it on your page in Māka.</p>
 </div>
 
-<div class="footer">Māka · <a href="index.html">For teachers</a></div>
+<div class="footer">Māka · <a href="index.html">For teachers</a> · <a href="privacy.html">Privacy</a></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -120,7 +120,7 @@ function clearErr(){document.getElementById('msg').style.display='none'}
 
 async function go(){
   var code=document.getElementById('code').value.trim();
-  if(!code){setErr('Type in your code first — it looks like KEA-4912.');return}
+  if(!code){setErr('Type in your code first — it\u2019s the bird-name code your teacher gave you.');return}
   clearErr();
   var btn=document.getElementById('go-btn');btn.disabled=true;btn.textContent='Checking…';
   try{
