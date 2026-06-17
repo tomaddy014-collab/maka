@@ -167,6 +167,26 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .remark-btn{font-size:11px;padding:4px 10px;border-radius:100px;border:.5px solid var(--border2);background:var(--bg);cursor:pointer;color:var(--text2);font-family:'DM Sans',sans-serif;margin-left:6px}.remark-btn:hover{background:var(--bg2)}
 .editable{cursor:pointer;border-radius:4px;padding:2px 4px}.editable:hover{background:var(--bg2)}
 .editing{width:100%;font-family:'DM Sans',sans-serif;font-size:12px;background:var(--bg2);border:1px solid var(--green);border-radius:4px;padding:2px 4px;color:var(--text)}
+/* Marking-mode segmented control */
+.mode-switch{display:flex;gap:4px;background:var(--bg2);border-radius:100px;padding:4px;margin-bottom:14px}
+.mode-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 12px;border:none;background:none;border-radius:100px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .2s var(--ease),color .2s var(--ease)}
+.mode-btn .mode-sub{font-weight:400;font-size:11px;color:var(--text3)}
+.mode-btn.active{background:var(--bg);color:var(--text);box-shadow:var(--sh-sm,0 1px 3px rgba(0,0,0,.08))}
+.mode-btn.active .mode-sub{color:var(--text2)}
+.mode-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+/* Maths result card */
+.mq-group{margin-bottom:10px}
+.mq-qnum{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.mq-parts{display:flex;flex-wrap:wrap;gap:6px}
+.mq-part{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg2);user-select:none;transition:background .15s var(--ease),border-color .15s var(--ease)}
+.mq-part .mq-lab{color:var(--text2);font-weight:700}
+.mq-part.correct{background:var(--green-bg);border-color:transparent;color:var(--green)}
+.mq-part.wrong{background:var(--danger-bg);border-color:transparent;color:var(--danger-text)}
+.mq-part .mq-mark{font-weight:800}
+.mq-part .mq-detail{font-weight:400;font-size:11px;opacity:.85}
+.mq-part:hover{border-color:var(--border2)}
+.mq-part:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.mq-hint{font-size:11px;color:var(--text3);margin:2px 0 12px}
 .dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem}
 .stat-box{background:var(--bg);border:.5px solid var(--border);border-radius:var(--r);padding:1.25rem;text-align:center;transition:transform .3s var(--ease-spring),box-shadow .3s var(--ease);animation:riseIn .45s var(--ease-spring) backwards}
 .stat-box:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,0.06)}
@@ -347,32 +367,42 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       </div>
     </div>
     <div class="card">
-      <div class="step-row"><span class="step-n">1</span><span class="step-title">Marking criteria</span></div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div class="step-row"><span class="step-n">1</span><span class="step-title">What to mark</span></div>
+      <div class="mode-switch" role="tablist" aria-label="Marking mode">
+        <button type="button" class="mode-btn active" id="mode-rubric" role="tab" aria-selected="true" onclick="setMarkMode('rubric')"><span data-ic="edit"></span>Rubric <span class="mode-sub">writing, science</span></button>
+        <button type="button" class="mode-btn" id="mode-maths" role="tab" aria-selected="false" onclick="setMarkMode('maths')"><span data-ic="hash"></span>Maths <span class="mode-sub">right / wrong</span></button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 12px;flex-wrap:wrap;gap:8px" id="rubric-load-row">
         <select id="rubric-select" style="width:auto;font-size:13px;padding:6px 10px;flex:1;max-width:280px" onchange="loadRubric()"><option value="">— Load a saved rubric —</option></select>
         <button class="btn btn-sm" onclick="saveRubric()"><span data-ic="save"></span>Save current</button>
       </div>
       <div class="grid2">
-        <div class="field"><label class="lbl">Learning area</label><select id="la"><option>English / Literacy</option><option>Mathematics / Pāngarau</option><option>Science</option><option>Social sciences</option><option>Technology</option><option>Arts</option><option>Health and PE</option><option>Te Reo Māori</option></select></div>
-        <div class="field"><label class="lbl">Curriculum level</label><select id="cl"><option value="4">Level 4 — Years 7–8</option><option value="3">Level 3 — Years 5–6</option><option value="5">Level 5 — Years 9–10</option></select></div>
+        <div class="field"><label class="lbl" for="la">Learning area</label><select id="la"><option>English / Literacy</option><option>Mathematics / Pāngarau</option><option>Science</option><option>Social sciences</option><option>Technology</option><option>Arts</option><option>Health and PE</option><option>Te Reo Māori</option></select></div>
+        <div class="field"><label class="lbl" for="cl">Curriculum level</label><select id="cl"><option value="4">Level 4 — Years 7–8</option><option value="3">Level 3 — Years 5–6</option><option value="5">Level 5 — Years 9–10</option></select></div>
       </div>
-      <div class="field"><label class="lbl">Task / focus</label><input type="text" id="task" placeholder="e.g. Persuasive writing — should school uniforms be compulsory?" oninput="autoSessName()"></div>
-      <div class="field">
+      <div class="field"><label class="lbl" for="task">Task / focus</label><input type="text" id="task" placeholder="e.g. Persuasive writing — should school uniforms be compulsory?" oninput="autoSessName()"></div>
+      <div class="field" id="rubric-block">
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:5px">
-    <label class="lbl" style="margin-bottom:0">Rubric <span style="font-weight:500;text-transform:none;letter-spacing:0">(one per line — leave blank for NZC defaults)</span></label>
+    <label class="lbl" style="margin-bottom:0" for="rubric">Rubric <span style="font-weight:500;text-transform:none;letter-spacing:0">(one per line — leave blank for NZC defaults)</span></label>
     <button class="btn btn-sm" id="build-rub-btn" onclick="buildRubric()" style="font-size:12px;padding:5px 10px"><span data-ic="sparkle"></span>Build rubric with AI</button>
   </div>
   <div id="build-rub-status" style="font-size:12px;color:var(--text2);margin-bottom:6px;display:none"></div>
   <textarea id="rubric" placeholder="e.g.&#10;Ideas — clearly states a position&#10;Structure — TIDE paragraph&#10;Language — persuasive devices&#10;Conventions — spelling, punctuation, grammar&#10;Clarity — flows logically"></textarea>
 </div>
-      <div class="field"><label class="lbl">Session name</label><input type="text" id="session-name" placeholder="e.g. 7B Writing — Kaitiakitanga — Term 2"></div>
+      <div class="field" id="maths-block" style="display:none">
+        <label class="lbl" for="answer-key">Answer key <span style="font-weight:500;text-transform:none;letter-spacing:0">(recommended — leave blank to let the AI solve, less accurate)</span></label>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;line-height:1.5">Type the answers as they appear in the book. Sub-parts welcome — equivalent forms (½ = 0.5) are accepted.</div>
+        <textarea id="answer-key" placeholder="e.g.&#10;1. a)6  b)12  c)18&#10;2. a)3.5  b)1/2  c)9  d)40&#10;3. a)24  b)7  c)100"></textarea>
+        <div style="font-size:12px;color:var(--warn-text);margin-top:6px;display:flex;gap:6px;align-items:flex-start"><span data-ic="alert" style="flex-shrink:0;margin-top:1px"></span><span>AI reads handwritten maths well but not perfectly — every answer is tap-to-flip after marking, so check before sharing.</span></div>
+      </div>
+      <div class="field"><label class="lbl" for="session-name">Session name</label><input type="text" id="session-name" placeholder="e.g. 7B Writing — Kaitiakitanga — Term 2"></div>
     </div>
     <div class="card">
       <div class="step-row"><span class="step-n">2</span><span class="step-title">Upload student work</span></div>
       <div class="upload-box empty-pulse" id="dropzone">
         <div class="upload-ico" style="margin-bottom:10px"><span data-ic="file"></span></div>
         <div style="font-size:14px;font-weight:500;margin-bottom:4px">Drag and drop files here</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:14px">PDF, JPG and PNG — or snap a photo. Scanned handwriting works too</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:14px">PDF, JPG and PNG — or snap a photo. Multiple photos of one student combine into a single PDF</div>
         <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
           <button class="btn" id="pickbtn">Browse files</button>
           <button class="btn" id="camerabtn"><span data-ic="camera"></span>Take photo</button>
@@ -515,17 +545,33 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 </div>
 
 <div class="modal-bg" id="rename-modal"><div class="modal"><div class="modal-title">Rename session</div><input type="text" id="rename-input" placeholder="Session name"><div class="modal-footer"><button class="btn" onclick="closeModal('rename-modal')">Cancel</button><button class="btn btn-p" onclick="confirmRename()">Rename</button></div></div></div>
-<div class="modal-bg" id="photo-assign-modal"><div class="modal" style="max-width:480px"><div class="modal-title">Who took these photos?</div><p style="font-size:13px;color:var(--text2);margin-bottom:1rem">Match each photo to a student so their result saves to their profile.</p><div id="photo-assign-rows" style="display:flex;flex-direction:column;gap:.6rem;max-height:55vh;overflow-y:auto;margin-bottom:1rem"></div><div class="modal-footer"><button class="btn" onclick="skipPhotoAssign()">Skip for now</button><button class="btn btn-p" onclick="confirmPhotoAssign()">Mark now</button></div></div></div>
+<div class="modal-bg" id="photo-assign-modal"><div class="modal" style="max-width:480px"><div class="modal-title">Whose work is this?</div><p style="font-size:13px;color:var(--text2);margin-bottom:1rem">Assign each photo to a student. <strong>Photos given to the same student are combined into one PDF and marked as a single piece</strong> — so snap every page of their book.</p><div id="photo-assign-rows" style="display:flex;flex-direction:column;gap:.6rem;max-height:55vh;overflow-y:auto;margin-bottom:1rem"></div><div class="modal-footer"><button class="btn" onclick="skipPhotoAssign()">Skip for now</button><button class="btn btn-p" onclick="confirmPhotoAssign()">Mark now</button></div></div></div>
 <div class="modal-bg" id="add-stu-modal"><div class="modal"><div class="modal-title">Add student</div><div class="field"><label class="lbl">Name</label><input type="text" id="new-stu-name" placeholder="Student name"></div><div class="grid2" style="margin-bottom:0"><div class="field"><label class="lbl">Year level</label><select id="new-stu-year"><option value="">Select</option><option>Year 1</option><option>Year 2</option><option>Year 3</option><option>Year 4</option><option>Year 5</option><option>Year 6</option><option>Year 7</option><option>Year 8</option><option>Year 9</option><option>Year 10</option></select></div><div class="field"><label class="lbl">Gender</label><select id="new-stu-gender"><option value="">Select</option><option value="boy">Boy (he/him)</option><option value="girl">Girl (she/her)</option><option value="nonbinary">Non-binary (they/them)</option></select></div></div><div class="modal-footer"><button class="btn" onclick="closeModal('add-stu-modal')">Cancel</button><button class="btn btn-p" onclick="addStu()">Add</button></div></div></div>
 <div class="print-out" id="print-out"></div>
 <div id="toast-wrap" aria-live="polite" aria-atomic="false"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
 var SURL='https://agwqenhduoxxeemklmpr.supabase.co';
 var SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnd3FlbmhkdW94eGVlbWtsbXByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MzkxNDAsImV4cCI6MjA5NDAxNTE0MH0.TZkrRgForSDTzQ4vZ9j36WncEAVBx4reG-ADcoohY8o';
 var sb=null,USER=null,PROFILE={};
 var files=[],results=[],currentSessId=null,progressItems=[],currentCType='report',renameTargetId=null,CLASS_STUDENTS=[];
+var MARK_MODE='rubric'; // 'rubric' | 'maths'
+function setMarkMode(m){
+  MARK_MODE=m;
+  var rb=document.getElementById('mode-rubric'),mb=document.getElementById('mode-maths');
+  rb.classList.toggle('active',m==='rubric');mb.classList.toggle('active',m==='maths');
+  rb.setAttribute('aria-selected',m==='rubric'?'true':'false');
+  mb.setAttribute('aria-selected',m==='maths'?'true':'false');
+  document.getElementById('rubric-block').style.display=m==='rubric'?'':'none';
+  document.getElementById('rubric-load-row').style.display=m==='rubric'?'':'none';
+  document.getElementById('maths-block').style.display=m==='maths'?'':'none';
+  // Default the learning area to Maths when switching to maths mode (teacher can change it)
+  if(m==='maths'){var la=document.getElementById('la');for(var i=0;i<la.options.length;i++){if(/Math/i.test(la.options[i].text)){la.selectedIndex=i;break}}}
+  try{localStorage.setItem('maka-mark-mode',m)}catch(e){}
+}
+try{var _mm=localStorage.getItem('maka-mark-mode');if(_mm==='maths')setTimeout(function(){setMarkMode('maths')},0)}catch(e){}
 
 var DEFAULT_STYLE="Ashton has demonstrated positive growth in his writing this term. He engaged enthusiastically with our unit on poetic forms, successfully using his creative mind to compose an excellent piece of poetry. He participated effectively in classroom debates, demonstrating strong verbal communication skills. He is encouraged to apply the same focus and energy he shows in group work to his individual assignments. Bennett has bravely embraced the challenge of improving his spelling and handwriting this term, diligently applying learned phonics patterns to his work. His engagement across both reading and writing is commendable, and he is encouraged to maintain this focus. Georgia has made pleasing progress in English this term, demonstrating a strong understanding of structure and form. Moving forward, she is encouraged to continue developing her collaborative skills. Harper has continued to make excellent progress in English this term. A noticeable highlight has been his growing sense of pride in his work. His sustained effort and pride in learning are commendable strengths to carry forward. Jessica has made noticeable progress in her writing this term. A highlight has been her involvement in an additional writing group which has helped her rediscover pride in her writing. Maintaining this confidence and continuing to expand on her ideas will strengthen her writing even further.";
 var DEFAULT_RUBRIC="Ideas and Content — selects and develops relevant ideas that clearly support the main point\nStructure and Organisation — uses TIDE paragraph structure with a clear topic and concluding sentence\nVocabulary and Language Features — uses appropriate vocabulary and varied sentence structures\nConventions — spelling, punctuation, and grammar are accurate and support meaning\nClarity and Cohesion — writing flows logically and is easy for the reader to follow";
@@ -566,7 +612,9 @@ var ICONS={
   circle:'<circle cx="12" cy="12" r="9"/>',
   target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
   image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>',
-  grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>'
+  grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
+  hash:'<path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/>',
+  layers2:'<path d="M12 2 2 7l10 5 10-5-10-5Z"/>'
 };
 function ic(name){return'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[name]||'')+'</svg>'}
 function showToast(msg,type,dur,undoLabel,undoCb){
@@ -846,6 +894,37 @@ document.getElementById('markbtn').onclick=runMarking;
 updMark();
 
 function toB64(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1])};r.onerror=rej;r.readAsDataURL(file)})}
+// ── Photo → PDF (downscaled, EXIF-orientation aware) ────────────────────────
+function loadImgEl(file){return new Promise(function(res,rej){var img=new Image();img.onload=function(){res(img)};img.onerror=rej;img.src=URL.createObjectURL(file)})}
+function loadBitmap(file){
+  if(window.createImageBitmap){
+    try{return createImageBitmap(file,{imageOrientation:'from-image'}).catch(function(){return loadImgEl(file)})}catch(e){return loadImgEl(file)}
+  }
+  return loadImgEl(file);
+}
+// Combine one or more image files into a single multi-page PDF File.
+async function imagesToPdf(imageFiles,name){
+  var ns=window.jspdf||window.jsPDF;var JSP=ns&&(ns.jsPDF||ns);
+  if(!JSP)throw new Error('PDF library not loaded');
+  var doc=null,MAX=1600;
+  for(var i=0;i<imageFiles.length;i++){
+    var bmp=await loadBitmap(imageFiles[i]);
+    var w=bmp.width||bmp.naturalWidth,h=bmp.height||bmp.naturalHeight;
+    var scale=Math.min(1,MAX/Math.max(w,h));
+    var cw=Math.max(1,Math.round(w*scale)),ch=Math.max(1,Math.round(h*scale));
+    var canvas=document.createElement('canvas');canvas.width=cw;canvas.height=ch;
+    canvas.getContext('2d').drawImage(bmp,0,0,cw,ch);
+    if(bmp.close)try{bmp.close()}catch(e){}
+    var dataURL=canvas.toDataURL('image/jpeg',0.85);
+    var orient=cw>=ch?'l':'p';
+    if(!doc){doc=new JSP({orientation:orient,unit:'px',format:[cw,ch]})}
+    else{doc.addPage([cw,ch],orient)}
+    doc.addImage(dataURL,'JPEG',0,0,cw,ch);
+  }
+  var blob=doc.output('blob');
+  var safe=(name||'work').replace(/[^a-zA-Z0-9 ._-]/g,'').trim()||'work';
+  return new File([blob],safe+'.pdf',{type:'application/pdf'});
+}
 async function gemini(key,parts,onRetry,maxTokens){
   var url='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key;
   var body=JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0.3,maxOutputTokens:maxTokens||8192}});
@@ -896,7 +975,82 @@ function renderProg(){
   }).join('')+'</ul>';
 }
 
-async function markOne(key,file,rubric,area,level,task,style,idx){
+// ── Maths helpers ──────────────────────────────────────────────────────────
+function mathsBand(pct){return pct>=85?'Exceeds':pct>=65?'Achieved':pct>=40?'Approaching':'Beginning'}
+function normQuestions(arr){
+  return (arr||[]).map(function(q){
+    var c=q.correct;c=(c===true||c==='true'||c===1||c==='1');
+    return{q:String(q.q==null?'':q.q),part:String(q.part==null?'':q.part),correct:c,student:String(q.student==null?'':q.student),answer:String(q.answer==null?'':q.answer)};
+  });
+}
+function computeMaths(questions){
+  var total=questions.length,correct=questions.filter(function(q){return q.correct}).length;
+  var pct=total?Math.round(100*correct/total):0;
+  return{correct:correct,total:total,percent:pct,score:correct+'/'+total,band:mathsBand(pct)};
+}
+function applyMaths(r){
+  r.questions=normQuestions(r.questions);
+  var c=computeMaths(r.questions);
+  r.mode='maths';r.correct=c.correct;r.total=c.total;r.percent=c.percent;
+  r.criteriaTotal=c.score;r.overallScore=c.band;
+  return r;
+}
+async function markOneMaths(key,file,area,level,task,answerKey,idx){
+  progressItems[idx].status='working';progressItems[idx].phase='Marking…';renderProg();
+  try{
+    var mime=file.type==='application/pdf'?'application/pdf':file.type,b64=await toB64(file);
+    var keyBlock=answerKey?('The OFFICIAL ANSWER KEY is below. Mark each answer RIGHT or WRONG against it.'):'No answer key was provided — solve each question yourself first, then mark the student RIGHT or WRONG.';
+    var jsonShape='{"fileName":"'+file.name+'","questions":[{"q":"1","part":"a","correct":true,"student":"6","answer":"6"},{"q":"1","part":"b","correct":false,"student":"16","answer":"18"}],"improve1":"Warm tip naming a skill they did well, using you/your.","improve2":"Warm next-step tip naming the skill to work on, referencing items like Q2b."}';
+    var prompt=[
+      'You are a careful, encouraging NZ Years 7-8 maths teacher marking a student\'s hand-written maths book.',
+      'Topic/task: '+(task||'Maths practice')+'. NZC Level: '+level+'.',
+      keyBlock,
+      'Accept mathematically EQUIVALENT forms as correct (1/2 = 0.5 = 2/4; 07 = 7; 3.0 = 3; equivalent units).',
+      answerKey?('ANSWER KEY:\n'+answerKey):'',
+      '',
+      'RULES:',
+      '1. Read EVERY question the student attempted, including lettered sub-parts (1a, 1b, 2a, 2b...). Each sub-part is a SEPARATE item.',
+      '2. For each item record the student\'s FINAL answer and whether it is correct (final answer only — no part marks).',
+      '3. If an item in the key was skipped/not attempted, return correct:false with student:"(blank)".',
+      '4. Use the question number in "q" (e.g. "2") and the sub-part letter in "part" (e.g. "b"); use "" for part if there are no sub-parts.',
+      '5. Write two warm tips to the student (you/your): improve1 celebrates a skill, improve2 gives the next step and references specific items (e.g. "Q2b").',
+      '',
+      'Return ONLY raw JSON, no markdown fences, no explanation:',
+      jsonShape
+    ].join('\n');
+    var onBusy=function(a,max){progressItems[idx].phase='Busy — retry '+a+'/'+(max-1)+'…';renderProg()};
+    var r=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:'File: "'+file.name+'"\n\n'+prompt}],onBusy));
+    r.fileName=r.fileName||file.name;
+
+    // ── Pass 2: independent moderation (re-reads and re-marks) ──
+    progressItems[idx].phase='Moderating…';renderProg();
+    try{
+      var modPrompt=[
+        'You are a senior NZ maths moderator doing a SECOND, INDEPENDENT check of this marking against the same answer key.',
+        'Topic/task: '+(task||'Maths practice')+'. NZC Level: '+level+'.',
+        answerKey?('ANSWER KEY:\n'+answerKey):'No answer key — solve each item yourself.',
+        'Accept mathematically equivalent forms.',
+        '',
+        'A first marker produced these results:',
+        JSON.stringify({questions:normQuestions(r.questions)}),
+        '',
+        'Re-read the student work yourself. Correct any mis-read student answers or wrong right/wrong judgements. Keep the SAME q/part items. Final answer only.',
+        'Return ONLY raw JSON in this exact shape, no markdown:',
+        jsonShape
+      ].join('\n');
+      var onMod=function(a,max){progressItems[idx].phase='Moderating — retry '+a+'/'+(max-1)+'…';renderProg()};
+      var m=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:'File: "'+file.name+'"\n\n'+modPrompt}],onMod));
+      if(m&&Array.isArray(m.questions)&&m.questions.length){m.fileName=r.fileName;if(!m.improve1)m.improve1=r.improve1;if(!m.improve2)m.improve2=r.improve2;r=m;}
+    }catch(modErr){/* keep first-pass maths result */}
+
+    applyMaths(r);
+    progressItems[idx].status='done';progressItems[idx].phase='';renderProg();
+    return r;
+  }catch(e){progressItems[idx].status='error';progressItems[idx].phase='';progressItems[idx].err=e.message;renderProg();return{fileName:file.name,_error:e.message}}
+}
+
+async function markOne(key,file,rubric,area,level,task,style,idx,mode,answerKey){
+  if(mode==='maths')return markOneMaths(key,file,area,level,task,answerKey,idx);
   progressItems[idx].status='working';progressItems[idx].phase='Marking…';renderProg();
   try{
     var mime=file.type==='application/pdf'?'application/pdf':file.type,b64=await toB64(file);
@@ -963,18 +1117,23 @@ async function remarkStu(idx){
   progressItems[idx]={name:files[idx].name,status:'pending',phase:'',err:''};
   document.getElementById('progress').style.display='block';renderProg();
   var prev=results[idx]||{};
-  var res=await markOne(key,files[idx],rub,area,level,task,getStyle(),idx);
+  var mode=prev.mode||MARK_MODE,answerKey=(document.getElementById('answer-key')||{}).value||'';
+  var res=await markOne(key,files[idx],rub,area,level,task,getStyle(),idx,mode,answerKey.trim());
   res._file=files[idx];if(prev.assignTo)res.assignTo=prev.assignTo;
   results[idx]=res;document.getElementById('progress').style.display='none';renderResults(results);
-  if(currentSessId&&!res._error&&sb&&USER)sb.from('student_results').upsert({session_id:currentSessId,teacher_id:USER.id,student_id:assignedStudentIdFor(res),file_name:resultSaveName(res),overall_score:res.overallScore,criteria_total:res.criteriaTotal,criteria:res.criteria,strengths:res.improve1||res.strengths||'',next_steps:res.improve2?[res.improve2]:(res.nextSteps||[]),nzc_reference:res.nzcReference},{onConflict:'session_id,file_name'}).then(function(){}).catch(function(){});
+  if(currentSessId&&!res._error&&sb&&USER)sb.from('student_results').upsert(resultRow(res,currentSessId),{onConflict:'session_id,file_name'}).then(function(){}).catch(function(){});
 }
 
 var _photoAssignResolve=null;
 function openPhotoAssignModal(photoFiles){
   var rows=document.getElementById('photo-assign-rows');
   rows.innerHTML=photoFiles.map(function(f,i){
-    var opts='<option value="">— unassigned —</option>'+CLASS_STUDENTS.map(function(s){return'<option value="'+esc(s.name)+'">'+esc(s.name)+'</option>'}).join('');
-    return'<div style="display:flex;align-items:center;gap:10px;font-size:13px"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)" title="'+esc(f.name)+'">'+ic('file')+''+esc(f.name)+'</span><select data-photo-idx="'+i+'" style="width:160px;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--rs);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px">'+opts+'</select></div>';
+    // Pre-select a student if the file name already matches one
+    var pre='';var fn=(f.name||'').toLowerCase();
+    var m=CLASS_STUDENTS.find(function(s){var first=(s.name||'').split(' ')[0].toLowerCase();return first&&fn.indexOf(first)!==-1});
+    if(m)pre=m.name;
+    var opts='<option value="">— mark on its own —</option>'+CLASS_STUDENTS.map(function(s){return'<option value="'+esc(s.name)+'"'+(s.name===pre?' selected':'')+'>'+esc(s.name)+'</option>'}).join('');
+    return'<div style="display:flex;align-items:center;gap:10px;font-size:13px"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)" title="'+esc(f.name)+'">'+ic('file')+' Photo '+(i+1)+'</span><select data-photo-idx="'+i+'" style="width:170px;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--rs);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px">'+opts+'</select></div>';
   }).join('');
   openModal('photo-assign-modal');
   return new Promise(function(resolve){_photoAssignResolve=resolve});
@@ -992,24 +1151,32 @@ async function runMarking(){
   if(sb&&USER&&key!==(PROFILE.gemini_key||''))sb.from('profiles').update({gemini_key:key}).eq('id',USER.id).then(function(){PROFILE.gemini_key=key}).catch(function(){});
   var area=document.getElementById('la').value,level=document.getElementById('cl').value,task=document.getElementById('task').value;
   var rub=document.getElementById('rubric').value.trim()||DEFAULT_RUBRIC,style=getStyle();
+  var mode=MARK_MODE,answerKey=((document.getElementById('answer-key')||{}).value||'').trim();
   var sname=document.getElementById('session-name').value.trim()||('Session '+new Date().toLocaleDateString('en-NZ'));
-  // For photo files with no auto-matched student, ask the teacher to assign them now.
-  if(CLASS_STUDENTS.length){
-    var unmatched=files.map(function(f,i){return{f:f,i:i}}).filter(function(x){
-      if(x.f.type==='application/pdf')return false;
-      var fn=x.f.name.toLowerCase();
-      return!CLASS_STUDENTS.find(function(s){var first=(s.name||'').split(' ')[0].toLowerCase();return first&&fn.indexOf(first)!==-1});
-    });
-    if(unmatched.length){
-      var map=await openPhotoAssignModal(unmatched.map(function(x){return x.f}));
-      Object.keys(map).forEach(function(k){var name=map[k];if(name){var globalIdx=unmatched[parseInt(k)].i;var tmp=files[globalIdx];files[globalIdx]=new File([tmp],name+' — '+tmp.name,{type:tmp.type})}});
+  // Photos: let the teacher assign each to a student. Photos assigned to the SAME
+  // student are combined into one multi-page PDF and marked as a single piece.
+  var images=files.map(function(f,i){return{f:f,i:i}}).filter(function(x){return x.f.type==='image/jpeg'||x.f.type==='image/png'});
+  if(images.length){
+    var map=await openPhotoAssignModal(images.map(function(x){return x.f}));
+    var groups={},loose=[];
+    images.forEach(function(x,k){var nm=(map[k]||'').trim();if(nm){(groups[nm]=groups[nm]||[]).push(x.f)}else{loose.push(x.f)}});
+    var groupNames=Object.keys(groups);
+    if(groupNames.length){
+      var nonImages=files.filter(function(f){return!(f.type==='image/jpeg'||f.type==='image/png')});
+      var combined=[];
+      for(var gi=0;gi<groupNames.length;gi++){
+        try{combined.push(await imagesToPdf(groups[groupNames[gi]],groupNames[gi]));}
+        catch(e){/* if PDF build fails, fall back to the individual photos */ combined=combined.concat(groups[groupNames[gi]]);}
+      }
+      files=nonImages.concat(combined).concat(loose);
+      renderFiles();
     }
   }
   document.getElementById('rsec').style.display='block';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='block';document.getElementById('save-status').innerHTML='';
   progressItems=files.map(function(f){return{name:f.name,status:'pending',phase:'',err:''}});renderProg();
   var out=[];
-  out=await Promise.all(files.map(function(f,j){return markOne(key,f,rub,area,level,task,style,j)}));
-  for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(2000);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markOne(key,files[i],rub,area,level,task,style,i)}));fail.forEach(function(i,j){out[i]=ret[j]})}
+  out=await Promise.all(files.map(function(f,j){return markOne(key,f,rub,area,level,task,style,j,mode,answerKey)}));
+  for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(2000);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markOne(key,files[i],rub,area,level,task,style,i,mode,answerKey)}));fail.forEach(function(i,j){out[i]=ret[j]})}
   out.forEach(function(r,i){r._file=files[i]});
   results=out;document.getElementById('progress').style.display='none';renderResults(out);
   var okCount=out.filter(function(r){return!r._error}).length;
@@ -1018,7 +1185,7 @@ async function runMarking(){
   document.getElementById('cmp-a').textContent=out.length+' students — '+sname;
   persistResults();
   notifyDone('Marking complete','Māka finished marking '+okCount+' piece'+(okCount!==1?'s':'')+' of work.');
-  if(sb&&USER)saveSess(sname,area,level,task,rub,out);
+  if(sb&&USER)saveSess(sname,area,level,task,(mode==='maths'?answerKey:rub),out,mode);
 }
 // Browser notification when a long task finishes (only if the tab is in the background).
 function notifyDone(title,body){
@@ -1042,10 +1209,17 @@ async function uploadPDF(file,teacherId){
   }catch(e){console.error('PDF upload failed:',e.message);return null;}
 }
 
-function saveSess(name,area,level,task,rubric,res){
+function saveSess(name,area,level,task,rubric,res,mode){
+  mode=mode||'rubric';
   var ss=document.getElementById('save-status');
   ss.innerHTML='<div style="font-size:13px;color:var(--text2);margin-top:8px;display:flex;align-items:center;gap:6px"><div class="spinner"></div>Saving…</div>';
-  sb.from('sessions').insert({teacher_id:USER.id,name:name,learning_area:area,level:level,task:task,rubric:rubric}).select().single().then(function(sres){
+  sb.from('sessions').insert({teacher_id:USER.id,name:name,learning_area:area,level:level,task:task,rubric:rubric,mark_mode:mode}).select().single().then(function(sres){
+    // If mark_mode column doesn't exist yet, retry the session insert without it
+    if(sres.error&&/mark_mode/.test(sres.error.message||'')){
+      return sb.from('sessions').insert({teacher_id:USER.id,name:name,learning_area:area,level:level,task:task,rubric:rubric}).select().single().then(function(s2){return s2});
+    }
+    return sres;
+  }).then(function(sres){
     if(sres.error){ss.innerHTML='';showToast('Could not save: '+sres.error.message,'err');return}
     currentSessId=sres.data.id;
     var valid=res.filter(function(r){return!r._error});
@@ -1056,24 +1230,11 @@ function saveSess(name,area,level,task,rubric,res){
         return fileObj?uploadPDF(fileObj,USER.id):Promise.resolve(null);
       })).then(function(paths){
         return Promise.all(paths.map(signedPdfUrl)).then(function(urls){
-          sb.from('student_results').insert(valid.map(function(r,i){return{
-            session_id:sres.data.id,
-            teacher_id:USER.id,
-            student_id:assignedStudentIdFor(r),
-            file_name:resultSaveName(r),
-            overall_score:r.overallScore,
-            criteria_total:r.criteriaTotal,
-            criteria:r.criteria,
-            strengths:r.improve1||r.strengths||'',
-            next_steps:r.improve2?[r.improve2]:(r.nextSteps||[]),
-            nzc_reference:r.nzcReference,
-            pdf_path:paths[i]||null,
-            pdf_url:urls[i]||null
-          }})).then(function(ins){
-            // Older databases may not have student_id/pdf_url yet — retry without them
+          sb.from('student_results').insert(valid.map(function(r,i){return resultRow(r,sres.data.id,paths[i],urls[i])})).then(function(ins){
+            // Older databases may not have the newer columns — retry with the legacy set
             if(ins&&ins.error)return sb.from('student_results').insert(valid.map(function(r,i){return{
               session_id:sres.data.id,teacher_id:USER.id,file_name:resultSaveName(r),
-              overall_score:r.overallScore,criteria_total:r.criteriaTotal,criteria:r.criteria,
+              overall_score:r.overallScore,criteria_total:r.criteriaTotal,criteria:(r.mode==='maths'?(r.questions||[]):(r.criteria||[])),
               strengths:r.improve1||r.strengths||'',next_steps:r.improve2?[r.improve2]:(r.nextSteps||[]),
               nzc_reference:r.nzcReference,pdf_path:paths[i]||null
             }}));
@@ -1095,9 +1256,10 @@ function saveAllToProfiles(){
   function done(ok,msg){if(btn){btn.disabled=false;btn.innerHTML=ic('save')+'Save all to profiles'}showToast(msg,ok?'ok':'err')}
   if(!currentSessId){
     var area=document.getElementById('la').value,level=document.getElementById('cl').value,task=document.getElementById('task').value;
-    var rub=document.getElementById('rubric').value.trim()||DEFAULT_RUBRIC;
+    var smode=(results[0]&&results[0].mode)||MARK_MODE;
+    var rub=smode==='maths'?(((document.getElementById('answer-key')||{}).value||'').trim()):(document.getElementById('rubric').value.trim()||DEFAULT_RUBRIC);
     var sname=document.getElementById('session-name').value.trim()||('Session '+new Date().toLocaleDateString('en-NZ'));
-    saveSess(sname,area,level,task,rub,results);if(btn){btn.disabled=false;btn.innerHTML=ic('save')+'Save all to profiles'}return;
+    saveSess(sname,area,level,task,rub,results,smode);if(btn){btn.disabled=false;btn.innerHTML=ic('save')+'Save all to profiles'}return;
   }
   // Existing session: upsert current rows first (no data loss if it fails), then prune orphans.
   var newNames={};valid.forEach(function(r){newNames[resultSaveName(r)]=true});
@@ -1118,13 +1280,7 @@ function saveAllToProfiles(){
       }));
     })
     .then(function(infos){
-      return sb.from('student_results').upsert(valid.map(function(r,i){return{
-        session_id:currentSessId,teacher_id:USER.id,file_name:resultSaveName(r),
-        student_id:assignedStudentIdFor(r),
-        overall_score:r.overallScore,criteria_total:r.criteriaTotal,criteria:r.criteria,
-        strengths:r.improve1||r.strengths||'',next_steps:r.improve2?[r.improve2]:(r.nextSteps||[]),
-        nzc_reference:r.nzcReference,pdf_path:infos[i].path||null,pdf_url:infos[i].url||null
-      }}),{onConflict:'session_id,file_name'});
+      return sb.from('student_results').upsert(valid.map(function(r,i){return resultRow(r,currentSessId,infos[i].path,infos[i].url)}),{onConflict:'session_id,file_name'});
     }).then(function(up){
       if(up&&up.error)throw new Error(up.error.message);
       // Only after a successful upsert, delete rows from this session that are no longer present.
@@ -1147,8 +1303,66 @@ function makeEditable(el,onSave){
     inp.onblur=done;inp.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();done()}if(e.key==='Escape'){el.innerHTML=orig;el.onclick=null;makeEditable(el,onSave)}};
   }
 }
+// Shared "Save to profile" combobox row used by both rubric and maths cards.
+function assignRowHtml(r,idx){
+  var assigned=assignedStudentFor(r);
+  var hint=CLASS_STUDENTS.length?'':' (add students in the Class tab first)';
+  return'<div class="assign-row"><span class="assign-lbl" id="assign-lbl-'+idx+'">Save to profile</span>'+
+    '<div class="combo" data-idx="'+idx+'">'+
+      '<input class="combo-input" type="text" role="combobox" aria-expanded="false" aria-controls="combo-list-'+idx+'" aria-autocomplete="list" aria-labelledby="assign-lbl-'+idx+'" autocomplete="off" placeholder="Auto-match by file name" value="'+esc(assigned)+'">'+
+      '<button type="button" class="combo-clear" tabindex="-1" aria-label="Clear assignment"'+(assigned?'':' style="display:none"')+'>×</button>'+
+      '<ul class="combo-list" id="combo-list-'+idx+'" role="listbox" hidden></ul>'+
+    '</div>'+
+    '<span class="assign-hint">'+hint+'</span></div>';
+}
+// Flip one maths sub-part right↔wrong; recompute the score and persist.
+function flipMathsPart(idx,qi){
+  var r=results[idx];if(!r||!r.questions||!r.questions[qi])return;
+  r.questions[qi].correct=!r.questions[qi].correct;
+  applyMaths(r);persistResults();
+  if(currentSessId&&sb&&USER)sb.from('student_results').upsert(resultRow(r,currentSessId),{onConflict:'session_id,file_name'}).then(function(){}).catch(function(){});
+  renderResults(results);
+}
+function renderMathsCard(r,idx,editable){
+  var qs=r.questions||r.criteria||[];
+  var band=r.overallScore||r.overall_score||'';
+  var score=r.criteriaTotal||r.criteria_total||'';
+  var pct=(r.percent!=null)?r.percent:(function(){var t=qs.length,c=qs.filter(function(q){return q.correct}).length;return t?Math.round(100*c/t):0})();
+  var i1=r.improve1||r.strengths||'',i2=r.improve2||(r.next_steps&&r.next_steps[0])||'';
+  var remarkBtn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkStu('+idx+')">'+ic('refresh')+'Re-mark</button>':'';
+  var pillc=pct>=75?'ph':pct>=50?'pm':'pl';
+  var html='<div class="rcard">';
+  html+='<div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span><div style="display:flex;align-items:center;gap:6px"><span class="pill '+pillc+'">'+esc(band)+' · '+esc(score)+(pct?' ('+pct+'%)':'')+'</span>'+remarkBtn+'</div></div>';
+  var order=[],groups={};
+  qs.forEach(function(q,qi){var k=String(q.q||'');if(!(k in groups)){groups[k]=[];order.push(k)}groups[k].push({q:q,qi:qi})});
+  if(order.length){
+    order.forEach(function(k){
+      html+='<div class="mq-group"><div class="mq-qnum">Q'+esc(k)+'</div><div class="mq-parts">';
+      groups[k].forEach(function(item){
+        var q=item.q,qi=item.qi,lab=esc(q.part||'•');
+        var mark=q.correct?ic('check'):ic('x');
+        var detail=(!q.correct&&(q.student||q.answer))?'<span class="mq-detail">'+esc(q.student||'—')+' → '+esc(q.answer||'?')+'</span>':'';
+        var flip=editable?(' role="button" tabindex="0" onclick="flipMathsPart('+idx+','+qi+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();flipMathsPart('+idx+','+qi+')}" title="Tap to flip"'):'';
+        html+='<span class="mq-part '+(q.correct?'correct':'wrong')+'"'+flip+'><span class="mq-lab">'+lab+'</span><span class="mq-mark">'+mark+'</span>'+detail+'</span>';
+      });
+      html+='</div></div>';
+    });
+  }else{
+    html+='<div class="mq-hint">No questions were read from this work.</div>';
+  }
+  if(editable&&order.length)html+='<div class="mq-hint">Tap any answer to flip it — the score updates automatically.</div>';
+  if(i1||i2){
+    html+='<div class="slbl">Feedback</div>';
+    if(i1)html+='<div class="sbox improve" style="margin-bottom:6px">'+ic('bulb')+esc(i1)+'</div>';
+    if(i2)html+='<div class="sbox improve">'+ic('bulb')+esc(i2)+'</div>';
+  }
+  if(editable)html+=assignRowHtml(r,idx);
+  html+='</div>';
+  return html;
+}
 function renderResultCard(r,idx,editable){
   if(r._error){var btn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkStu('+idx+')">'+ic('refresh')+'Retry</button>':'';return'<div class="rcard"><div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span>'+btn+'</div><div class="err">'+ic('alert')+' '+esc(r._error)+'</div></div>'}
+  if(r.mode==='maths'||r.mark_mode==='maths')return renderMathsCard(r,idx,editable);
   var crit=r.criteria||[],tot=r.criteriaTotal||r.criteria_total||'';
   var sc=crit.map(function(c){return parseInt(c.score)||0}),total=sc.reduce(function(a,b){return a+b},0);
   var pct=sc.length?Math.round(total/(sc.length*5)*100):0;
@@ -1170,17 +1384,7 @@ function renderResultCard(r,idx,editable){
     if(i1)html+='<div class="sbox improve" style="margin-bottom:6px">'+ic('bulb')+esc(i1)+'</div>';
     if(i2)html+='<div class="sbox improve">'+ic('bulb')+esc(i2)+'</div>';
   }
-  if(editable){
-    var assigned=assignedStudentFor(r);
-    var hint=CLASS_STUDENTS.length?'':' (add students in the Class tab first)';
-    html+='<div class="assign-row"><span class="assign-lbl" id="assign-lbl-'+idx+'">Save to profile</span>'+
-      '<div class="combo" data-idx="'+idx+'">'+
-        '<input class="combo-input" type="text" role="combobox" aria-expanded="false" aria-controls="combo-list-'+idx+'" aria-autocomplete="list" aria-labelledby="assign-lbl-'+idx+'" autocomplete="off" placeholder="Auto-match by file name" value="'+esc(assigned)+'">'+
-        '<button type="button" class="combo-clear" tabindex="-1" aria-label="Clear assignment"'+(assigned?'':' style="display:none"')+'>×</button>'+
-        '<ul class="combo-list" id="combo-list-'+idx+'" role="listbox" hidden></ul>'+
-      '</div>'+
-      '<span class="assign-hint">'+hint+'</span></div>';
-  }
+  if(editable)html+=assignRowHtml(r,idx);
   html+='</div>';
   return html;
 }
@@ -1199,6 +1403,20 @@ function resultSaveName(r){
   return r.assignTo+' — '+base;
 }
 function assignResult(idx,name){if(results[idx]){results[idx].assignTo=name||'';persistResults()}}
+// Build a DB row for either marking mode. Maths stores its per-question array in
+// the same jsonb `criteria` column; mark_mode tells the readers how to render it.
+function resultRow(r,sessId,pdf_path,pdf_url){
+  var row={
+    session_id:sessId,teacher_id:USER.id,student_id:assignedStudentIdFor(r),
+    file_name:resultSaveName(r),overall_score:r.overallScore,criteria_total:r.criteriaTotal,
+    criteria:(r.mode==='maths')?(r.questions||[]):(r.criteria||[]),
+    strengths:r.improve1||r.strengths||'',next_steps:r.improve2?[r.improve2]:(r.nextSteps||[]),
+    nzc_reference:r.nzcReference||null,mark_mode:r.mode||'rubric'
+  };
+  if(pdf_path!==undefined)row.pdf_path=pdf_path||null;
+  if(pdf_url!==undefined)row.pdf_url=pdf_url||null;
+  return row;
+}
 // The students.id this result belongs to — explicit assignment or auto-match by file name.
 function assignedStudentIdFor(r){
   var name=assignedStudentFor(r);
@@ -1263,7 +1481,13 @@ function renderResults(res){
   });
 }
 function renderResultSet(res,container){container.innerHTML=res.map(function(r,i){return renderResultCard(r,i,false)}).join('')}
-function normResult(r){return{fileName:r.file_name,overallScore:r.overall_score,criteriaTotal:r.criteria_total,criteria:r.criteria||[],improve1:r.strengths||'',improve2:(r.next_steps&&r.next_steps[0])||'',nzcReference:r.nzc_reference}}
+function normResult(r){
+  if(r.mark_mode==='maths'){
+    var o={fileName:r.file_name,mode:'maths',questions:normQuestions(r.criteria||[]),improve1:r.strengths||'',improve2:(r.next_steps&&r.next_steps[0])||''};
+    applyMaths(o);return o;
+  }
+  return{fileName:r.file_name,overallScore:r.overall_score,criteriaTotal:r.criteria_total,criteria:r.criteria||[],improve1:r.strengths||'',improve2:(r.next_steps&&r.next_steps[0])||'',nzcReference:r.nzc_reference};
+}
 
 function loadDashSessions(){
   if(!sb||!USER)return;
@@ -1276,8 +1500,31 @@ function loadDashSess(){
   sb.from('student_results').select('*').eq('session_id',id).then(function(res){renderDashboard((res.data||[]).map(normResult));document.getElementById('dash-sess-label').textContent=document.getElementById('dash-sess-sel').options[document.getElementById('dash-sess-sel').selectedIndex].text}).catch(function(){});
 }
 function heatColor(s){return s>=5?'#1f6b1c':s>=4?'#3a833a':s>=3?'#936a0a':s>=2?'#a85525':s>=1?'#9c2b2b':'#9a958c'}
+function renderMathsDashboard(v){
+  document.getElementById('dash-empty').style.display='none';document.getElementById('dash-content').style.display='block';
+  var pcts=v.map(function(r){var qs=r.questions||r.criteria||[];var t=qs.length,c=qs.filter(function(q){return q.correct}).length;return t?Math.round(100*c/t):0});
+  var avg=Math.round(pcts.reduce(function(a,b){return a+b},0)/pcts.length);
+  var ex=v.filter(function(r){return /Exceeds/.test(r.overallScore||r.overall_score||'')}).length;
+  var ac=v.filter(function(r){var o=r.overallScore||r.overall_score||'';return /Achieved/.test(o)&&!/Exceeds/.test(o)}).length;
+  var need=v.filter(function(r){return /Approaching|Beginning/.test(r.overallScore||r.overall_score||'')}).length;
+  document.getElementById('dash-stats').innerHTML=[{n:v.length,l:'Students'},{n:avg+'%',l:'Class average'},{n:ex+ac,l:'At/above expected'},{n:need,l:'Need support'}].map(function(s){return'<div class="stat-box"><div class="stat-num">'+s.n+'</div><div class="stat-lbl">'+s.l+'</div></div>'}).join('');
+  // Hardest questions across the class (most-missed q/part)
+  var miss={};
+  v.forEach(function(r){(r.questions||r.criteria||[]).forEach(function(q){if(!q.correct){var k='Q'+(q.q||'')+(q.part?q.part:'');miss[k]=(miss[k]||0)+1}})});
+  var arr=Object.keys(miss).map(function(k){return{k:k,n:miss[k]}}).sort(function(a,b){return b.n-a.n}).slice(0,12);
+  document.getElementById('dash-bars').innerHTML=arr.length?('<div style="font-size:12px;color:var(--text2);margin-bottom:10px">Most-missed questions</div>'+arr.map(function(x){return'<div class="bar-row"><div class="bar-lbl">'+esc(x.k)+'</div><div class="bar-track"><div class="bar-fill" style="width:'+Math.round(100*x.n/v.length)+'%;background:var(--danger-text)"></div></div><div class="bar-val">'+x.n+'</div></div>'}).join('')):'<div style="font-size:13px;color:var(--text2)">Everyone got everything right — ka pai!</div>';
+  document.getElementById('dash-heat').innerHTML='';
+  var bd=[{l:'Exceeds (85%+)',cls:'ph',f:function(o){return /Exceeds/.test(o)}},{l:'Achieved (65–84%)',cls:'ph',f:function(o){return /Achieved/.test(o)&&!/Exceeds/.test(o)}},{l:'Approaching (40–64%)',cls:'pm',f:function(o){return /Approaching/.test(o)}},{l:'Beginning (<40%)',cls:'pl',f:function(o){return /Beginning/.test(o)}}];
+  document.getElementById('dash-bands').innerHTML=bd.map(function(b){var st=v.filter(function(r){return b.f(r.overallScore||r.overall_score||'')});return'<div class="band-row"><span class="pill '+b.cls+'" style="min-width:28px;text-align:center">'+st.length+'</span><span style="font-weight:500;font-size:13px;width:220px;flex-shrink:0">'+b.l+'</span><span style="font-size:12px;color:var(--text2)">'+esc(st.map(function(r){return stripExt(r.fileName||r.file_name||'')}).join(', ')||'—')+'</span></div>'}).join('');
+  var sup=v.filter(function(r,i){return pcts[i]<50});
+  document.getElementById('dash-support').innerHTML=sup.length?sup.map(function(r){var qs=r.questions||r.criteria||[];var t=qs.length,c=qs.filter(function(q){return q.correct}).length;return'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:.5px solid var(--border);font-size:13px"><span style="font-weight:500;flex:1">'+esc(stripExt(r.fileName||r.file_name||''))+'</span><span class="pill pl">'+c+'/'+t+'</span></div>'}).join(''):'<div style="font-size:13px;color:var(--text2);padding:8px 0">No students flagged — great work!</div>';
+  var ins=document.getElementById('dash-insight');if(ins)ins.innerHTML='';
+}
 function renderDashboard(res){
-  var v=(res||[]).filter(function(r){return!r._error&&(r.criteria||[]).length});
+  var clean=(res||[]).filter(function(r){return!r._error});
+  var maths=clean.filter(function(r){return r.mode==='maths'||r.mark_mode==='maths'});
+  if(maths.length&&maths.length>=clean.length){return renderMathsDashboard(maths)}
+  var v=clean.filter(function(r){return r.mode!=='maths'&&r.mark_mode!=='maths'&&(r.criteria||[]).length});
   if(!v.length){document.getElementById('dash-empty').style.display='block';document.getElementById('dash-content').style.display='none';return}
   document.getElementById('dash-empty').style.display='none';document.getElementById('dash-content').style.display='block';
   var tots=v.map(function(r){return(r.criteria||[]).map(function(c){return parseInt(c.score)||0}).reduce(function(a,b){return a+b},0)});
@@ -1507,11 +1754,26 @@ function printSheets(){
   if(!results.length){showToast('No results to print.');return}
   var task=document.getElementById('task').value||'Assessment';
   document.getElementById('print-out').innerHTML=results.filter(function(r){return!r._error}).map(function(r,i,arr){
-    var sc=(r.criteria||[]).map(function(c){return parseInt(c.score)||0}),tot=sc.reduce(function(a,b){return a+b},0);
     // The marking AI returns two overall feedback tips (improve1/improve2); older
     // saved rows used strengths/next_steps. Map both so written feedback always prints.
     var fb1=r.improve1||r.strengths||'';
     var fb2=r.improve2||(r.nextSteps&&r.nextSteps[0])||(r.next_steps&&r.next_steps[0])||'';
+    if(r.mode==='maths'||r.mark_mode==='maths'){
+      var qs=r.questions||r.criteria||[];
+      var pct=(r.percent!=null)?r.percent:(function(){var t=qs.length,c=qs.filter(function(q){return q.correct}).length;return t?Math.round(100*c/t):0})();
+      var groups={},order=[];
+      qs.forEach(function(q){var k=String(q.q||'');if(!(k in groups)){groups[k]=[];order.push(k)}groups[k].push(q)});
+      var qhtml=order.map(function(k){
+        var parts=groups[k].map(function(q){
+          var ok=q.correct,sym=ok?'✓':'✗';
+          var det=(!ok&&(q.student||q.answer))?' <span style="color:#888;font-weight:400">('+esc(q.student||'—')+'→'+esc(q.answer||'?')+')</span>':'';
+          return'<span style="display:inline-block;margin:0 10px 6px 0;font-size:13px;color:'+(ok?'#2d5a27':'#a32d2d')+';font-weight:700">'+esc(q.part||'•')+' '+sym+det+'</span>';
+        }).join('');
+        return'<div style="margin-bottom:8px"><span style="font-size:11px;font-weight:700;text-transform:uppercase;color:#888;margin-right:8px">Q'+esc(k)+'</span>'+parts+'</div>';
+      }).join('');
+      return'<div style="max-width:680px;margin:0 auto;padding:48px 0;font-family:-apple-system,sans-serif"><div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;margin-bottom:24px;border-bottom:2px solid #1a1a1a"><div><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:6px">Māka · Maths</div><div style="font-size:24px;font-weight:700;margin-bottom:3px">'+esc(stripExt(r.fileName))+'</div><div style="font-size:13px;color:#666">'+esc(task)+'</div></div><div style="text-align:right"><div style="font-size:32px;font-weight:800;color:#2d5a27;line-height:1">'+esc(r.criteriaTotal||r.criteria_total||'')+'</div><div style="font-size:12px;font-weight:600;color:#2d5a27;margin-top:4px">'+esc(r.overallScore||r.overall_score||'')+(pct?' · '+pct+'%':'')+'</div></div></div><div style="margin-bottom:18px">'+qhtml+'</div>'+(fb1?'<div style="background:#f0f7ee;border-radius:8px;padding:12px 14px;margin-bottom:8px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#2d5a27;margin-bottom:4px">What you did well</div><div style="font-size:13px;line-height:1.6;color:#333">'+esc(fb1)+'</div></div>':'')+(fb2?'<div style="background:#f7f6f3;border-radius:8px;padding:12px 14px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#666;margin-bottom:6px">Next step</div><div style="font-size:13px;line-height:1.6;color:#333">'+esc(fb2)+'</div></div>':'')+'</div>'+(i<arr.length-1?'<div style="page-break-after:always"></div>':'');
+    }
+    var sc=(r.criteria||[]).map(function(c){return parseInt(c.score)||0}),tot=sc.reduce(function(a,b){return a+b},0);
     var trows=(r.criteria||[]).map(function(c){var s=parseInt(c.score)||0,d='';for(var x=1;x<=5;x++)d+='<span style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:3px;background:'+(x<=s?'#2d5a27':'#ddd')+'"></span>';var cm=c.comment?'<td style="padding:8px 0;border-bottom:1px solid #eee;font-size:12px;color:#555;line-height:1.5">'+esc(c.comment)+'</td>':'';return'<tr><td style="padding:8px 4px 8px 0;border-bottom:1px solid #eee;width:55%;font-size:13px">'+esc(c.name||'')+'</td><td style="padding:8px 0;border-bottom:1px solid #eee;white-space:nowrap">'+d+' '+s+'/5</td>'+cm+'</tr>'}).join('');
     var hasComments=(r.criteria||[]).some(function(c){return c.comment});
     var commentTh=hasComments?'<th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 0 8px;border-bottom:1px solid #ddd">Comment</th>':'';

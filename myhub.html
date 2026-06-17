@@ -145,6 +145,7 @@ canvas{width:100%!important}
 .pdf-modal.open{display:flex;animation:riseIn .25s var(--ease)}
 .pdf-modal-inner{background:var(--bg);border-radius:var(--r);width:100%;max-width:900px;height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--sh-lg)}
 .pdf-modal-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);gap:8px;flex-wrap:wrap}
+.mq-group{margin-bottom:10px}.mq-qnum{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}.mq-parts{display:flex;flex-wrap:wrap;gap:6px}.mq-part{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--border);background:var(--bg2)}.mq-part .mq-lab{color:var(--text2);font-weight:700}.mq-part.correct{background:var(--green-bg);border-color:transparent;color:var(--green)}.mq-part.wrong{background:var(--danger-bg);border-color:transparent;color:var(--danger-text)}.mq-part .mq-mark{font-weight:800}
 footer{text-align:center;font-size:12px;color:var(--text3);padding:0 1rem 2.5rem}
 .btn:focus-visible,.icon-btn:focus-visible,.signout:focus-visible,a:focus-visible,.sess-hd:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 @media(max-width:600px){.kpi-grid{grid-template-columns:1fr 1fr}.main{padding:1rem .85rem 3rem}.bar-lbl{width:110px}}
@@ -231,12 +232,18 @@ var ICONS={
   target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
   chevron:'<path d="M9 18l6-6-6-6"/>',
   bulb:'<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z"/>',
-  file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/>'
+  file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/>',
+  hash:'<path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>'
 };
 function ic(n){return ICONS[n]?'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'+ICONS[n]+'</svg>':''}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function fmtDate(d){try{return new Date(d).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'})}catch(e){return''}}
 function totOf(r){return parseInt((r.criteria_total||'0').split('/')[0])||0}
+function isMaths(r){return r.mark_mode==='maths'}
+function mathPct(r){var qs=r.criteria||[];var t=qs.length,c=qs.filter(function(q){return q.correct}).length;return t?Math.round(100*c/t):0}
+var CHARTSET=[]; // the writing (/25) results the progress chart plots
 
 function applyThemeLabel(){var b=document.getElementById('theme-btn');if(!b)return;var dark=document.documentElement.getAttribute('data-theme')==='dark';b.innerHTML=dark?ic('sun'):ic('moon')}
 function toggleTheme(){
@@ -285,7 +292,11 @@ function render(){
   var first=esc((STU.name||'').split(' ')[0]);
   document.title='Māka — '+(STU.name||'My Learning');
 
-  var totals=RESULTS.map(totOf);
+  var WRI=RESULTS.filter(function(r){return!isMaths(r)});
+  var MAT=RESULTS.filter(isMaths);
+  CHARTSET=WRI;
+
+  var totals=WRI.map(totOf);
   var avg=totals.length?(totals.reduce(function(a,b){return a+b},0)/totals.length).toFixed(1):'—';
   var best=totals.length?Math.max.apply(null,totals):'—';
   var latestT=totals.length?totals[totals.length-1]:null;
@@ -293,28 +304,45 @@ function render(){
   var trend=latestT!==null&&prevT!==null?latestT-prevT:null;
   var trendHtml=trend===null?'<span style="color:var(--text3);font-size:1.3rem">—</span>':trend>0?'<span class="delta d-up">↑ +'+trend+'</span>':trend<0?'<span class="delta d-dn">↓ '+trend+'</span>':'<span class="delta d-eq">→ 0</span>';
 
-  var latest=RESULTS.length?RESULTS[RESULTS.length-1]:null;
+  var latest=WRI.length?WRI[WRI.length-1]:null;
+  var latestMath=MAT.length?MAT[MAT.length-1]:null;
 
-  var hero=latest
-    ?'<div class="card hero-card">'
+  var hero;
+  if(latest){
+    hero='<div class="card hero-card">'
       +'<div class="hs-label">'+ic('award')+'Your latest result</div>'
       +'<div class="hs-num">'+totOf(latest)+'<span class="hs-den">/25</span></div>'
       +'<div class="hs-grade '+gradeCls(latest.overall_score)+'">'+ic('trophy')+esc(gradeWord(latest.overall_score))+'</div>'
       +'<div class="hs-sub">'+esc(latest.session_name||'')+(latest.learning_area?' · '+esc(latest.learning_area):'')+'</div>'
-    +'</div>'
-    :'<div class="card hero-card"><div class="empty" style="padding:1rem">'+ic('sprout')+'<div>No marked work yet — your results will show up here once your teacher marks your mahi.</div></div></div>';
+    +'</div>';
+  }else if(latestMath){
+    hero='<div class="card hero-card">'
+      +'<div class="hs-label">'+ic('hash')+'Your latest maths</div>'
+      +'<div class="hs-num">'+esc(latestMath.criteria_total||'')+'</div>'
+      +'<div class="hs-grade '+gradeCls(latestMath.overall_score)+'">'+ic('trophy')+esc(gradeWord(latestMath.overall_score))+'</div>'
+      +'<div class="hs-sub">'+esc(latestMath.session_name||'')+' · '+mathPct(latestMath)+'%</div>'
+    +'</div>';
+  }else{
+    hero='<div class="card hero-card"><div class="empty" style="padding:1rem">'+ic('sprout')+'<div>No marked work yet — your results will show up here once your teacher marks your mahi.</div></div></div>';
+  }
 
+  // KPIs use the /25 writing set when present, otherwise fall back to maths %
+  var avgCell,bestCell;
+  if(totals.length){avgCell=avg+'<span class="unit">/25</span>';bestCell=best+'<span class="unit">/25</span>';}
+  else if(MAT.length){var mp=MAT.map(mathPct);avgCell=Math.round(mp.reduce(function(a,b){return a+b},0)/mp.length)+'<span class="unit">%</span>';bestCell=Math.max.apply(null,mp)+'<span class="unit">%</span>';}
+  else{avgCell='—';bestCell='—';}
   var kpis='<div class="kpi-grid">'
     +'<div class="kpi"><div class="kpi-ico">'+ic('layers')+'</div><div class="stat-num">'+RESULTS.length+'</div><div class="stat-lbl">Pieces of work marked</div></div>'
-    +'<div class="kpi"><div class="kpi-ico">'+ic('chart')+'</div><div class="stat-num">'+avg+'<span class="unit">'+(avg!=='—'?'/25':'')+'</span></div><div class="stat-lbl">Your average</div></div>'
-    +'<div class="kpi"><div class="kpi-ico">'+ic('trophy')+'</div><div class="stat-num">'+best+'<span class="unit">'+(best!=='—'?'/25':'')+'</span></div><div class="stat-lbl">Your best score</div></div>'
+    +'<div class="kpi"><div class="kpi-ico">'+ic('chart')+'</div><div class="stat-num">'+avgCell+'</div><div class="stat-lbl">Your average</div></div>'
+    +'<div class="kpi"><div class="kpi-ico">'+ic('trophy')+'</div><div class="stat-num">'+bestCell+'</div><div class="stat-lbl">Your best score</div></div>'
     +'<div class="kpi"><div class="kpi-ico">'+ic('flame')+'</div><div style="display:flex;align-items:center;min-height:1.85rem">'+trendHtml+'</div><div class="stat-lbl">Since last time</div></div>'
   +'</div>';
 
   var tips='';
-  if(latest){
-    var t1=latest.strengths||'';
-    var t2=(latest.next_steps&&latest.next_steps[0])||'';
+  var fbsrc=latest||latestMath;
+  if(fbsrc){
+    var t1=fbsrc.strengths||'';
+    var t2=(fbsrc.next_steps&&fbsrc.next_steps[0])||'';
     if(t1||t2){
       tips='<div class="card"><div class="sect-title"><span class="ico-chip">'+ic('star')+'</span>Your latest feedback</div>'
         +(t1?'<div class="tip">'+ic('star')+'<div><strong>What you did well:</strong> '+esc(t1)+'</div></div>':'')
@@ -325,35 +353,49 @@ function render(){
 
   var chartCard='<div class="card" id="chart-card">'
     +'<div class="sect-title"><span class="ico-chip">'+ic('chart')+'</span>Your progress over time'
-    +(RESULTS.length<2?'':'<div class="chart-toggle" role="tablist"><button role="tab" id="ct-total" class="chart-tab active" onclick="setChartMode(\'total\')">Total</button><button role="tab" id="ct-crit" class="chart-tab" onclick="setChartMode(\'criteria\')">By skill</button></div>')
+    +(WRI.length<2?'':'<div class="chart-toggle" role="tablist"><button role="tab" id="ct-total" class="chart-tab active" onclick="setChartMode(\'total\')">Total</button><button role="tab" id="ct-crit" class="chart-tab" onclick="setChartMode(\'criteria\')">By skill</button></div>')
     +'</div>'
-    +(RESULTS.length<2
-      ?'<div class="empty">'+ic('chart')+'<div>Once you have 2 or more pieces of marked work, your progress chart will appear here.</div></div>'
+    +(WRI.length<2
+      ?'<div class="empty">'+ic('chart')+'<div>Once you have 2 or more pieces of marked writing, your progress chart will appear here.</div></div>'
       :'<div class="chart-wrap"><canvas id="progress-chart"></canvas></div><div id="chart-legend" class="chart-legend"></div>')
   +'</div>';
 
   var barsCard='<div class="card"><div class="sect-title"><span class="ico-chip">'+ic('target')+'</span>Your average by skill</div><div id="crit-bars">'+renderCritBars()+'</div></div>';
+
+  // Maths progress strip — separate percentage line so it never mixes with /25
+  var mathsCard='';
+  if(MAT.length){
+    var mrows=MAT.map(function(r){var p=mathPct(r);return'<div class="prog-row" style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(r.session_name||'Maths')+'</div><div style="width:120px;height:9px;background:var(--bg2);border-radius:100px;overflow:hidden"><div class="bar-fill" style="width:'+p+'%;height:100%;background:var(--green);border-radius:100px"></div></div><div style="width:64px;text-align:right;font-size:12.5px;font-weight:600">'+esc(r.criteria_total||'')+'</div></div>'}).join('');
+    mathsCard='<div class="card"><div class="sect-title"><span class="ico-chip">'+ic('hash')+'</span>Your maths<span class="count">'+MAT.length+'</span></div>'+mrows+'</div>';
+  }
 
   var work='';
   if(RESULTS.length){
     var revd=RESULTS.slice().reverse();
     work='<div class="card"><div class="sect-title"><span class="ico-chip">'+ic('book')+'</span>All your marked work<span class="count">'+RESULTS.length+' piece'+(RESULTS.length!==1?'s':'')+'</span></div>'
       +revd.map(function(r,i){
-        var crit=(r.criteria||[]).map(function(c){
-          var s=parseInt(c.score)||0,dotsHtml='';
-          for(var x=1;x<=5;x++)dotsHtml+='<span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:3px;background:'+(x<=s?'var(--green)':'var(--border2)')+'"></span>';
-          return'<tr><td class="cn">'+esc((c.name||'').split('—')[0].trim())+'</td><td class="cs">'+dotsHtml+'<span style="font-size:11px;color:var(--text2);margin-left:3px">'+s+'/5</span></td></tr>';
-        }).join('');
         var i1=r.strengths||'',i2=(r.next_steps&&r.next_steps[0])||'';
         var date=r.session_date?fmtDate(r.session_date):fmtDate(r.created_at);
+        var body;
+        if(isMaths(r)){
+          var qs=r.criteria||[],groups={},order=[];
+          qs.forEach(function(q){var k=String(q.q||'');if(!(k in groups)){groups[k]=[];order.push(k)}groups[k].push(q)});
+          body=order.map(function(k){var parts=groups[k].map(function(q){var ok=q.correct;var det=(!ok&&(q.student||q.answer))?' <span style="opacity:.8;font-weight:400">('+esc(q.student||'—')+'→'+esc(q.answer||'?')+')</span>':'';return'<span class="mq-part '+(ok?'correct':'wrong')+'"><span class="mq-lab">'+esc(q.part||'•')+'</span><span class="mq-mark">'+(ok?ic('check'):ic('x'))+'</span>'+det+'</span>'}).join('');return'<div class="mq-group"><div class="mq-qnum">Q'+esc(k)+'</div><div class="mq-parts">'+parts+'</div></div>'}).join('');
+        }else{
+          var crit=(r.criteria||[]).map(function(c){
+            var s=parseInt(c.score)||0,dotsHtml='';
+            for(var x=1;x<=5;x++)dotsHtml+='<span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:3px;background:'+(x<=s?'var(--green)':'var(--border2)')+'"></span>';
+            return'<tr><td class="cn">'+esc((c.name||'').split('—')[0].trim())+'</td><td class="cs">'+dotsHtml+'<span style="font-size:11px;color:var(--text2);margin-left:3px">'+s+'/5</span></td></tr>';
+          }).join('');
+          body=(crit?'<table class="ctable"><thead><tr><th>Skill</th><th>Score</th></tr></thead><tbody>'+crit+'</tbody></table>':'')+'<div class="total-row">Total: <strong>'+esc(r.criteria_total||'')+'</strong></div>';
+        }
         return'<div class="sess-card">'
           +'<div class="sess-hd" tabindex="0" role="button" aria-expanded="false" onclick="toggleSess(\'s'+i+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleSess(\'s'+i+'\')}">'
-            +'<div style="min-width:0"><div class="sess-name">'+esc(r.session_name||'Session')+'</div><div class="sess-meta">'+(r.learning_area?esc(r.learning_area)+' · ':'')+date+'</div></div>'
+            +'<div style="min-width:0"><div class="sess-name">'+esc(r.session_name||'Session')+'</div><div class="sess-meta">'+(isMaths(r)?'Maths · ':(r.learning_area?esc(r.learning_area)+' · ':''))+date+'</div></div>'
             +'<div style="display:flex;align-items:center;gap:10px"><span class="pill '+gradeCls(r.overall_score)+'">'+esc(r.overall_score||'')+' · '+esc(r.criteria_total||'')+'</span><span class="chevron" id="chev-s'+i+'">'+ic('chevron')+'</span></div>'
           +'</div>'
           +'<div class="sess-body" id="s'+i+'">'
-            +(crit?'<table class="ctable"><thead><tr><th>Skill</th><th>Score</th></tr></thead><tbody>'+crit+'</tbody></table>':'')
-            +'<div class="total-row">Total: <strong>'+esc(r.criteria_total||'')+'</strong></div>'
+            +body
             +((i1||i2)?'<div class="slbl">How to improve</div>':'')
             +(i1?'<div class="sbox improve" style="margin-bottom:6px">'+ic('bulb')+'<span>'+esc(i1)+'</span></div>':'')
             +(i2?'<div class="sbox improve">'+ic('bulb')+'<span>'+esc(i2)+'</span></div>':'')
@@ -370,9 +412,10 @@ function render(){
     +'<div class="top-grid">'+hero+kpis+'</div>'
     +tips
     +'<div class="mid-grid">'+chartCard+barsCard+'</div>'
+    +mathsCard
     +work;
 
-  if(RESULTS.length>=2)setTimeout(drawChart,50);
+  if(CHARTSET.length>=2)setTimeout(drawChart,50);
 
   // Animate count-up numbers + bar fills (mirrors the teacher hub)
   setTimeout(function(){
@@ -396,7 +439,7 @@ function render(){
 }
 
 function renderCritBars(){
-  var withCrit=RESULTS.filter(function(r){return r.criteria&&r.criteria.length});
+  var withCrit=CHARTSET.filter(function(r){return r.criteria&&r.criteria.length});
   if(!withCrit.length)return'<div class="empty">'+ic('target')+'<div>No skill scores yet.</div></div>';
   var latest=withCrit[withCrit.length-1];
   var cn=latest.criteria.map(function(c){return c.name||''});
@@ -459,11 +502,11 @@ function drawChart(){
   var gridCol=dark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)';
   var axisCol=dark?'rgba(236,233,227,0.5)':'rgba(0,0,0,0.4)';
   var dotFill=dark?'#1c1b19':'#fff';
-  var labels=RESULTS.map(function(r){return r.session_name?(r.session_name.substring(0,20)):'Session'});
+  var labels=CHARTSET.map(function(r){return r.session_name?(r.session_name.substring(0,20)):'Session'});
 
   var pad={t:20,r:20,b:50,l:40};
   var cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
-  var n=RESULTS.length;
+  var n=CHARTSET.length;
   var xStep=n>1?cw/(n-1):cw;
   function xPos(i){return pad.l+(n>1?i*xStep:cw/2)}
 
@@ -479,7 +522,7 @@ function drawChart(){
     [0,1,2,3,4,5].forEach(function(v){var y=yPos(v);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();ctx.fillStyle=axisCol;ctx.font='10px DM Sans,sans-serif';ctx.textAlign='right';ctx.fillText(v,pad.l-6,y+3)});
     names.forEach(function(nm,si){
       var col=CRIT_COLORS[si%CRIT_COLORS.length];
-      var series=RESULTS.map(function(r){var found=(r.criteria||[]).find(function(c){return(c.name||'').split('—')[0].trim()===nm});return found?(parseInt(found.score)||0):null});
+      var series=CHARTSET.map(function(r){var found=(r.criteria||[]).find(function(c){return(c.name||'').split('—')[0].trim()===nm});return found?(parseInt(found.score)||0):null});
       ctx.beginPath();ctx.strokeStyle=col;ctx.lineWidth=2.2;ctx.lineJoin='round';ctx.lineCap='round';
       var started=false;
       series.forEach(function(v,i){if(v===null)return;var x=xPos(i),y=yPos(v);started?ctx.lineTo(x,y):ctx.moveTo(x,y);started=true});
@@ -487,10 +530,10 @@ function drawChart(){
       series.forEach(function(v,i){if(v===null)return;var x=xPos(i),y=yPos(v);ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);ctx.fillStyle=dotFill;ctx.fill();ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke()});
     });
     ctx.fillStyle=axisCol;ctx.font='10px DM Sans,sans-serif';ctx.textAlign='center';
-    RESULTS.forEach(function(r,i){var lbl=labels[i];if(lbl.length>12)lbl=lbl.substring(0,12)+'…';ctx.save();ctx.translate(xPos(i),pad.t+ch+14);ctx.rotate(-0.4);ctx.fillText(lbl,0,0);ctx.restore()});
+    CHARTSET.forEach(function(r,i){var lbl=labels[i];if(lbl.length>12)lbl=lbl.substring(0,12)+'…';ctx.save();ctx.translate(xPos(i),pad.t+ch+14);ctx.rotate(-0.4);ctx.fillText(lbl,0,0);ctx.restore()});
     if(legend)legend.innerHTML=names.map(function(nm,si){return'<span class="lg"><span class="sw" style="background:'+CRIT_COLORS[si%CRIT_COLORS.length]+'"></span>'+esc(nm)+'</span>'}).join('');
   }else{
-    var data=RESULTS.map(totOf);
+    var data=CHARTSET.map(totOf);
     var maxVal=25,green=dark?'#7fb87a':'#2d5a27';
     function yPosT(v){return pad.t+ch-(v/maxVal)*ch}
     ctx.strokeStyle=gridCol;ctx.lineWidth=1;
@@ -501,7 +544,7 @@ function drawChart(){
     if(legend)legend.innerHTML='';
   }
 }
-window.addEventListener('resize',function(){if(RESULTS.length>=2)drawChart()});
+window.addEventListener('resize',function(){if(CHARTSET.length>=2)drawChart()});
 
 load();
 </script>

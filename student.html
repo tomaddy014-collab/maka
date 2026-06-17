@@ -215,6 +215,7 @@ textarea{resize:vertical;min-height:60px;line-height:1.5}
 .d-dn{background:var(--danger-bg);color:var(--danger-text)}
 .d-eq{background:var(--bg2);color:var(--text3)}
 .btn:focus-visible,.copy-btn:focus-visible,.eye-btn:focus-visible,.icon-btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.sess-hd:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.mq-group{margin-bottom:10px}.mq-qnum{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}.mq-parts{display:flex;flex-wrap:wrap;gap:6px}.mq-part{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--border);background:var(--bg2)}.mq-part .mq-lab{color:var(--text2);font-weight:700}.mq-part.correct{background:var(--green-bg);border-color:transparent;color:var(--green)}.mq-part.wrong{background:var(--danger-bg);border-color:transparent;color:var(--danger-text)}.mq-part .mq-mark{font-weight:800}
 @media(max-width:600px){.kpi-grid{grid-template-columns:1fr 1fr}.main{padding:1rem .85rem 3rem}.bar-lbl{width:110px}}
 </style>
 </head>
@@ -313,7 +314,7 @@ var _TEACHER_ID=_params.get('tid')||'';
 var SURL='https://agwqenhduoxxeemklmpr.supabase.co';
 var SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnd3FlbmhkdW94eGVlbWtsbXByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MzkxNDAsImV4cCI6MjA5NDAxNTE0MH0.TZkrRgForSDTzQ4vZ9j36WncEAVBx4reG-ADcoohY8o';
 
-var sb=null,USER=null,STUDENT=null,ALL_RESULTS=[],ALL_COMMENTS=[];
+var sb=null,USER=null,STUDENT=null,ALL_RESULTS=[],ALL_COMMENTS=[],CHARTSET=[];
 
 // ── Inline SVG icon set (Lucide-style, stroke=currentColor) ──────────────────
 var ICONS={
@@ -352,7 +353,7 @@ function toggleTheme(){
   var dark=document.documentElement.getAttribute('data-theme')==='dark';
   if(dark){document.documentElement.removeAttribute('data-theme');try{localStorage.setItem('maka-theme','light')}catch(e){}}
   else{document.documentElement.setAttribute('data-theme','dark');try{localStorage.setItem('maka-theme','dark')}catch(e){}}
-  applyThemeLabel();if(ALL_RESULTS.length>=2)setTimeout(drawChart,30);
+  applyThemeLabel();if(CHARTSET.length>=2)setTimeout(drawChart,30);
 }
 window.addEventListener('DOMContentLoaded',applyThemeLabel);
 </script>
@@ -399,7 +400,9 @@ function renderPage(){
   var gC={boy:'background:var(--info-bg);color:var(--info-text)',girl:'background:#fce8f3;color:#8b1a5e',nonbinary:'background:var(--bg2);color:var(--text2)'};
   var gender=STUDENT.gender&&gL[STUDENT.gender]?'<span class="gender-chip" style="'+gC[STUDENT.gender]+'">'+gL[STUDENT.gender]+'</span>':'';
 
-  var totals=ALL_RESULTS.map(function(r){return parseInt((r.criteria_total||'0').split('/')[0])||0});
+  var WR=ALL_RESULTS.filter(function(r){return r.mark_mode!=='maths'});
+  CHARTSET=WR;
+  var totals=WR.map(function(r){return parseInt((r.criteria_total||'0').split('/')[0])||0});
   var avg=totals.length?(totals.reduce(function(a,b){return a+b},0)/totals.length).toFixed(1):'—';
   var best=totals.length?Math.max.apply(null,totals):'—';
   var latest=totals.length?totals[totals.length-1]:null;
@@ -407,7 +410,7 @@ function renderPage(){
   var trend=latest!==null&&prev!==null?latest-prev:null;
   var trendHtml=trend===null?'<span style="color:var(--text3);font-size:1.3rem">—</span>':trend>0?'<span class="delta d-up">↑ +'+trend+'</span>':trend<0?'<span class="delta d-dn">↓ '+trend+'</span>':'<span class="delta d-eq">→ 0</span>';
 
-  var latestRes=ALL_RESULTS.length?ALL_RESULTS[ALL_RESULTS.length-1]:null;
+  var latestRes=WR.length?WR[WR.length-1]:null;
   var latestTot=latestRes?(parseInt((latestRes.criteria_total||'0').split('/')[0])||0):null;
   var latestGrade=latestRes?(latestRes.overall_score||''):'';
   var gradeMap={'Exceeds':'grade-exceeds','Achieved':'grade-achieved','Approaching':'grade-approaching','Beginning':'grade-beginning'};
@@ -455,9 +458,9 @@ function renderPage(){
     <div class="mid-grid">
       <div class="card" id="chart-card">
         <div class="sect-title"><span class="ico-chip">${ic('chart')}</span>Progress over time
-          ${ALL_RESULTS.length<2?'':'<div class="chart-toggle" role="tablist"><button role="tab" id="ct-total" class="chart-tab active" onclick="setChartMode(\'total\')">Total</button><button role="tab" id="ct-crit" class="chart-tab" onclick="setChartMode(\'criteria\')">By criterion</button></div>'}
+          ${CHARTSET.length<2?'':'<div class="chart-toggle" role="tablist"><button role="tab" id="ct-total" class="chart-tab active" onclick="setChartMode(\'total\')">Total</button><button role="tab" id="ct-crit" class="chart-tab" onclick="setChartMode(\'criteria\')">By criterion</button></div>'}
         </div>
-        ${ALL_RESULTS.length<2?'<div class="empty">'+ic('chart')+'<div>Mark at least 2 sessions to see the progress chart.</div></div>':'<div class="chart-wrap"><canvas id="progress-chart"></canvas></div><div id="chart-legend" class="chart-legend"></div>'}
+        ${CHARTSET.length<2?'<div class="empty">'+ic('chart')+'<div>Mark at least 2 sessions to see the progress chart.</div></div>':'<div class="chart-wrap"><canvas id="progress-chart"></canvas></div><div id="chart-legend" class="chart-legend"></div>'}
       </div>
 
       <div class="card">
@@ -493,7 +496,7 @@ function renderPage(){
     if(res.data&&res.data.gemini_key)document.getElementById('rep-key').value=res.data.gemini_key;
   }).catch(function(){});
 
-  if(ALL_RESULTS.length>=2)setTimeout(drawChart,50);
+  if(CHARTSET.length>=2)setTimeout(drawChart,50);
 
   // Count-up stat numbers + bar fills
   setTimeout(function(){
@@ -517,8 +520,10 @@ function renderPage(){
 }
 
 // ── CRITERION BARS ────────────────────────────────────────────────────────────
+function isMaths(r){return r.mark_mode==='maths'}
+function mathPct(r){var qs=r.criteria||[];var t=qs.length,c=qs.filter(function(q){return q.correct}).length;return t?Math.round(100*c/t):0}
 function renderCritBars(){
-  var withCrit=ALL_RESULTS.filter(function(r){return r.criteria&&r.criteria.length});
+  var withCrit=ALL_RESULTS.filter(function(r){return !isMaths(r)&&r.criteria&&r.criteria.length});
   if(!withCrit.length)return'<div class="empty">'+ic('target')+'<div>No criterion data yet.</div></div>';
   var latest=withCrit[withCrit.length-1];
   var cn=latest.criteria.map(function(c){return c.name||''});
@@ -535,21 +540,30 @@ function renderCritBars(){
 function renderSessions(){
   if(!ALL_RESULTS.length)return'<div class="empty">'+ic('layers')+'<div>No sessions yet. PDFs named with this student\'s first name will appear here automatically after marking.</div></div>';
   return ALL_RESULTS.slice().reverse().map(function(r,i){
+    var maths=isMaths(r);
     var tot=parseInt((r.criteria_total||'0').split('/')[0])||0;
-    var pct=Math.round(tot/25*100);
+    var pct=maths?mathPct(r):Math.round(tot/25*100);
     var crit=r.criteria||[];
-    var critRows=crit.map(function(c){return'<tr><td class="cn">'+esc(c.name||'')+'</td><td class="cs">'+dots(parseInt(c.score)||0)+'</td></tr>'}).join('');
+    var bodyTable;
+    if(maths){
+      var groups={},order=[];
+      crit.forEach(function(q){var k=String(q.q||'');if(!(k in groups)){groups[k]=[];order.push(k)}groups[k].push(q)});
+      bodyTable=order.map(function(k){var parts=groups[k].map(function(q){var ok=q.correct;var det=(!ok&&(q.student||q.answer))?' <span style="opacity:.8;font-weight:400">('+esc(q.student||'—')+'→'+esc(q.answer||'?')+')</span>':'';return'<span class="mq-part '+(ok?'correct':'wrong')+'"><span class="mq-lab">'+esc(q.part||'•')+'</span><span class="mq-mark">'+(ok?ic('sparkle'):'✗')+'</span>'+det+'</span>'}).join('');return'<div class="mq-group"><div class="mq-qnum">Q'+esc(k)+'</div><div class="mq-parts">'+parts+'</div></div>'}).join('');
+    }else{
+      var critRows=crit.map(function(c){return'<tr><td class="cn">'+esc(c.name||'')+'</td><td class="cs">'+dots(parseInt(c.score)||0)+'</td></tr>'}).join('');
+      bodyTable=(critRows?'<table class="ctable"><thead><tr><th>Criterion</th><th>Score</th></tr></thead><tbody>'+critRows+'</tbody></table>':'');
+    }
     var i1=r.strengths||'';
     var i2=(r.next_steps&&r.next_steps[0])||'';
     var date=r.sessions&&r.sessions.created_at?fmtDate(r.sessions.created_at):'';
-    var area=r.sessions&&r.sessions.learning_area?r.sessions.learning_area:'';
+    var area=maths?'Maths':(r.sessions&&r.sessions.learning_area?r.sessions.learning_area:'');
     return'<div class="sess-card">'
       +'<div class="sess-hd" tabindex="0" role="button" aria-expanded="false" onclick="toggleSess(\'s'+i+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleSess(\'s'+i+'\')}">'
         +'<div style="min-width:0"><div class="sess-name">'+esc((r.sessions&&r.sessions.name)||'Session')+'</div><div class="sess-meta">'+(area?esc(area):'')+(date?(area?' · ':'')+date:'')+'</div></div>'
         +'<div style="display:flex;align-items:center;gap:10px"><span class="pill '+pillCls(pct)+'">'+esc(r.overall_score||'')+' · '+esc(r.criteria_total||'')+'</span><span class="chevron" id="chev-s'+i+'">'+ic('chevron')+'</span></div>'
       +'</div>'
       +'<div class="sess-body" id="s'+i+'">'
-        +(critRows?'<table class="ctable"><thead><tr><th>Criterion</th><th>Score</th></tr></thead><tbody>'+critRows+'</tbody></table>':'')
+        +bodyTable
         +'<div class="total-row">Total: <strong>'+esc(r.criteria_total||'')+'</strong></div>'
         +((i1||i2)?'<div class="slbl">How to improve</div>':'')
         +(i1?'<div class="sbox improve" style="margin-bottom:6px">'+ic('bulb')+'<span>'+esc(i1)+'</span></div>':'')
@@ -634,11 +648,11 @@ function drawChart(){
   var gridCol=dark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)';
   var axisCol=dark?'rgba(236,233,227,0.5)':'rgba(0,0,0,0.4)';
   var dotFill=dark?'#1c1b19':'#fff';
-  var labels=ALL_RESULTS.map(function(r){return r.sessions&&r.sessions.name?(r.sessions.name.substring(0,20)):'Session'});
+  var labels=CHARTSET.map(function(r){return r.sessions&&r.sessions.name?(r.sessions.name.substring(0,20)):'Session'});
 
   var pad={t:20,r:20,b:50,l:40};
   var cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
-  var n=ALL_RESULTS.length;
+  var n=CHARTSET.length;
   var xStep=n>1?cw/(n-1):cw;
   function xPos(i){return pad.l+(n>1?i*xStep:cw/2)}
 
@@ -646,7 +660,7 @@ function drawChart(){
 
   if(CHART_MODE==='criteria'){
     var names=[];
-    ALL_RESULTS.forEach(function(r){(r.criteria||[]).forEach(function(c){var nm=(c.name||'').split('—')[0].trim();if(nm&&names.indexOf(nm)===-1)names.push(nm)})});
+    CHARTSET.forEach(function(r){(r.criteria||[]).forEach(function(c){var nm=(c.name||'').split('—')[0].trim();if(nm&&names.indexOf(nm)===-1)names.push(nm)})});
     if(!names.length){setChartMode('total');return}
     var maxV=5;
     function yPos(v){return pad.t+ch-(v/maxV)*ch}
@@ -654,7 +668,7 @@ function drawChart(){
     [0,1,2,3,4,5].forEach(function(v){var y=yPos(v);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();ctx.fillStyle=axisCol;ctx.font='10px DM Sans,sans-serif';ctx.textAlign='right';ctx.fillText(v,pad.l-6,y+3)});
     names.forEach(function(nm,si){
       var col=CRIT_COLORS[si%CRIT_COLORS.length];
-      var series=ALL_RESULTS.map(function(r){var found=(r.criteria||[]).find(function(c){return(c.name||'').split('—')[0].trim()===nm});return found?(parseInt(found.score)||0):null});
+      var series=CHARTSET.map(function(r){var found=(r.criteria||[]).find(function(c){return(c.name||'').split('—')[0].trim()===nm});return found?(parseInt(found.score)||0):null});
       ctx.beginPath();ctx.strokeStyle=col;ctx.lineWidth=2.2;ctx.lineJoin='round';ctx.lineCap='round';
       var started=false;
       series.forEach(function(v,i){if(v===null)return;var x=xPos(i),y=yPos(v);started?ctx.lineTo(x,y):ctx.moveTo(x,y);started=true});
@@ -662,10 +676,10 @@ function drawChart(){
       series.forEach(function(v,i){if(v===null)return;var x=xPos(i),y=yPos(v);ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);ctx.fillStyle=dotFill;ctx.fill();ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke()});
     });
     ctx.fillStyle=axisCol;ctx.font='10px DM Sans,sans-serif';ctx.textAlign='center';
-    ALL_RESULTS.forEach(function(r,i){var lbl=labels[i];if(lbl.length>12)lbl=lbl.substring(0,12)+'…';ctx.save();ctx.translate(xPos(i),pad.t+ch+14);ctx.rotate(-0.4);ctx.fillText(lbl,0,0);ctx.restore()});
+    CHARTSET.forEach(function(r,i){var lbl=labels[i];if(lbl.length>12)lbl=lbl.substring(0,12)+'…';ctx.save();ctx.translate(xPos(i),pad.t+ch+14);ctx.rotate(-0.4);ctx.fillText(lbl,0,0);ctx.restore()});
     if(legend)legend.innerHTML=names.map(function(nm,si){return'<span class="lg"><span class="sw" style="background:'+CRIT_COLORS[si%CRIT_COLORS.length]+'"></span>'+esc(nm)+'</span>'}).join('');
   }else{
-    var data=ALL_RESULTS.map(function(r){return parseInt((r.criteria_total||'0').split('/')[0])||0});
+    var data=CHARTSET.map(function(r){return parseInt((r.criteria_total||'0').split('/')[0])||0});
     var maxVal=25,green=dark?'#7fb87a':'#2d5a27';
     function yPosT(v){return pad.t+ch-(v/maxVal)*ch}
     ctx.strokeStyle=gridCol;ctx.lineWidth=1;
@@ -706,13 +720,19 @@ function downloadReportPDF(){
       doc.text((r.overall_score||'')+'   '+(r.criteria_total||''),pw-m,y,{align:'right'});
       y+=8;doc.setDrawColor(235,232,226);doc.line(m,y,pw-m,y);y+=16;
       doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(ink[0],ink[1],ink[2]);
-      (r.criteria||[]).forEach(function(c){
-        need(18);
-        var nm=(c.name||'').split('—')[0].trim();
-        doc.setTextColor(ink[0],ink[1],ink[2]);doc.text('•  '+nm,m+6,y);
-        doc.setTextColor(grey[0],grey[1],grey[2]);doc.text((c.score||0)+'/5',pw-m,y,{align:'right'});
-        y+=15;
-      });
+      if(isMaths(r)){
+        var qs=r.criteria||[],ok=qs.filter(function(q){return q.correct}).length;
+        need(18);doc.setTextColor(grey[0],grey[1],grey[2]);
+        doc.text(ok+' of '+qs.length+' correct ('+mathPct(r)+'%)',m+6,y);y+=15;
+      }else{
+        (r.criteria||[]).forEach(function(c){
+          need(18);
+          var nm=(c.name||'').split('—')[0].trim();
+          doc.setTextColor(ink[0],ink[1],ink[2]);doc.text('•  '+nm,m+6,y);
+          doc.setTextColor(grey[0],grey[1],grey[2]);doc.text((c.score||0)+'/5',pw-m,y,{align:'right'});
+          y+=15;
+        });
+      }
       var tips=[r.strengths,(r.next_steps&&r.next_steps[0])].filter(Boolean);
       if(tips.length){
         y+=4;doc.setTextColor(gold[0],gold[1],gold[2]);doc.setFont('helvetica','bold');doc.setFontSize(9);
@@ -821,7 +841,7 @@ function saveEdit(){
     STUDENT.name=name;STUDENT.year_level=year;STUDENT.gender=gender;
     STUDENT_NAME=name;
     closeModal();renderPage();
-    if(ALL_RESULTS.length>=2)setTimeout(drawChart,50);
+    if(CHARTSET.length>=2)setTimeout(drawChart,50);
   }).catch(function(e){alert(e.message)});
 }
 function copyLoginCode(btn){
@@ -865,7 +885,7 @@ function initSupabase(){
 }
 initSupabase();
 (function(){var nv=document.querySelector('nav');if(!nv)return;window.addEventListener('scroll',function(){nv.classList.toggle('scrolled',window.scrollY>4)},{passive:true})})();
-window.addEventListener('resize',function(){if(ALL_RESULTS.length>=2)drawChart()});
+window.addEventListener('resize',function(){if(CHARTSET.length>=2)drawChart()});
 </script>
 </body>
 </html>
