@@ -244,13 +244,14 @@ function totOf(r){return parseInt((r.criteria_total||'0').split('/')[0])||0}
 function isMaths(r){return r.mark_mode==='maths'}
 function mathPct(r){var qs=r.criteria||[];var t=qs.length,c=qs.filter(function(q){return q.correct}).length;return t?Math.round(100*c/t):0}
 var CHARTSET=[]; // the writing (/25) results the progress chart plots
+var MATSET=[];   // the maths (%) results the maths chart plots
 
 function applyThemeLabel(){var b=document.getElementById('theme-btn');if(!b)return;var dark=document.documentElement.getAttribute('data-theme')==='dark';b.innerHTML=dark?ic('sun'):ic('moon')}
 function toggleTheme(){
   var dark=document.documentElement.getAttribute('data-theme')==='dark';
   if(dark){document.documentElement.removeAttribute('data-theme');try{localStorage.setItem('maka-theme','light')}catch(e){}}
   else{document.documentElement.setAttribute('data-theme','dark');try{localStorage.setItem('maka-theme','dark')}catch(e){}}
-  applyThemeLabel();if(RESULTS.length>=2)setTimeout(drawChart,30);
+  applyThemeLabel();if(CHARTSET.length>=2)setTimeout(drawChart,30);if(MATSET.length>=2)setTimeout(drawMathsLine,30);
 }
 applyThemeLabel();
 
@@ -362,11 +363,13 @@ function render(){
 
   var barsCard='<div class="card"><div class="sect-title"><span class="ico-chip">'+ic('target')+'</span>Your average by skill</div><div id="crit-bars">'+renderCritBars()+'</div></div>';
 
-  // Maths progress strip — separate percentage line so it never mixes with /25
+  // Maths progress — separate percentage chart + list so it never mixes with /25
   var mathsCard='';
+  MATSET=MAT;
   if(MAT.length){
-    var mrows=MAT.map(function(r){var p=mathPct(r);return'<div class="prog-row" style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(r.session_name||'Maths')+'</div><div style="width:120px;height:9px;background:var(--bg2);border-radius:100px;overflow:hidden"><div class="bar-fill" style="width:'+p+'%;height:100%;background:var(--green);border-radius:100px"></div></div><div style="width:64px;text-align:right;font-size:12.5px;font-weight:600">'+esc(r.criteria_total||'')+'</div></div>'}).join('');
-    mathsCard='<div class="card"><div class="sect-title"><span class="ico-chip">'+ic('hash')+'</span>Your maths<span class="count">'+MAT.length+'</span></div>'+mrows+'</div>';
+    var mchart=MAT.length>=2?'<div class="chart-wrap" style="height:200px;margin-bottom:6px"><canvas id="maths-chart"></canvas></div>':'<div style="font-size:12px;color:var(--text2);margin-bottom:10px">Your maths over time will draw a chart once you have 2 or more marked.</div>';
+    var mrows=MAT.map(function(r){var p=mathPct(r);return'<div class="prog-row" style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(r.session_name||'Maths')+'</div><div style="width:120px;height:9px;background:var(--bg2);border-radius:100px;overflow:hidden"><div class="bar-fill" style="width:'+p+'%;height:100%;background:var(--green);border-radius:100px"></div></div><div style="width:78px;text-align:right;font-size:12.5px;font-weight:600">'+esc(r.criteria_total||'')+' · '+p+'%</div></div>'}).join('');
+    mathsCard='<div class="card"><div class="sect-title"><span class="ico-chip">'+ic('hash')+'</span>Your maths<span class="count">'+MAT.length+'</span></div>'+mchart+mrows+'</div>';
   }
 
   var work='';
@@ -416,6 +419,7 @@ function render(){
     +work;
 
   if(CHARTSET.length>=2)setTimeout(drawChart,50);
+  if(MATSET.length>=2)setTimeout(drawMathsLine,60);
 
   // Animate count-up numbers + bar fills (mirrors the teacher hub)
   setTimeout(function(){
@@ -544,7 +548,25 @@ function drawChart(){
     if(legend)legend.innerHTML='';
   }
 }
-window.addEventListener('resize',function(){if(CHARTSET.length>=2)drawChart()});
+// Maths percentage line — separate from the /25 writing chart
+function drawMathsLine(){
+  var canvas=document.getElementById('maths-chart');if(!canvas)return;
+  var ctx=canvas.getContext('2d'),wrap=canvas.parentElement,W=wrap.clientWidth,H=200;
+  canvas.width=W*devicePixelRatio;canvas.height=H*devicePixelRatio;canvas.style.width=W+'px';canvas.style.height=H+'px';
+  ctx.setTransform(1,0,0,1,0,0);ctx.scale(devicePixelRatio,devicePixelRatio);ctx.clearRect(0,0,W,H);
+  var dark=isDark(),gridCol=dark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)',axisCol=dark?'rgba(236,233,227,0.5)':'rgba(0,0,0,0.4)',dotFill=dark?'#1c1b19':'#fff',green=dark?'#7fb87a':'#2d5a27';
+  var labels=MATSET.map(function(r){return r.session_name?r.session_name.substring(0,20):'Maths'});
+  var data=MATSET.map(mathPct);
+  var pad={t:20,r:20,b:50,l:42},cw=W-pad.l-pad.r,ch=H-pad.t-pad.b,n=MATSET.length;
+  var xStep=n>1?cw/(n-1):cw;function xPos(i){return pad.l+(n>1?i*xStep:cw/2)}
+  function yPos(v){return pad.t+ch-(v/100)*ch}
+  ctx.strokeStyle=gridCol;ctx.lineWidth=1;
+  [0,25,50,75,100].forEach(function(v){var y=yPos(v);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();ctx.fillStyle=axisCol;ctx.font='10px DM Sans,sans-serif';ctx.textAlign='right';ctx.fillText(v+'%',pad.l-6,y+3)});
+  ctx.beginPath();ctx.moveTo(xPos(0),yPos(data[0]));data.forEach(function(v,i){if(i>0)ctx.lineTo(xPos(i),yPos(v))});ctx.lineTo(xPos(n-1),pad.t+ch);ctx.lineTo(xPos(0),pad.t+ch);ctx.closePath();ctx.fillStyle=dark?'rgba(127,184,122,0.12)':'rgba(45,90,39,0.08)';ctx.fill();
+  ctx.beginPath();ctx.strokeStyle=green;ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.lineCap='round';data.forEach(function(v,i){i===0?ctx.moveTo(xPos(i),yPos(v)):ctx.lineTo(xPos(i),yPos(v))});ctx.stroke();
+  data.forEach(function(v,i){var x=xPos(i),y=yPos(v);ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fillStyle=dotFill;ctx.fill();ctx.strokeStyle=green;ctx.lineWidth=2;ctx.stroke();ctx.fillStyle=green;ctx.font='bold 11px DM Sans,sans-serif';ctx.textAlign='center';ctx.fillText(v+'%',x,y-10);ctx.fillStyle=axisCol;ctx.font='10px DM Sans,sans-serif';var lbl=labels[i];if(lbl.length>12)lbl=lbl.substring(0,12)+'…';ctx.save();ctx.translate(x,pad.t+ch+14);ctx.rotate(-0.4);ctx.fillText(lbl,0,0);ctx.restore()});
+}
+window.addEventListener('resize',function(){if(CHARTSET.length>=2)drawChart();if(MATSET.length>=2)drawMathsLine()});
 
 load();
 </script>

@@ -314,7 +314,7 @@ var _TEACHER_ID=_params.get('tid')||'';
 var SURL='https://agwqenhduoxxeemklmpr.supabase.co';
 var SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnd3FlbmhkdW94eGVlbWtsbXByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MzkxNDAsImV4cCI6MjA5NDAxNTE0MH0.TZkrRgForSDTzQ4vZ9j36WncEAVBx4reG-ADcoohY8o';
 
-var sb=null,USER=null,STUDENT=null,ALL_RESULTS=[],ALL_COMMENTS=[],CHARTSET=[];
+var sb=null,USER=null,STUDENT=null,ALL_RESULTS=[],ALL_COMMENTS=[],CHARTSET=[],MATSET=[];
 
 // ── Inline SVG icon set (Lucide-style, stroke=currentColor) ──────────────────
 var ICONS={
@@ -353,7 +353,7 @@ function toggleTheme(){
   var dark=document.documentElement.getAttribute('data-theme')==='dark';
   if(dark){document.documentElement.removeAttribute('data-theme');try{localStorage.setItem('maka-theme','light')}catch(e){}}
   else{document.documentElement.setAttribute('data-theme','dark');try{localStorage.setItem('maka-theme','dark')}catch(e){}}
-  applyThemeLabel();if(CHARTSET.length>=2)setTimeout(drawChart,30);
+  applyThemeLabel();if(CHARTSET.length>=2)setTimeout(drawChart,30);if(MATSET.length>=2)setTimeout(drawMathsLine,30);
 }
 window.addEventListener('DOMContentLoaded',applyThemeLabel);
 </script>
@@ -402,6 +402,7 @@ function renderPage(){
 
   var WR=ALL_RESULTS.filter(function(r){return r.mark_mode!=='maths'});
   CHARTSET=WR;
+  MATSET=ALL_RESULTS.filter(isMaths);
   var totals=WR.map(function(r){return parseInt((r.criteria_total||'0').split('/')[0])||0});
   var avg=totals.length?(totals.reduce(function(a,b){return a+b},0)/totals.length).toFixed(1):'—';
   var best=totals.length?Math.max.apply(null,totals):'—';
@@ -469,6 +470,12 @@ function renderPage(){
       </div>
     </div>
 
+    ${MATSET.length?`<!-- MATHS TREND -->
+    <div class="card">
+      <div class="sect-title"><span class="ico-chip">${ic('chart')}</span>Maths over time <span style="font-size:12px;font-weight:400;color:var(--text2)">(% correct — separate from the /25 chart)</span><span class="count">${MATSET.length} set${MATSET.length!==1?'s':''}</span></div>
+      ${MATSET.length<2?'<div class="empty">'+ic('chart')+'<div>Mark at least 2 maths sets to see the trend.</div></div>':'<div class="chart-wrap"><canvas id="maths-chart"></canvas></div>'}
+    </div>`:''}
+
     <!-- SESSION HISTORY -->
     <div class="card">
       <div class="sect-title"><span class="ico-chip">${ic('layers')}</span>Session history<span class="count">${ALL_RESULTS.length} session${ALL_RESULTS.length!==1?'s':''}</span></div>
@@ -496,7 +503,7 @@ function renderPage(){
     if(res.data&&res.data.gemini_key)document.getElementById('rep-key').value=res.data.gemini_key;
   }).catch(function(){});
 
-  if(CHARTSET.length>=2)setTimeout(drawChart,50);
+  if(CHARTSET.length>=2)setTimeout(drawChart,50);if(MATSET.length>=2)setTimeout(drawMathsLine,60);
 
   // Count-up stat numbers + bar fills
   setTimeout(function(){
@@ -841,7 +848,7 @@ function saveEdit(){
     STUDENT.name=name;STUDENT.year_level=year;STUDENT.gender=gender;
     STUDENT_NAME=name;
     closeModal();renderPage();
-    if(CHARTSET.length>=2)setTimeout(drawChart,50);
+    if(CHARTSET.length>=2)setTimeout(drawChart,50);if(MATSET.length>=2)setTimeout(drawMathsLine,60);
   }).catch(function(e){alert(e.message)});
 }
 function copyLoginCode(btn){
@@ -885,7 +892,25 @@ function initSupabase(){
 }
 initSupabase();
 (function(){var nv=document.querySelector('nav');if(!nv)return;window.addEventListener('scroll',function(){nv.classList.toggle('scrolled',window.scrollY>4)},{passive:true})})();
-window.addEventListener('resize',function(){if(CHARTSET.length>=2)drawChart()});
+function drawMathsLine(){
+  var canvas=document.getElementById('maths-chart');if(!canvas)return;
+  var ctx=canvas.getContext('2d'),wrap=canvas.parentElement,W=wrap.clientWidth,H=210;
+  canvas.width=W*devicePixelRatio;canvas.height=H*devicePixelRatio;canvas.style.width=W+'px';canvas.style.height=H+'px';
+  ctx.setTransform(1,0,0,1,0,0);ctx.scale(devicePixelRatio,devicePixelRatio);ctx.clearRect(0,0,W,H);
+  var dark=isDark(),gridCol=dark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)',axisCol=dark?'rgba(236,233,227,0.5)':'rgba(0,0,0,0.4)',dotFill=dark?'#1c1b19':'#fff',green=dark?'#7fb87a':'#2d5a27';
+  var labels=MATSET.map(function(r){return r.sessions&&r.sessions.name?r.sessions.name.substring(0,20):'Maths'});
+  var data=MATSET.map(mathPct);
+  var pad={t:20,r:20,b:50,l:42},cw=W-pad.l-pad.r,ch=H-pad.t-pad.b,n=MATSET.length;
+  var xStep=n>1?cw/(n-1):cw;function xPos(i){return pad.l+(n>1?i*xStep:cw/2)}
+  function yPos(v){return pad.t+ch-(v/100)*ch}
+  ctx.strokeStyle=gridCol;ctx.lineWidth=1;
+  [0,25,50,75,100].forEach(function(v){var y=yPos(v);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();ctx.fillStyle=axisCol;ctx.font='10px DM Sans,sans-serif';ctx.textAlign='right';ctx.fillText(v+'%',pad.l-6,y+3)});
+  ctx.beginPath();ctx.moveTo(xPos(0),yPos(data[0]));data.forEach(function(v,i){if(i>0)ctx.lineTo(xPos(i),yPos(v))});ctx.lineTo(xPos(n-1),pad.t+ch);ctx.lineTo(xPos(0),pad.t+ch);ctx.closePath();ctx.fillStyle=dark?'rgba(127,184,122,0.12)':'rgba(45,90,39,0.08)';ctx.fill();
+  ctx.beginPath();ctx.strokeStyle=green;ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.lineCap='round';data.forEach(function(v,i){i===0?ctx.moveTo(xPos(i),yPos(v)):ctx.lineTo(xPos(i),yPos(v))});ctx.stroke();
+  data.forEach(function(v,i){var x=xPos(i),y=yPos(v);ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fillStyle=dotFill;ctx.fill();ctx.strokeStyle=green;ctx.lineWidth=2;ctx.stroke();ctx.fillStyle=green;ctx.font='bold 11px DM Sans,sans-serif';ctx.textAlign='center';ctx.fillText(v+'%',x,y-10);ctx.fillStyle=axisCol;ctx.font='10px DM Sans,sans-serif';var lbl=labels[i];if(lbl.length>12)lbl=lbl.substring(0,12)+'…';ctx.save();ctx.translate(x,pad.t+ch+14);ctx.rotate(-0.4);ctx.fillText(lbl,0,0);ctx.restore()});
+}
+
+window.addEventListener('resize',function(){if(CHARTSET.length>=2)drawChart();if(MATSET.length>=2)drawMathsLine()});
 </script>
 </body>
 </html>
