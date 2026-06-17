@@ -920,6 +920,38 @@ async function markOne(key,file,rubric,area,level,task,style,idx){
     var onBusy=function(a,max){progressItems[idx].phase='Busy — retry '+a+'/'+(max-1)+'…';renderProg()};
     var r=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:'File: "'+file.name+'"\n\n'+prompt}],onBusy));
     r.fileName=r.fileName||file.name;
+
+    // ── Pass 2: independent moderation ──────────────────────────────────────
+    // A genuine second look — re-reads the actual work against the rubric and
+    // the provisional scores, and adjusts anything too harsh or too generous.
+    progressItems[idx].phase='Moderating…';renderProg();
+    try{
+      var modPrompt=[
+        'You are a senior NZ Years 7-8 moderator performing a SECOND, INDEPENDENT marking of this student work against the rubric below.',
+        'Learning area: '+area+'. NZC Level: '+level+'. Task: '+(task||'General assessment')+'.',
+        'Teacher writing style (match this voice in feedback): '+style,
+        '',
+        'A first marker gave these provisional scores:',
+        JSON.stringify({criteria:r.criteria,criteriaTotal:r.criteriaTotal,overallScore:r.overallScore}),
+        '',
+        'MODERATION RULES:',
+        '1. Re-read the work yourself against EACH criterion. Do NOT simply copy the provisional scores — your job is to check them.',
+        '2. Adjust any score that is too harsh or too generous for NZC Level '+level+' (3/5 = meeting expectations).',
+        '3. Keep the EXACT criterion names. Score each 1-5.',
+        '4. Recompute criteriaTotal = sum of all scores (out of 25), then set overallScore: 21-25=Exceeds, 16-20=Achieved, 11-15=Approaching, 1-10=Beginning.',
+        '5. Make sure the two feedback tips match the FINAL moderated scores.',
+        '',
+        'RUBRIC (score each 1-5, total /25):',
+        rubric,
+        '',
+        'Return ONLY raw JSON, no markdown fences, no explanation:',
+        '{"fileName":"'+(r.fileName||file.name)+'","criteriaTotal":"X/25","overallScore":"Achieved","criteria":[{"name":"exact name","score":3}],"improve1":"Warm tip 1 to student using you/your — one actionable sentence.","improve2":"Warm tip 2 to student using you/your — one actionable sentence."}'
+      ].join('\n');
+      var onMod=function(a,max){progressItems[idx].phase='Moderating — retry '+a+'/'+(max-1)+'…';renderProg()};
+      var m=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:'File: "'+file.name+'"\n\n'+modPrompt}],onMod));
+      if(m&&Array.isArray(m.criteria)&&m.criteria.length){m.fileName=r.fileName;r=m;}
+    }catch(modErr){/* moderation pass failed — keep the first-pass result rather than losing the mark */}
+
     progressItems[idx].status='done';progressItems[idx].phase='';renderProg();
     return r;
   }catch(e){progressItems[idx].status='error';progressItems[idx].phase='';progressItems[idx].err=e.message;renderProg();return{fileName:file.name,_error:e.message}}
