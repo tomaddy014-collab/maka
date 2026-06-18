@@ -215,7 +215,7 @@ textarea{resize:vertical;min-height:60px;line-height:1.5}
 .d-dn{background:var(--danger-bg);color:var(--danger-text)}
 .d-eq{background:var(--bg2);color:var(--text3)}
 .btn:focus-visible,.copy-btn:focus-visible,.eye-btn:focus-visible,.icon-btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.sess-hd:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-.mq-group{margin-bottom:10px}.mq-qnum{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}.mq-parts{display:flex;flex-wrap:wrap;gap:6px}.mq-part{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--border);background:var(--bg2)}.mq-part .mq-lab{color:var(--text2);font-weight:700}.mq-part.correct{background:var(--green-bg);border-color:transparent;color:var(--green)}.mq-part.wrong{background:var(--danger-bg);border-color:transparent;color:var(--danger-text)}.mq-part .mq-mark{font-weight:800}
+.mq-group{margin-bottom:10px}.mq-qnum{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}.mq-parts{display:flex;flex-wrap:wrap;gap:6px}.mq-part{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--border);background:var(--bg2)}.mq-part .mq-lab{color:var(--text2);font-weight:700}.mq-part.correct{background:var(--green-bg);border-color:transparent;color:var(--green)}.mq-part.wrong{background:var(--danger-bg);border-color:transparent;color:var(--danger-text)}.mq-part.unread{background:var(--warn-bg);border-color:transparent;color:var(--warn-text)}.mq-sheet{font-size:12px;font-weight:700;color:var(--text);margin:12px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border)}.mq-part .mq-mark{font-weight:800}
 @media(max-width:600px){.kpi-grid{grid-template-columns:1fr 1fr}.main{padding:1rem .85rem 3rem}.bar-lbl{width:110px}}
 </style>
 </head>
@@ -553,9 +553,9 @@ function renderSessions(){
     var crit=r.criteria||[];
     var bodyTable;
     if(maths){
-      var groups={},order=[];
-      crit.forEach(function(q){var k=String(q.q||'');if(!(k in groups)){groups[k]=[];order.push(k)}groups[k].push(q)});
-      bodyTable=order.map(function(k){var parts=groups[k].map(function(q){var ok=q.correct;var det=(!ok&&(q.student||q.answer))?' <span style="opacity:.8;font-weight:400">('+esc(q.student||'—')+'→'+esc(q.answer||'?')+')</span>':'';return'<span class="mq-part '+(ok?'correct':'wrong')+'"><span class="mq-lab">'+esc(q.part||'•')+'</span><span class="mq-mark">'+(ok?ic('sparkle'):'✗')+'</span>'+det+'</span>'}).join('');return'<div class="mq-group"><div class="mq-qnum">Q'+esc(k)+'</div><div class="mq-parts">'+parts+'</div></div>'}).join('');
+      var sheets=[],bySheet={};
+      crit.forEach(function(q){var sh=String(q.sheet||'');if(!(sh in bySheet)){bySheet[sh]={order:[],groups:{}};sheets.push(sh)}var b=bySheet[sh],k=String(q.q||'');if(!(k in b.groups)){b.groups[k]=[];b.order.push(k)}b.groups[k].push(q)});
+      bodyTable=sheets.map(function(sh){var b=bySheet[sh];var head=sh?'<div class="mq-sheet">'+esc(sh)+'</div>':'';return head+b.order.map(function(k){var parts=b.groups[k].map(function(q){var un=q.unreadable,ok=q.correct;var det=(!ok&&!un&&(q.student||q.answer))?' <span style="opacity:.8;font-weight:400">('+esc(q.student||'—')+'→'+esc(q.answer||'?')+')</span>':'';return'<span class="mq-part '+(un?'unread':(ok?'correct':'wrong'))+'"><span class="mq-lab">'+esc(q.part||'•')+'</span><span class="mq-mark">'+(un?'?':(ok?'✓':'✗'))+'</span>'+det+'</span>'}).join('');return'<div class="mq-group"><div class="mq-qnum">Q'+esc(k)+'</div><div class="mq-parts">'+parts+'</div></div>'}).join('')}).join('');
     }else{
       var critRows=crit.map(function(c){return'<tr><td class="cn">'+esc(c.name||'')+'</td><td class="cs">'+dots(parseInt(c.score)||0)+'</td></tr>'}).join('');
       bodyTable=(critRows?'<table class="ctable"><thead><tr><th>Criterion</th><th>Score</th></tr></thead><tbody>'+critRows+'</tbody></table>':'');

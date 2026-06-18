@@ -182,6 +182,8 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .mq-part .mq-lab{color:var(--text2);font-weight:700}
 .mq-part.correct{background:var(--green-bg);border-color:transparent;color:var(--green)}
 .mq-part.wrong{background:var(--danger-bg);border-color:transparent;color:var(--danger-text)}
+.mq-part.unread{background:var(--warn-bg);border-color:transparent;color:var(--warn-text)}
+.mq-sheet{font-size:12px;font-weight:700;color:var(--text);margin:12px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
 .mq-part .mq-mark{font-weight:800}
 .mq-part .mq-detail{font-weight:400;font-size:11px;opacity:.85}
 .mq-part:hover{border-color:var(--border2)}
@@ -390,10 +392,19 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
   <textarea id="rubric" placeholder="e.g.&#10;Ideas — clearly states a position&#10;Structure — TIDE paragraph&#10;Language — persuasive devices&#10;Conventions — spelling, punctuation, grammar&#10;Clarity — flows logically"></textarea>
 </div>
       <div class="field" id="maths-block" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+          <select id="key-select" style="width:auto;font-size:13px;padding:6px 10px;flex:1;max-width:280px" onchange="loadKey()"><option value="">— Load a saved key —</option></select>
+          <button class="btn btn-sm" onclick="saveKey()"><span data-ic="save"></span>Save key</button>
+        </div>
         <label class="lbl" for="answer-key">Answer key <span style="font-weight:500;text-transform:none;letter-spacing:0">(recommended — leave blank to let the AI solve, less accurate)</span></label>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;line-height:1.5">Type the answers as they appear in the book. Sub-parts welcome — equivalent forms (½ = 0.5) are accepted.</div>
-        <textarea id="answer-key" placeholder="e.g.&#10;1. a)6  b)12  c)18&#10;2. a)3.5  b)1/2  c)9  d)40&#10;3. a)24  b)7  c)100"></textarea>
-        <div style="font-size:12px;color:var(--warn-text);margin-top:6px;display:flex;gap:6px;align-items:flex-start"><span data-ic="alert" style="flex-shrink:0;margin-top:1px"></span><span>AI reads handwritten maths well but not perfectly — every answer is tap-to-flip after marking, so check before sharing.</span></div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px;line-height:1.5">Type the answers, or generate them from a blank worksheet. Sub-parts and multiple worksheets welcome; equivalent forms (½ = 0.5) are accepted.</div>
+        <div style="margin-bottom:8px">
+          <button class="btn btn-sm" id="gen-key-btn" onclick="genKeyFromWorksheet()" style="font-size:12px;padding:5px 10px"><span data-ic="sparkle"></span>Generate key from worksheet</button>
+          <input type="file" id="key-worksheet-input" accept="image/*,.pdf" multiple style="display:none">
+        </div>
+        <div id="gen-key-status" style="font-size:12px;color:var(--text2);margin-bottom:6px;display:none"></div>
+        <textarea id="answer-key" placeholder="e.g.&#10;Worksheet 1&#10;1. a)9  b)56  c)24&#10;2. a)23  b)13&#10;&#10;Worksheet 2&#10;1. a)…"></textarea>
+        <div style="font-size:12px;color:var(--warn-text);margin-top:6px;display:flex;gap:6px;align-items:flex-start"><span data-ic="alert" style="flex-shrink:0;margin-top:1px"></span><span>AI reads handwritten maths well but not perfectly — answers it can’t read are flagged with “?”, and every answer is tap-to-flip, so check before sharing.</span></div>
       </div>
       <div class="field"><label class="lbl" for="session-name">Session name</label><input type="text" id="session-name" placeholder="e.g. 7B Writing — Kaitiakitanga — Term 2"></div>
     </div>
@@ -723,7 +734,7 @@ function loadProfileBg(){
         if(PROFILE.writing_style)document.getElementById('set-style').value=PROFILE.writing_style;
         updateNavForUser();
       }else{sb.from('profiles').upsert({id:USER.id,email:USER.email,display_name:''}).then(function(){}).catch(function(){})}
-      loadRubrics();loadDashSessions();loadCompareSessions();loadClassStudents();
+      loadRubrics();loadKeys();loadDashSessions();loadCompareSessions();loadClassStudents();
     }catch(e){}
   }).catch(function(){});
 }
@@ -830,6 +841,60 @@ async function buildRubric(){
   btn.disabled=false;btn.innerHTML=ic('sparkle')+'Build rubric with AI';
 }
 function saveRubric(){if(!sb||!USER){showToast('Sign in to save rubrics.');return}var n=prompt('Name for this rubric:');if(!n)return;sb.from('rubrics').insert({teacher_id:USER.id,name:n,learning_area:document.getElementById('la').value,level:document.getElementById('cl').value,criteria:document.getElementById('rubric').value.trim()}).then(function(){loadRubrics()}).catch(function(){})}
+
+// ── Maths answer keys: generate from a blank worksheet, save & reuse ─────────
+function genKeyFromWorksheet(){document.getElementById('key-worksheet-input').click()}
+document.getElementById('key-worksheet-input').onchange=async function(){
+  var fs=Array.from(this.files||[]);this.value='';
+  if(!fs.length)return;
+  var key=getKey();if(!key)return;
+  var btn=document.getElementById('gen-key-btn'),status=document.getElementById('gen-key-status');
+  btn.disabled=true;btn.innerHTML=ic('sparkle')+'Reading worksheet…';
+  status.style.display='block';status.style.color='var(--text2)';status.textContent='Working out the answers…';
+  try{
+    var parts=[];
+    for(var i=0;i<fs.length;i++){var mime=fs[i].type==='application/pdf'?'application/pdf':fs[i].type;parts.push({inline_data:{mime_type:mime,data:await toB64(fs[i])}})}
+    var prompt=[
+      'These images are BLANK NZ maths worksheet pages (the questions, not a student\'s answers).',
+      'For EVERY numbered question and lettered sub-part, work out the correct final answer yourself.',
+      'If there is more than one worksheet, group by each worksheet\'s printed title (e.g. "Worksheet 1").',
+      'Output ONLY the answer key as plain text, no explanation, in EXACTLY this format:',
+      'Worksheet 1',
+      '1. a)<answer>  b)<answer>  c)<answer>',
+      '2. a)<answer>  b)<answer>',
+      '',
+      'Rules: omit the "Worksheet N" heading if there is only one sheet. Keep the question numbers and sub-part letters exactly as printed. Give plain final answers only.'
+    ].join('\n');
+    parts.push({text:prompt});
+    var raw=await gemini(key,parts,function(a,max){status.textContent='Gemini busy — retry '+a+'/'+(max-1)+'…'});
+    document.getElementById('answer-key').value=raw.trim();
+    status.style.color='var(--green)';status.textContent='Key generated — check it over, then mark as usual. You can Save it for next time.';
+  }catch(e){
+    status.style.color='var(--danger-text)';status.textContent='Could not generate the key: '+(e.message||'try again');
+  }
+  btn.disabled=false;btn.innerHTML=ic('sparkle')+'Generate key from worksheet';
+};
+function loadKeys(){
+  if(!sb||!USER)return Promise.resolve([]);
+  return sb.from('answer_keys').select('*').eq('teacher_id',USER.id).order('created_at',{ascending:false}).then(function(res){
+    var data=(res&&res.data)||[];
+    var sel=document.getElementById('key-select');if(!sel)return data;
+    sel.innerHTML='<option value="">— Load a saved key —</option>';
+    data.forEach(function(k){var o=document.createElement('option');o.value=k.id;o.textContent=k.name;o.dataset.content=k.content||'';sel.appendChild(o)});
+    return data;
+  }).catch(function(){return[]});
+}
+function loadKey(){var sel=document.getElementById('key-select');var opt=sel.options[sel.selectedIndex];if(!opt||!opt.value)return;document.getElementById('answer-key').value=opt.dataset.content||''}
+function saveKey(){
+  if(!sb||!USER){showToast('Sign in to save keys.');return}
+  var content=document.getElementById('answer-key').value.trim();
+  if(!content){showToast('Nothing to save — generate or type a key first','warn');return}
+  var n=prompt('Name for this answer key:');if(!n)return;
+  sb.from('answer_keys').insert({teacher_id:USER.id,name:n,content:content}).then(function(res){
+    if(res&&res.error){showToast('Could not save key: '+res.error.message,'err');return}
+    loadKeys();showToast('Key saved','ok');
+  }).catch(function(e){showToast('Could not save key: '+(e.message||e),'err')});
+}
 function loadRubricsSettings(){
   loadRubrics().then(function(data){
     var el=document.getElementById('rubrics-list');
@@ -979,8 +1044,10 @@ function renderProg(){
 function mathsBand(pct){return pct>=85?'Exceeds':pct>=65?'Achieved':pct>=40?'Approaching':'Beginning'}
 function normQuestions(arr){
   return (arr||[]).map(function(q){
+    var u=(q.unreadable===true||q.unreadable==='true');
     var c=q.correct;c=(c===true||c==='true'||c===1||c==='1');
-    return{q:String(q.q==null?'':q.q),part:String(q.part==null?'':q.part),correct:c,student:String(q.student==null?'':q.student),answer:String(q.answer==null?'':q.answer)};
+    if(u)c=false;
+    return{sheet:String(q.sheet==null?'':q.sheet),q:String(q.q==null?'':q.q),part:String(q.part==null?'':q.part),correct:c,unreadable:u,student:String(q.student==null?'':q.student),answer:String(q.answer==null?'':q.answer)};
   });
 }
 function computeMaths(questions){
@@ -999,8 +1066,10 @@ async function markOneMaths(key,file,area,level,task,answerKey,idx){
   progressItems[idx].status='working';progressItems[idx].phase='Marking…';renderProg();
   try{
     var mime=file.type==='application/pdf'?'application/pdf':file.type,b64=await toB64(file);
-    var keyBlock=answerKey?('The OFFICIAL ANSWER KEY is below. Mark each answer RIGHT or WRONG against it.'):'No answer key was provided — solve each question yourself first, then mark the student RIGHT or WRONG.';
-    var jsonShape='{"fileName":"'+file.name+'","questions":[{"q":"1","part":"a","correct":true,"student":"6","answer":"6"},{"q":"1","part":"b","correct":false,"student":"16","answer":"18"}],"improve1":"Warm tip naming a skill they did well, using you/your.","improve2":"Warm next-step tip naming the skill to work on, referencing items like Q2b."}';
+    var keyBlock=answerKey
+      ?'The OFFICIAL ANSWER KEY is below. It defines EXACTLY which items exist (by worksheet, question number and sub-part). Return one result for EVERY item in the key — do not invent or skip items. Mark each RIGHT or WRONG against the key.'
+      :'No answer key was provided — find every question and sub-part yourself, solve it, then mark the student RIGHT or WRONG.';
+    var jsonShape='{"fileName":"'+file.name+'","questions":[{"sheet":"Worksheet 1","q":"1","part":"a","correct":true,"unreadable":false,"student":"6","answer":"6"},{"sheet":"Worksheet 1","q":"1","part":"b","correct":false,"unreadable":false,"student":"16","answer":"18"}],"improve1":"Warm tip naming a skill they did well, using you/your.","improve2":"Warm next-step tip naming the skill to work on, referencing items like Q2b."}';
     var prompt=[
       'You are a careful, encouraging NZ Years 7-8 maths teacher marking a student\'s hand-written maths book.',
       'Topic/task: '+(task||'Maths practice')+'. NZC Level: '+level+'.',
@@ -1009,11 +1078,12 @@ async function markOneMaths(key,file,area,level,task,answerKey,idx){
       answerKey?('ANSWER KEY:\n'+answerKey):'',
       '',
       'RULES:',
-      '1. Read EVERY question the student attempted, including lettered sub-parts (1a, 1b, 2a, 2b...). Each sub-part is a SEPARATE item.',
-      '2. For each item record the student\'s FINAL answer and whether it is correct (final answer only — no part marks).',
-      '3. If an item in the key was skipped/not attempted, return correct:false with student:"(blank)".',
-      '4. Use the question number in "q" (e.g. "2") and the sub-part letter in "part" (e.g. "b"); use "" for part if there are no sub-parts.',
-      '5. Write two warm tips to the student (you/your): improve1 celebrates a skill, improve2 gives the next step and references specific items (e.g. "Q2b").',
+      '1. The student\'s final answer may be in the printed answer box OR written nearby — in their working, the margin, or beside the question. Look across the WHOLE area for each question, not just the box.',
+      '2. Record the student\'s FINAL answer and whether it is correct (final answer only — no part marks).',
+      '3. If you genuinely CANNOT read or find the student\'s answer for an item, set "unreadable":true and student:"(unreadable)" — do NOT guess.',
+      '4. If the student clearly left an item blank, set correct:false and student:"(blank)".',
+      '5. The work may span MULTIPLE worksheets — identify each from its printed title and put it in "sheet" (e.g. "Worksheet 1"); use "" if there is only one sheet. Put the question number in "q" and the sub-part letter in "part" ("" if none).',
+      '6. Write two warm tips to the student (you/your): improve1 celebrates a skill, improve2 gives the next step and references specific items (e.g. "Q2b").',
       '',
       'Return ONLY raw JSON, no markdown fences, no explanation:',
       jsonShape
@@ -1318,10 +1388,32 @@ function assignRowHtml(r,idx){
 // Flip one maths sub-part right↔wrong; recompute the score and persist.
 function flipMathsPart(idx,qi){
   var r=results[idx];if(!r||!r.questions||!r.questions[qi])return;
-  r.questions[qi].correct=!r.questions[qi].correct;
+  var q=r.questions[qi];
+  // First tap on an unreadable item clears the flag and marks it correct; thereafter toggles
+  if(q.unreadable){q.unreadable=false;q.correct=true;}else{q.correct=!q.correct;}
   applyMaths(r);persistResults();
   if(currentSessId&&sb&&USER)sb.from('student_results').upsert(resultRow(r,currentSessId),{onConflict:'session_id,file_name'}).then(function(){}).catch(function(){});
   renderResults(results);
+}
+// Group maths items by sheet → question for display.
+function groupMaths(qs){
+  var sheets=[],bySheet={};
+  qs.forEach(function(q,qi){
+    var sh=String(q.sheet||'');
+    if(!(sh in bySheet)){bySheet[sh]={order:[],groups:{}};sheets.push(sh)}
+    var b=bySheet[sh],k=String(q.q||'');
+    if(!(k in b.groups)){b.groups[k]=[];b.order.push(k)}
+    b.groups[k].push({q:q,qi:qi});
+  });
+  return{sheets:sheets,bySheet:bySheet};
+}
+function mqPartHtml(q,qi,idx,editable){
+  var lab=esc(q.part||'•');
+  var cls=q.unreadable?'unread':(q.correct?'correct':'wrong');
+  var mark=q.unreadable?'?':(q.correct?ic('check'):ic('x'));
+  var detail=(!q.correct&&!q.unreadable&&(q.student||q.answer))?'<span class="mq-detail">'+esc(q.student||'—')+' → '+esc(q.answer||'?')+'</span>':'';
+  var flip=editable?(' role="button" tabindex="0" onclick="flipMathsPart('+idx+','+qi+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();flipMathsPart('+idx+','+qi+')}" title="Tap to flip"'):'';
+  return'<span class="mq-part '+cls+'"'+flip+'><span class="mq-lab">'+lab+'</span><span class="mq-mark">'+mark+'</span>'+detail+'</span>';
 }
 function renderMathsCard(r,idx,editable){
   var qs=r.questions||r.criteria||[];
@@ -1331,26 +1423,25 @@ function renderMathsCard(r,idx,editable){
   var i1=r.improve1||r.strengths||'',i2=r.improve2||(r.next_steps&&r.next_steps[0])||'';
   var remarkBtn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkStu('+idx+')">'+ic('refresh')+'Re-mark</button>':'';
   var pillc=pct>=75?'ph':pct>=50?'pm':'pl';
+  var unreadN=qs.filter(function(q){return q.unreadable}).length;
   var html='<div class="rcard">';
   html+='<div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span><div style="display:flex;align-items:center;gap:6px"><span class="pill '+pillc+'">'+esc(band)+' · '+esc(score)+(pct?' ('+pct+'%)':'')+'</span>'+remarkBtn+'</div></div>';
-  var order=[],groups={};
-  qs.forEach(function(q,qi){var k=String(q.q||'');if(!(k in groups)){groups[k]=[];order.push(k)}groups[k].push({q:q,qi:qi})});
-  if(order.length){
-    order.forEach(function(k){
-      html+='<div class="mq-group"><div class="mq-qnum">Q'+esc(k)+'</div><div class="mq-parts">';
-      groups[k].forEach(function(item){
-        var q=item.q,qi=item.qi,lab=esc(q.part||'•');
-        var mark=q.correct?ic('check'):ic('x');
-        var detail=(!q.correct&&(q.student||q.answer))?'<span class="mq-detail">'+esc(q.student||'—')+' → '+esc(q.answer||'?')+'</span>':'';
-        var flip=editable?(' role="button" tabindex="0" onclick="flipMathsPart('+idx+','+qi+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();flipMathsPart('+idx+','+qi+')}" title="Tap to flip"'):'';
-        html+='<span class="mq-part '+(q.correct?'correct':'wrong')+'"'+flip+'><span class="mq-lab">'+lab+'</span><span class="mq-mark">'+mark+'</span>'+detail+'</span>';
+  if(unreadN)html+='<div class="mq-hint" style="color:var(--warn-text)">'+unreadN+' answer'+(unreadN!==1?'s':'')+' couldn’t be read (shown as ?). Tap to set them.</div>';
+  var g=groupMaths(qs);
+  if(qs.length){
+    g.sheets.forEach(function(sh){
+      if(sh)html+='<div class="mq-sheet">'+esc(sh)+'</div>';
+      var b=g.bySheet[sh];
+      b.order.forEach(function(k){
+        html+='<div class="mq-group"><div class="mq-qnum">Q'+esc(k)+'</div><div class="mq-parts">';
+        b.groups[k].forEach(function(item){html+=mqPartHtml(item.q,item.qi,idx,editable)});
+        html+='</div></div>';
       });
-      html+='</div></div>';
     });
   }else{
     html+='<div class="mq-hint">No questions were read from this work.</div>';
   }
-  if(editable&&order.length)html+='<div class="mq-hint">Tap any answer to flip it — the score updates automatically.</div>';
+  if(editable&&qs.length)html+='<div class="mq-hint">Tap any answer to flip it — the score updates automatically.</div>';
   if(i1||i2){
     html+='<div class="slbl">Feedback</div>';
     if(i1)html+='<div class="sbox improve" style="margin-bottom:6px">'+ic('bulb')+esc(i1)+'</div>';
@@ -1510,7 +1601,7 @@ function renderMathsDashboard(v){
   document.getElementById('dash-stats').innerHTML=[{n:v.length,l:'Students'},{n:avg+'%',l:'Class average'},{n:ex+ac,l:'At/above expected'},{n:need,l:'Need support'}].map(function(s){return'<div class="stat-box"><div class="stat-num">'+s.n+'</div><div class="stat-lbl">'+s.l+'</div></div>'}).join('');
   // Hardest questions across the class (most-missed q/part)
   var miss={};
-  v.forEach(function(r){(r.questions||r.criteria||[]).forEach(function(q){if(!q.correct){var k='Q'+(q.q||'')+(q.part?q.part:'');miss[k]=(miss[k]||0)+1}})});
+  v.forEach(function(r){(r.questions||r.criteria||[]).forEach(function(q){if(!q.correct){var k=(q.sheet?q.sheet+' ':'')+'Q'+(q.q||'')+(q.part?q.part:'');miss[k]=(miss[k]||0)+1}})});
   var arr=Object.keys(miss).map(function(k){return{k:k,n:miss[k]}}).sort(function(a,b){return b.n-a.n}).slice(0,12);
   document.getElementById('dash-bars').innerHTML=arr.length?('<div style="font-size:12px;color:var(--text2);margin-bottom:10px">Most-missed questions</div>'+arr.map(function(x){return'<div class="bar-row"><div class="bar-lbl">'+esc(x.k)+'</div><div class="bar-track"><div class="bar-fill" style="width:'+Math.round(100*x.n/v.length)+'%;background:var(--danger-text)"></div></div><div class="bar-val">'+x.n+'</div></div>'}).join('')):'<div style="font-size:13px;color:var(--text2)">Everyone got everything right — ka pai!</div>';
   document.getElementById('dash-heat').innerHTML='';
@@ -1761,15 +1852,20 @@ function printSheets(){
     if(r.mode==='maths'||r.mark_mode==='maths'){
       var qs=r.questions||r.criteria||[];
       var pct=(r.percent!=null)?r.percent:(function(){var t=qs.length,c=qs.filter(function(q){return q.correct}).length;return t?Math.round(100*c/t):0})();
-      var groups={},order=[];
-      qs.forEach(function(q){var k=String(q.q||'');if(!(k in groups)){groups[k]=[];order.push(k)}groups[k].push(q)});
-      var qhtml=order.map(function(k){
-        var parts=groups[k].map(function(q){
-          var ok=q.correct,sym=ok?'✓':'✗';
-          var det=(!ok&&(q.student||q.answer))?' <span style="color:#888;font-weight:400">('+esc(q.student||'—')+'→'+esc(q.answer||'?')+')</span>':'';
-          return'<span style="display:inline-block;margin:0 10px 6px 0;font-size:13px;color:'+(ok?'#2d5a27':'#a32d2d')+';font-weight:700">'+esc(q.part||'•')+' '+sym+det+'</span>';
+      var sheets=[],bySheet={};
+      qs.forEach(function(q){var sh=String(q.sheet||'');if(!(sh in bySheet)){bySheet[sh]={order:[],groups:{}};sheets.push(sh)}var b=bySheet[sh],k=String(q.q||'');if(!(k in b.groups)){b.groups[k]=[];b.order.push(k)}b.groups[k].push(q)});
+      var qhtml=sheets.map(function(sh){
+        var b=bySheet[sh];
+        var head=sh?'<div style="font-size:12px;font-weight:700;margin:6px 0 4px;border-bottom:1px solid #ddd;padding-bottom:2px">'+esc(sh)+'</div>':'';
+        return head+b.order.map(function(k){
+          var parts=b.groups[k].map(function(q){
+            var unread=q.unreadable,ok=q.correct,sym=unread?'?':(ok?'✓':'✗');
+            var col=unread?'#854f0b':(ok?'#2d5a27':'#a32d2d');
+            var det=(!ok&&!unread&&(q.student||q.answer))?' <span style="color:#888;font-weight:400">('+esc(q.student||'—')+'→'+esc(q.answer||'?')+')</span>':'';
+            return'<span style="display:inline-block;margin:0 10px 6px 0;font-size:13px;color:'+col+';font-weight:700">'+esc(q.part||'•')+' '+sym+det+'</span>';
+          }).join('');
+          return'<div style="margin-bottom:8px"><span style="font-size:11px;font-weight:700;text-transform:uppercase;color:#888;margin-right:8px">Q'+esc(k)+'</span>'+parts+'</div>';
         }).join('');
-        return'<div style="margin-bottom:8px"><span style="font-size:11px;font-weight:700;text-transform:uppercase;color:#888;margin-right:8px">Q'+esc(k)+'</span>'+parts+'</div>';
       }).join('');
       return'<div style="max-width:680px;margin:0 auto;padding:48px 0;font-family:-apple-system,sans-serif"><div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;margin-bottom:24px;border-bottom:2px solid #1a1a1a"><div><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:6px">Māka · Maths</div><div style="font-size:24px;font-weight:700;margin-bottom:3px">'+esc(stripExt(r.fileName))+'</div><div style="font-size:13px;color:#666">'+esc(task)+'</div></div><div style="text-align:right"><div style="font-size:32px;font-weight:800;color:#2d5a27;line-height:1">'+esc(r.criteriaTotal||r.criteria_total||'')+'</div><div style="font-size:12px;font-weight:600;color:#2d5a27;margin-top:4px">'+esc(r.overallScore||r.overall_score||'')+(pct?' · '+pct+'%':'')+'</div></div></div><div style="margin-bottom:18px">'+qhtml+'</div>'+(fb1?'<div style="background:#f0f7ee;border-radius:8px;padding:12px 14px;margin-bottom:8px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#2d5a27;margin-bottom:4px">What you did well</div><div style="font-size:13px;line-height:1.6;color:#333">'+esc(fb1)+'</div></div>':'')+(fb2?'<div style="background:#f7f6f3;border-radius:8px;padding:12px 14px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#666;margin-bottom:6px">Next step</div><div style="font-size:13px;line-height:1.6;color:#333">'+esc(fb2)+'</div></div>':'')+'</div>'+(i<arr.length-1?'<div style="page-break-after:always"></div>':'');
     }

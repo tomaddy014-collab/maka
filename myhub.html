@@ -145,7 +145,7 @@ canvas{width:100%!important}
 .pdf-modal.open{display:flex;animation:riseIn .25s var(--ease)}
 .pdf-modal-inner{background:var(--bg);border-radius:var(--r);width:100%;max-width:900px;height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--sh-lg)}
 .pdf-modal-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);gap:8px;flex-wrap:wrap}
-.mq-group{margin-bottom:10px}.mq-qnum{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}.mq-parts{display:flex;flex-wrap:wrap;gap:6px}.mq-part{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--border);background:var(--bg2)}.mq-part .mq-lab{color:var(--text2);font-weight:700}.mq-part.correct{background:var(--green-bg);border-color:transparent;color:var(--green)}.mq-part.wrong{background:var(--danger-bg);border-color:transparent;color:var(--danger-text)}.mq-part .mq-mark{font-weight:800}
+.mq-group{margin-bottom:10px}.mq-qnum{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}.mq-parts{display:flex;flex-wrap:wrap;gap:6px}.mq-part{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--border);background:var(--bg2)}.mq-part .mq-lab{color:var(--text2);font-weight:700}.mq-part.correct{background:var(--green-bg);border-color:transparent;color:var(--green)}.mq-part.wrong{background:var(--danger-bg);border-color:transparent;color:var(--danger-text)}.mq-part.unread{background:var(--warn-bg);border-color:transparent;color:var(--warn-text)}.mq-sheet{font-size:12px;font-weight:700;color:var(--text);margin:12px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border)}.mq-part .mq-mark{font-weight:800}
 footer{text-align:center;font-size:12px;color:var(--text3);padding:0 1rem 2.5rem}
 .btn:focus-visible,.icon-btn:focus-visible,.signout:focus-visible,a:focus-visible,.sess-hd:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 @media(max-width:600px){.kpi-grid{grid-template-columns:1fr 1fr}.main{padding:1rem .85rem 3rem}.bar-lbl{width:110px}}
@@ -381,9 +381,9 @@ function render(){
         var date=r.session_date?fmtDate(r.session_date):fmtDate(r.created_at);
         var body;
         if(isMaths(r)){
-          var qs=r.criteria||[],groups={},order=[];
-          qs.forEach(function(q){var k=String(q.q||'');if(!(k in groups)){groups[k]=[];order.push(k)}groups[k].push(q)});
-          body=order.map(function(k){var parts=groups[k].map(function(q){var ok=q.correct;var det=(!ok&&(q.student||q.answer))?' <span style="opacity:.8;font-weight:400">('+esc(q.student||'—')+'→'+esc(q.answer||'?')+')</span>':'';return'<span class="mq-part '+(ok?'correct':'wrong')+'"><span class="mq-lab">'+esc(q.part||'•')+'</span><span class="mq-mark">'+(ok?ic('check'):ic('x'))+'</span>'+det+'</span>'}).join('');return'<div class="mq-group"><div class="mq-qnum">Q'+esc(k)+'</div><div class="mq-parts">'+parts+'</div></div>'}).join('');
+          var qs=r.criteria||[],sheets=[],bySheet={};
+          qs.forEach(function(q){var sh=String(q.sheet||'');if(!(sh in bySheet)){bySheet[sh]={order:[],groups:{}};sheets.push(sh)}var b=bySheet[sh],k=String(q.q||'');if(!(k in b.groups)){b.groups[k]=[];b.order.push(k)}b.groups[k].push(q)});
+          body=sheets.map(function(sh){var b=bySheet[sh];var head=sh?'<div class="mq-sheet">'+esc(sh)+'</div>':'';return head+b.order.map(function(k){var parts=b.groups[k].map(function(q){var un=q.unreadable,ok=q.correct;var det=(!ok&&!un&&(q.student||q.answer))?' <span style="opacity:.8;font-weight:400">('+esc(q.student||'—')+'→'+esc(q.answer||'?')+')</span>':'';return'<span class="mq-part '+(un?'unread':(ok?'correct':'wrong'))+'"><span class="mq-lab">'+esc(q.part||'•')+'</span><span class="mq-mark">'+(un?'?':(ok?ic('check'):ic('x')))+'</span>'+det+'</span>'}).join('');return'<div class="mq-group"><div class="mq-qnum">Q'+esc(k)+'</div><div class="mq-parts">'+parts+'</div></div>'}).join('')}).join('');
         }else{
           var crit=(r.criteria||[]).map(function(c){
             var s=parseInt(c.score)||0,dotsHtml='';
