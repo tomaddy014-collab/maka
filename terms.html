@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<!--
+  ⚠️  IMPORTANT — READ BEFORE PUBLISHING
+  This is a COMPREHENSIVE DRAFT, not finished legal advice. Before you rely on it
+  commercially you MUST have it reviewed by a qualified New Zealand lawyer, because:
+   • it concerns children's personal information (Privacy Act 2020);
+   • the Consumer Guarantees Act 1993 and Fair Trading Act 1986 limit what you can
+     disclaim — some clauses below only work for genuine business-to-business supply;
+   • the liability, indemnity and payment clauses have real financial consequences.
+  Fill every [BRACKETED] placeholder before publishing.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Māka — Terms of Service</title>
+<script>
+(function(){try{
+  var t=localStorage.getItem('maka-theme');
+  if(!t)t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+  if(t==='dark')document.documentElement.setAttribute('data-theme','dark');
+}catch(e){}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --paper:#f5f0e8;--paper-dark:#ede7d9;--card:#fff;
+  --ink:#0f0e0c;--ink-light:#3a3630;--text2:#6e6960;
+  --green:#2d5a27;--green-bg:#e8f0e6;
+  --gold:#c8840a;--gold-soft:rgba(200,132,10,0.12);
+  --border:rgba(15,14,12,0.1);
+  --ease:cubic-bezier(.25,.8,.25,1)}
+[data-theme="dark"]{
+  --paper:#161513;--paper-dark:#242220;--card:#1c1b19;
+  --ink:#ece9e3;--ink-light:#c9c5bd;--text2:#a9a49b;
+  --green:#7fb87a;--green-bg:#23302180;
+  --gold:#e0a52a;--gold-soft:rgba(224,165,42,0.16);
+  --border:rgba(255,255,255,0.1);
+}
+[data-theme="dark"] .logo>span{color:#ece9e3!important}
+[data-theme="dark"] .logo span span span{background:#ece9e3!important}
+body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
+button,a{touch-action:manipulation}
+.wrap{max-width:760px;margin:0 auto;padding:2.5rem 1.25rem 4rem}
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:12px}
+a.back{font-size:13px;color:var(--text2);text-decoration:none;transition:color .2s var(--ease)}
+a.back:hover{color:var(--ink)}
+h1{font-family:'Fraunces',serif;font-size:clamp(28px,6vw,38px);font-weight:800;letter-spacing:-.02em;margin:1.25rem 0 .4rem}
+.updated{font-size:13px;color:var(--text2);margin-bottom:1.5rem}
+h2{font-family:'Fraunces',serif;font-size:19px;font-weight:800;letter-spacing:-.01em;margin:2rem 0 .6rem}
+p,li{font-size:15px;line-height:1.7;color:var(--ink-light);margin-bottom:.8rem}
+ul,ol{padding-left:1.3rem;margin-bottom:1rem}
+li{margin-bottom:.35rem}
+strong{color:var(--ink)}
+a{color:var(--green)}
+.lead{font-size:15px;line-height:1.7;color:var(--ink-light)}
+.callout{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:12px;padding:1rem 1.25rem;margin:1.25rem 0;font-size:14.5px;line-height:1.7}
+.callout.key{border-left-color:var(--green)}
+.footer{font-size:12px;color:var(--text2);text-align:center;padding:2rem 1rem}
+a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="logo" style="text-decoration:none;display:inline-block;position:relative;padding-bottom:7px">
+    <span style="font-family:'Fraunces',Georgia,serif;font-size:28px;font-weight:900;color:#0f0e0c;letter-spacing:-0.02em;line-height:1;white-space:nowrap">m<span style="position:relative;display:inline-block"><span style="position:absolute;top:2px;left:50%;transform:translateX(-50%);width:55%;height:2.5px;background:#0f0e0c;border-radius:1px"></span>a</span>ka</span>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190 20" style="position:absolute;bottom:-3px;left:0;width:100%;height:20px;pointer-events:none">
+  <defs><linearGradient id="fg_tm1" x1="100%" y1="0%" x2="0%" y2="0%">
+    <stop offset="0%" style="stop-color:#f0b429;stop-opacity:1"/>
+    <stop offset="65%" style="stop-color:#d4a017;stop-opacity:0.65"/>
+    <stop offset="100%" style="stop-color:#d4a017;stop-opacity:0.03"/>
+  </linearGradient></defs>
+  <path d="M 183 7 C 150 11, 90 15, 30 16 C 12 16, 2 14, 0 12" fill="none" stroke="url(#fg_tm1)" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 176 6 C 171 1, 164 0, 156 1" fill="none" stroke="#f0b429" stroke-width="1" stroke-linecap="round" opacity="0.9"/>
+  <path d="M 162 8 C 156 3, 149 2, 141 3" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.8"/>
+  <path d="M 147 9 C 141 5, 134 4, 126 5" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.72"/>
+  <path d="M 131 10 C 125 7, 118 6, 110 7" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.62"/>
+  <path d="M 114 11 C 108 8, 101 8, 93 8" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.52"/>
+  <path d="M 96 12 C 90 10, 83 9, 75 10" fill="none" stroke="#f0b429" stroke-width="0.7" stroke-linecap="round" opacity="0.42"/>
+  <path d="M 77 12 C 71 11, 64 10, 56 11" fill="none" stroke="#f0b429" stroke-width="0.6" stroke-linecap="round" opacity="0.32"/>
+  <path d="M 174 8 C 169 13, 162 15, 154 14" fill="none" stroke="#f0b429" stroke-width="1" stroke-linecap="round" opacity="0.8"/>
+  <path d="M 159 9 C 154 14, 147 16, 139 15" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.72"/>
+  <path d="M 144 10 C 139 15, 132 17, 124 16" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.64"/>
+  <path d="M 128 11 C 123 16, 116 17, 108 16" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.55"/>
+  <path d="M 111 12 C 106 16, 99 17, 91 16" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.46"/>
+  <path d="M 93 13 C 88 16, 81 17, 73 16" fill="none" stroke="#f0b429" stroke-width="0.7" stroke-linecap="round" opacity="0.36"/>
+  <path d="M 73 13 C 68 16, 61 16, 53 15" fill="none" stroke="#f0b429" stroke-width="0.6" stroke-linecap="round" opacity="0.26"/>
+  <path d="M 3 13 C 2 12, 1 11, 0.5 10" fill="none" stroke="#ede7d9" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 1 11 C 0.5 10, 0 9.5, 0 9" fill="none" stroke="#f5f0e8" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
+  </div>
+    <a class="back" href="index.html">← Back to Māka</a>
+  </div>
+
+  <h1>Terms of Service</h1>
+  <div class="updated">Effective date: [EFFECTIVE DATE] · Provider: [LEGAL ENTITY NAME] (“Māka”, “we”, “us”)</div>
+
+  <p class="lead">These Terms of Service (“Terms”) are a legal agreement between you (“you”, “the teacher”, “the user”) and [LEGAL ENTITY NAME] governing your use of the Māka application and website (the “Service”). By creating an account or using the Service, you agree to these Terms. If you do not agree, do not use the Service.</p>
+
+  <div class="callout key"><strong>The most important thing:</strong> Māka is an AI-assisted <em>aid</em> for teachers. It does not replace your professional judgement. You remain fully responsible for reviewing, correcting and approving every score, comment and report before using or sharing it. Māka’s outputs are automated suggestions and may contain errors.</div>
+
+  <h2>1. Who may use Māka</h2>
+  <p>The Service is intended for use by teachers, educators and education professionals who are at least 18 years old and acting in a professional capacity. By using the Service you confirm you meet these requirements and that you are authorised by your school or employer (where relevant) to use a tool of this kind.</p>
+
+  <h2>2. What Māka does</h2>
+  <p>Māka lets you upload student work, have it assessed against a rubric or answer key using a third-party AI service (Google Gemini), generate feedback and report comments, and store and track results. All AI assessment is automated and probabilistic.</p>
+
+  <h2>3. Your responsibility for AI outputs</h2>
+  <ul>
+    <li>AI-generated marks, feedback, answer keys, report comments and any other output are <strong>suggestions only</strong> and are not guaranteed to be accurate, complete or fit for any particular purpose.</li>
+    <li>You must independently review and verify every output before relying on it, recording it, or sharing it with students, parents, whānau, colleagues or any third party.</li>
+    <li>You are solely responsible for all assessment decisions, grades, reports and communications you produce using the Service. To the maximum extent permitted by law, we are not liable for decisions made in reliance on AI outputs.</li>
+  </ul>
+
+  <h2>4. Accounts and security</h2>
+  <ul>
+    <li>You are responsible for keeping your login credentials and your Google Gemini API key secure, and for all activity under your account.</li>
+    <li>You must provide your own Google Gemini API key. All AI processing is billed to, and governed by your agreement with, Google. You are responsible for your own API usage and costs.</li>
+    <li>Notify us promptly of any unauthorised use of your account or any security concern.</li>
+  </ul>
+
+  <h2>5. Student data and privacy</h2>
+  <p>Use of the Service involves personal information about students. You agree that:</p>
+  <ul>
+    <li>you have the authority and any necessary permission (including from your school and, where required, parents/guardians) to upload and process students’ personal information and work through the Service;</li>
+    <li>you will use the Service in compliance with the Privacy Act 2020 and your school’s privacy policies;</li>
+    <li>our handling of personal information is described in our <a href="privacy.html">Privacy &amp; Data Statement</a>, which forms part of these Terms.</li>
+  </ul>
+  <p>You, your school and the relevant student remain the owners of student work and data. We process it only to provide the Service.</p>
+
+  <h2>6. Acceptable use and your content</h2>
+  <p>You must only upload material that you are legally entitled to use. In particular you warrant that:</p>
+  <ul>
+    <li>you hold all rights, licences and permissions necessary for any worksheets, textbooks, assessment material or other third-party content you upload or use with the Service (for example, that your use is permitted by the copyright owner’s licence);</li>
+    <li>your use of the Service, and of any such material, does not infringe any copyright, licence terms, or other rights of any third party;</li>
+    <li>you will not upload unlawful, harmful or infringing content, or use the Service for any unlawful purpose.</li>
+  </ul>
+  <div class="callout"><strong>Third-party teaching materials.</strong> Many published worksheets and textbooks are licensed for personal/educational use only and prohibit commercial use, copying or editing. It is your responsibility to ensure your use of any such material with Māka is permitted by its licence. We do not grant you any rights in third-party material.</div>
+
+  <h2>7. Intellectual property</h2>
+  <p>The Service, including its software, design, branding and content (excluding your content and third-party material), is owned by [LEGAL ENTITY NAME] and protected by law. We grant you a limited, non-exclusive, non-transferable, revocable licence to use the Service for its intended purpose. You retain ownership of the student work and content you upload.</p>
+
+  <h2>8. Fees and payment</h2>
+  <ul>
+    <li>Fees, billing cycles and any free or trial components are as described at the point of purchase. Prices are in [CURRENCY] and [include / exclude] GST as stated at checkout.</li>
+    <li>[Refund / cancellation policy — set out clearly here.] Nothing in these Terms limits any rights you have under the Consumer Guarantees Act 1993 that cannot lawfully be excluded.</li>
+    <li>We may change fees on reasonable notice; changes do not affect the current paid period.</li>
+  </ul>
+
+  <h2>9. Third-party services</h2>
+  <p>The Service relies on third-party providers, including Google (Gemini API) for AI processing and Supabase for hosting and storage. Your use of those services through Māka is also subject to their terms. We are not responsible for the acts, omissions, availability or terms of third-party providers.</p>
+
+  <h2>10. Availability</h2>
+  <p>We aim to keep the Service available but do not guarantee it will be uninterrupted, error-free or secure. We may modify, suspend or discontinue all or part of the Service at any time. You are responsible for keeping your own records and exports of important data.</p>
+
+  <h2>11. Disclaimers</h2>
+  <p>To the maximum extent permitted by law, the Service is provided “as is” and “as available”, without warranties of any kind, express or implied, including as to accuracy, fitness for a particular purpose, or non-infringement. We do not warrant that AI outputs are accurate or reliable.</p>
+  <p><strong>New Zealand consumers:</strong> nothing in these Terms excludes, restricts or modifies any guarantee, right or remedy under the Consumer Guarantees Act 1993 or Fair Trading Act 1986 that cannot lawfully be excluded. <strong>Business use:</strong> where you acquire the Service for the purposes of a business, you agree that the Consumer Guarantees Act 1993 does not apply, to the extent permitted by section 43 of that Act.</p>
+
+  <h2>12. Limitation of liability</h2>
+  <p>To the maximum extent permitted by law, and except for liability that cannot lawfully be limited:</p>
+  <ul>
+    <li>we are not liable for any indirect, incidental, special or consequential loss, or any loss of data, profit, goodwill or reputation;</li>
+    <li>our total aggregate liability arising out of or in connection with the Service is limited to the amount you paid us for the Service in the [3] months before the event giving rise to the claim (or, if you have paid nothing, [NZ$100]).</li>
+  </ul>
+
+  <h2>13. Indemnity</h2>
+  <p>You agree to indemnify and hold harmless [LEGAL ENTITY NAME] from any claim, loss, liability or cost (including reasonable legal costs) arising from: (a) your content or material you upload; (b) your breach of these Terms; (c) your breach of any third-party rights, including intellectual property or privacy rights; or (d) your assessment decisions and communications.</p>
+
+  <h2>14. Suspension and termination</h2>
+  <p>You may stop using the Service and delete your account at any time. We may suspend or terminate your access if you breach these Terms or if we reasonably need to. On termination, the licence in clause 7 ends; clauses that by their nature should survive (including 3, 5, 6, 11, 12 and 13) continue.</p>
+
+  <h2>15. Changes to these Terms</h2>
+  <p>We may update these Terms from time to time. Material changes will be notified through the Service or by email. Continued use after changes take effect means you accept the updated Terms.</p>
+
+  <h2>16. Governing law</h2>
+  <p>These Terms are governed by the laws of New Zealand, and you submit to the non-exclusive jurisdiction of the New Zealand courts.</p>
+
+  <h2>17. Contact</h2>
+  <p>Questions about these Terms: <strong>[CONTACT NAME, EMAIL]</strong>.</p>
+
+  <div class="footer">Māka · NZC Assessment Tool · <a href="privacy.html" style="color:inherit">Privacy</a></div>
+</div>
+</body>
+</html>

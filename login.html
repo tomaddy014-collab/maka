@@ -141,6 +141,7 @@ button,a,input{touch-action:manipulation}
     <div class="field"><label for="s-email">Email</label><input type="email" id="s-email" placeholder="you@school.ac.nz" autocomplete="email"></div>
     <div class="field"><label for="s-pass">Password</label><div class="pw-wrap"><input type="password" id="s-pass" placeholder="At least 6 characters" autocomplete="new-password"><button type="button" class="pw-toggle" onclick="togglePw(this)" aria-label="Show password" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
     <button class="btn" id="s-btn" onclick="doSignup()">Create account →</button>
+    <p style="font-size:12px;color:var(--text2);line-height:1.5;margin-top:14px;text-align:center">By creating an account you agree to the <a href="terms.html" target="_blank" rel="noopener" style="color:var(--green)">Terms of Service</a> and <a href="privacy.html" target="_blank" rel="noopener" style="color:var(--green)">Privacy Statement</a>.</p>
   </div>
 
   <div id="panel-reset" class="panel">
@@ -158,7 +159,7 @@ button,a,input{touch-action:manipulation}
   </div>
 </div>
 
-<div class="footer">Māka · NZC Assessment Tool · <a href="privacy.html" style="color:inherit">Privacy &amp; data statement</a></div>
+<div class="footer">Māka · <a href="terms.html" style="color:inherit">Terms</a> · <a href="privacy.html" style="color:inherit">Privacy</a></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
