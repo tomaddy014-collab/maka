@@ -499,9 +499,8 @@ function renderPage(){
     </div>
   `;
 
-  sb.from('profiles').select('gemini_key,writing_style').eq('id',USER.id).maybeSingle().then(function(res){
-    if(res.data&&res.data.gemini_key)document.getElementById('rep-key').value=res.data.gemini_key;
-  }).catch(function(){});
+  // API key lives in this browser only (shared with the tool on this device).
+  try{var _lk=localStorage.getItem('maka-gemini-key')||'';if(_lk)document.getElementById('rep-key').value=_lk;}catch(e){}
 
   if(CHARTSET.length>=2)setTimeout(drawChart,50);if(MATSET.length>=2)setTimeout(drawMathsLine,60);
 

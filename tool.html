@@ -365,7 +365,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <div class="step-row"><span class="step-n">0</span><span class="step-title">Gemini API key</span></div>
       <div class="field">
         <div class="key-row"><input type="password" id="apikey" placeholder="AIza…" autocomplete="off"><button class="eye-btn" onclick="var f=document.getElementById('apikey');f.type=f.type=='password'?'text':'password'"><span data-ic="eye"></span></button></div>
-        <div class="hint" id="key-hint">Get a key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a> — saved to your account when signed in. <strong>For student work, use a key on a billing-enabled project:</strong> Google doesn’t train on paid-tier data, but <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener">free-tier prompts can be used to improve their models</a>.</div>
+        <div class="hint" id="key-hint">Get a key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a> — stored only in this browser, never in Māka’s database. <strong>For student work, use a key on a billing-enabled project:</strong> Google doesn’t train on paid-tier data, but <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener">free-tier prompts can be used to improve their models</a>.</div>
       </div>
     </div>
     <div class="card">
@@ -393,8 +393,8 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 </div>
       <div class="field" id="maths-block" style="display:none">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">
-          <select id="key-select" style="width:auto;font-size:13px;padding:6px 10px;flex:1;max-width:280px" onchange="loadKey()"><option value="">— Load a saved key —</option></select>
-          <button class="btn btn-sm" onclick="saveKey()"><span data-ic="save"></span>Save key</button>
+          <select id="key-select" style="width:auto;font-size:13px;padding:6px 10px;flex:1;max-width:280px" onchange="loadAnswerKey()"><option value="">— Load a saved key —</option></select>
+          <button class="btn btn-sm" onclick="saveAnswerKey()"><span data-ic="save"></span>Save key</button>
         </div>
         <label class="lbl" for="answer-key">Answer key <span style="font-weight:500;text-transform:none;letter-spacing:0">(recommended — leave blank to let the AI solve, less accurate)</span></label>
         <div style="font-size:12px;color:var(--text2);margin-bottom:6px;line-height:1.5">Type the answers, or generate them from a blank worksheet. Sub-parts and multiple worksheets welcome; equivalent forms (½ = 0.5) are accepted.</div>
@@ -538,6 +538,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         </div>
         <div style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:.5px solid var(--border)">
           <div class="lbl">Gemini API key</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:8px;line-height:1.5">Kept in this browser only — never stored in Māka’s database. You’ll re-enter it on a new device.</div>
           <div class="key-row"><input type="password" id="set-key" placeholder="AIza…" autocomplete="off"><button class="eye-btn" onclick="var f=document.getElementById('set-key');f.type=f.type=='password'?'text':'password'"><span data-ic="eye"></span></button><button class="btn" onclick="saveKey()">Save</button></div>
           <div id="key-status"></div>
         </div>
@@ -593,7 +594,9 @@ function fmt(b){return b>1048576?(b/1048576).toFixed(1)+' MB':Math.round(b/1024)
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function stripExt(n){return String(n).replace(/\.[^.]+$/,'')}
 function getStyle(){return(PROFILE&&PROFILE.writing_style&&PROFILE.writing_style.trim())||DEFAULT_STYLE}
-function getKey(){var k=(document.getElementById('apikey').value||'').trim()||(PROFILE&&PROFILE.gemini_key)||'';if(!k){showToast('Please enter your Gemini API key.');return null}return k}
+function storedKey(){try{return localStorage.getItem('maka-gemini-key')||''}catch(e){return ''}}
+function storeKey(k){try{if(k)localStorage.setItem('maka-gemini-key',k);else localStorage.removeItem('maka-gemini-key')}catch(e){}}
+function getKey(){var k=(document.getElementById('apikey').value||'').trim()||storedKey();if(!k){showToast('Please enter your Gemini API key.');return null}return k}
 var ICONS={
   edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   chart:'<path d="M3 3v18h18"/><path d="M7 16v-5"/><path d="M12 16V8"/><path d="M17 16v-9"/>',
@@ -729,13 +732,17 @@ function loadProfileBg(){
     try{
       if(res.data){
         PROFILE=res.data;
-        if(PROFILE.gemini_key){document.getElementById('apikey').value=PROFILE.gemini_key;var kh=document.getElementById('key-hint');if(kh)kh.innerHTML='<span style="color:var(--green);font-weight:600">✓ Loaded from your account.</span> Manage it in Settings.';}
+        // API keys are kept in THIS BROWSER only — never in the shared database.
+        // Move any legacy key out of the profile into local storage, then clear the DB.
+        if(PROFILE.gemini_key){if(!storedKey())storeKey(PROFILE.gemini_key);sb.from('profiles').update({gemini_key:null}).eq('id',USER.id).then(function(){}).catch(function(){});PROFILE.gemini_key=null;}
+        var _lk=storedKey();
+        if(_lk){document.getElementById('apikey').value=_lk;var kh=document.getElementById('key-hint');if(kh)kh.innerHTML='<span style="color:var(--green);font-weight:600">✓ Saved on this device.</span> It stays in this browser only.';}
         if(PROFILE.display_name){document.getElementById('av-init').textContent=PROFILE.display_name[0].toUpperCase();document.getElementById('dd-name').textContent=PROFILE.display_name;document.getElementById('set-name').value=PROFILE.display_name}
-        if(PROFILE.gemini_key)document.getElementById('set-key').value=PROFILE.gemini_key;
+        if(_lk)document.getElementById('set-key').value=_lk;
         if(PROFILE.writing_style)document.getElementById('set-style').value=PROFILE.writing_style;
         updateNavForUser();
       }else{sb.from('profiles').upsert({id:USER.id,email:USER.email,display_name:''}).then(function(){}).catch(function(){})}
-      loadRubrics();loadKeys();loadDashSessions();loadCompareSessions();loadClassStudents();
+      loadRubrics();loadAnswerKeys();loadDashSessions();loadCompareSessions();loadClassStudents();
     }catch(e){}
   }).catch(function(){});
 }
@@ -775,7 +782,7 @@ function toggleDD(){document.getElementById('dropdown').classList.toggle('open')
 document.addEventListener('click',function(e){if(document.getElementById('avatar-btn')&&!document.getElementById('avatar-btn').contains(e.target))document.getElementById('dropdown').classList.remove('open')});
 
 function saveName(){if(!sb||!USER)return;var n=document.getElementById('set-name').value.trim();if(!n)return;sb.from('profiles').update({display_name:n}).eq('id',USER.id).then(function(){PROFILE.display_name=n;document.getElementById('dd-name').textContent=n;document.getElementById('av-init').textContent=n[0].toUpperCase();showStatus('name-status','Saved','ok')}).catch(function(){})}
-function saveKey(){if(!sb||!USER)return;var k=document.getElementById('set-key').value.trim();if(!k)return;sb.from('profiles').update({gemini_key:k}).eq('id',USER.id).then(function(){PROFILE.gemini_key=k;document.getElementById('apikey').value=k;showStatus('key-status','Saved','ok')}).catch(function(){})}
+function saveKey(){var k=document.getElementById('set-key').value.trim();if(!k)return;storeKey(k);document.getElementById('apikey').value=k;showStatus('key-status','Saved on this device','ok')}
 function saveStyle(){if(!sb||!USER)return;var s=document.getElementById('set-style').value.trim();sb.from('profiles').update({writing_style:s||null}).eq('id',USER.id).then(function(){PROFILE.writing_style=s;showStatus('style-status','Saved','ok')}).catch(function(){})}
 function deleteAcct(){if(!sb||!USER||!confirm('Delete your account and ALL data? Cannot be undone.'))return;sb.from('profiles').delete().eq('id',USER.id).then(function(){sb.auth.signOut().then(function(){window.location.href='login.html'})}).catch(function(){})}
 
@@ -875,7 +882,7 @@ document.getElementById('key-worksheet-input').onchange=async function(){
   }
   btn.disabled=false;btn.innerHTML=ic('sparkle')+'Generate key from worksheet';
 };
-function loadKeys(){
+function loadAnswerKeys(){
   if(!sb||!USER)return Promise.resolve([]);
   return sb.from('answer_keys').select('*').eq('teacher_id',USER.id).order('created_at',{ascending:false}).then(function(res){
     var data=(res&&res.data)||[];
@@ -885,15 +892,15 @@ function loadKeys(){
     return data;
   }).catch(function(){return[]});
 }
-function loadKey(){var sel=document.getElementById('key-select');var opt=sel.options[sel.selectedIndex];if(!opt||!opt.value)return;document.getElementById('answer-key').value=opt.dataset.content||''}
-function saveKey(){
+function loadAnswerKey(){var sel=document.getElementById('key-select');var opt=sel.options[sel.selectedIndex];if(!opt||!opt.value)return;document.getElementById('answer-key').value=opt.dataset.content||''}
+function saveAnswerKey(){
   if(!sb||!USER){showToast('Sign in to save keys.');return}
   var content=document.getElementById('answer-key').value.trim();
   if(!content){showToast('Nothing to save — generate or type a key first','warn');return}
   var n=prompt('Name for this answer key:');if(!n)return;
   sb.from('answer_keys').insert({teacher_id:USER.id,name:n,content:content}).then(function(res){
     if(res&&res.error){showToast('Could not save key: '+res.error.message,'err');return}
-    loadKeys();showToast('Key saved','ok');
+    loadAnswerKeys();showToast('Key saved','ok');
   }).catch(function(e){showToast('Could not save key: '+(e.message||e),'err')});
 }
 function loadRubricsSettings(){
@@ -1219,7 +1226,7 @@ function skipPhotoAssign(){closeModal('photo-assign-modal');if(_photoAssignResol
 async function runMarking(){
   var key=getKey();if(!key||!files.length)return;
   ensureNotifyPermission();
-  if(sb&&USER&&key!==(PROFILE.gemini_key||''))sb.from('profiles').update({gemini_key:key}).eq('id',USER.id).then(function(){PROFILE.gemini_key=key}).catch(function(){});
+  storeKey(key);
   var area=document.getElementById('la').value,level=document.getElementById('cl').value,task=document.getElementById('task').value;
   var rub=document.getElementById('rubric').value.trim()||DEFAULT_RUBRIC,style=getStyle();
   var mode=MARK_MODE,answerKey=((document.getElementById('answer-key')||{}).value||'').trim();

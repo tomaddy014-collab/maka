@@ -1,4 +1,4 @@
-var CACHE = 'maka-v11';
+var CACHE = 'maka-v12';
 var ASSETS = [
   '/tool.html',
   '/student-login.html',
