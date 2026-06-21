@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  backend-tests:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run tests
+        run: pytest -q
+
+  e2e-smoke:
+    name: Frontend e2e (Playwright)
+    runs-on: ubuntu-latest
+    # The Playwright image ships Chromium + system deps, so the browser binary
+    # download that's blocked elsewhere is already present here.
+    container:
+      image: mcr.microsoft.com/playwright/python:v1.49.0-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: Serve the static frontend and run the smoke test
+        run: |
+          python3 -m http.server 8000 &
+          # wait for the server to accept connections
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:8000/index.html >/dev/null && break
+            sleep 0.5
+          done
+          python3 tests/e2e/smoke_test.py
