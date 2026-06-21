@@ -545,6 +545,15 @@ const api = {
   workouts(limit) { return this.req("GET", "/lifting/workouts?limit=" + (limit || 10)); },
   prs() { return this.req("GET", "/lifting/prs"); },
   progress(exId) { return this.req("GET", "/lifting/exercises/" + exId + "/progress"); },
+  // ---- Phase 4: nutrition ----
+  foodSearch(q) { return this.req("GET", "/nutrition/search?q=" + encodeURIComponent(q)); },
+  foodBarcode(code) { return this.req("GET", "/nutrition/barcode/" + encodeURIComponent(code)); },
+  logEntry(payload) { return this.req("POST", "/nutrition/entries", payload); },
+  entries(day) { return this.req("GET", "/nutrition/entries" + (day ? "?day=" + day : "")); },
+  delEntry(id) { return this.req("DELETE", "/nutrition/entries/" + id); },
+  getTargets() { return this.req("GET", "/nutrition/targets"); },
+  setTargets(t) { return this.req("PUT", "/nutrition/targets", t); },
+  nutritionSummary(day) { return this.req("GET", "/nutrition/summary" + (day ? "?day=" + day : "")); },
 };
 window.api = api;
 
@@ -634,14 +643,122 @@ const VIEWS = {
 
   lifting: () => liftingView(),
 
-  nutrition: () => stubScreen("Fuel", 4, "nutrition",
-    "Food logging against daily macro/calorie targets (kcal + kJ), Open Food Facts search + barcode lookup, meal photos, and daily/weekly summaries."),
+  nutrition: () => nutritionView(),
 
   analytics: () => stubScreen("Analytics &amp; The Oracle", 5, "perseverance",
     "Cross-trends (training load vs recovery vs sleep) and the AI cardio suggestion engine — balances fat-loss vs endurance honestly, cross-references recovery &amp; lifting, advisory only with reasoning shown. The Anthropic key stays server-side (Phase 2 backend)."),
 
   quotes: () => quoteBankView()
 };
+
+/* ---- Nutrition screen (Phase 4): OFF search/barcode, log, targets, summary - */
+function nutritionView() {
+  if (!api.connected()) {
+    return `
+      <div class="topline"><h1>Fuel</h1><div class="date">${fmtDate()}</div></div>
+      ${renderQuoteBanner("nutrition")}
+      <div class="card"><h3>Backend not connected</h3>
+        <p class="placeholder-note">Food logging + Open Food Facts run through the backend.
+        Connect it on the <a href="#" onclick="navigate('garmin');return false;">Garmin</a> screen first.</p></div>`;
+  }
+  return `
+    <div class="topline"><h1>Fuel</h1><div class="date">${fmtDate()}</div></div>
+    ${renderQuoteBanner("nutrition")}
+
+    <div class="section-title"><h2>Today vs Targets</h2><div class="rule"></div>
+      <button class="btn ghost" style="width:auto;" id="targetsBtn">Set targets</button></div>
+    <div id="macroGrid" class="grid"><div class="card"><p class="placeholder-note">Loading…</p></div></div>
+
+    <div class="section-title"><h2>Find &amp; Log Food</h2><div class="rule"></div></div>
+    <div class="card">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="text" id="foodQ" placeholder="Search Open Food Facts (e.g. greek yoghurt)" style="flex:2;min-width:180px;" />
+        <button class="btn" style="width:auto;" id="foodSearchBtn">Search</button>
+        <input type="text" id="barcodeIn" placeholder="Barcode" style="width:140px;" />
+        <button class="btn ghost" style="width:auto;" id="barcodeBtn">Lookup</button>
+      </div>
+      <div id="foodResults" style="margin-top:12px;"></div>
+      <div id="nutMsg" class="placeholder-note" style="margin-top:8px;"></div>
+    </div>
+
+    <div class="section-title"><h2>Today's Log</h2><div class="rule"></div></div>
+    <div id="entryList" class="card"><p class="placeholder-note">Loading…</p></div>
+
+    <div class="section-title"><h2>Last 7 Days (kcal)</h2><div class="rule"></div></div>
+    <div class="card"><div id="weekChart"></div></div>`;
+}
+
+function macroCard(label, val, target, unit) {
+  const pct = target ? Math.min(100, Math.round((val / target) * 100)) : null;
+  const over = target && val > target;
+  return `<div class="card"><h3>${label}</h3>
+    <div class="stat">${Math.round(val)}<small> / ${target != null ? Math.round(target) : "—"} ${unit}</small></div>
+    ${pct != null ? `<div style="height:8px;background:var(--base);border-radius:6px;margin-top:8px;overflow:hidden;">
+      <div style="height:100%;width:${pct}%;background:${over ? "var(--bad)" : "linear-gradient(90deg,var(--brass),var(--brass-hi))"};"></div></div>` : ""}
+  </div>`;
+}
+
+async function loadMacros() {
+  const grid = document.getElementById("macroGrid"); if (!grid) return;
+  try {
+    const s = await api.nutritionSummary();
+    const t = s.targets || {}, tot = s.totals || {};
+    grid.innerHTML =
+      macroCard("Energy", tot.kcal || 0, t.kcal, "kcal") +
+      macroCard("Protein", tot.protein_g || 0, t.protein_g, "g") +
+      macroCard("Carbs", tot.carbs_g || 0, t.carbs_g, "g") +
+      macroCard("Fat", tot.fat_g || 0, t.fat_g, "g");
+    const wrap = document.getElementById("weekChart");
+    if (wrap) {
+      const max = Math.max(...s.week.map(d => d.kcal), t.kcal || 1) || 1;
+      wrap.innerHTML = `<div style="display:flex;align-items:flex-end;gap:10px;height:150px;">` +
+        s.week.map(d => {
+          const h = Math.max(4, Math.round((d.kcal / max) * 130));
+          return `<div style="flex:1;text-align:center;">
+            <div title="${d.kcal} kcal" style="height:${h}px;background:linear-gradient(180deg,var(--brass-hi),var(--brass));border-radius:4px 4px 0 0;"></div>
+            <div style="font-size:10px;color:var(--ink-faint);margin-top:4px;">${d.date.slice(5)}</div></div>`;
+        }).join("") + `</div>`;
+    }
+  } catch (e) { grid.innerHTML = `<div class="card"><p class="placeholder-note">${e.message}</p></div>`; }
+}
+
+async function loadEntries() {
+  const wrap = document.getElementById("entryList"); if (!wrap) return;
+  try {
+    const es = await api.entries();
+    wrap.innerHTML = es.length ? es.map(e => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);">
+        <span><b>${e.food}</b> <span class="placeholder-note">${e.grams} g${e.meal ? " · " + e.meal : ""}</span></span>
+        <span style="display:flex;gap:12px;align-items:center;">
+          <span style="font-family:var(--font-display);color:var(--brass-hi);">${e.kcal} kcal</span>
+          <span class="placeholder-note">P${e.protein_g} C${e.carbs_g} F${e.fat_g}</span>
+          <button class="btn ghost" style="width:auto;padding:4px 10px;" onclick="deleteEntry(${e.id})">✕</button>
+        </span></div>`).join("")
+      : `<p class="placeholder-note">Nothing logged today yet.</p>`;
+  } catch (e) { wrap.innerHTML = `<p class="placeholder-note">${e.message}</p>`; }
+}
+async function deleteEntry(id) { try { await api.delEntry(id); loadEntries(); loadMacros(); } catch (e) { setText("nutMsg", e.message); } }
+window.deleteEntry = deleteEntry;
+
+function renderFoodResults(foods) {
+  const wrap = document.getElementById("foodResults"); if (!wrap) return;
+  if (!foods.length) { wrap.innerHTML = `<p class="placeholder-note">No results.</p>`; return; }
+  window.__foodResults = foods;
+  wrap.innerHTML = foods.slice(0, 12).map((f, i) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);">
+      <span><b>${f.name}</b> <span class="placeholder-note">${f.kcal_per_100g || "?"} kcal/100g · P${f.protein_g || 0} C${f.carbs_g || 0} F${f.fat_g || 0}</span></span>
+      <span style="display:flex;gap:6px;align-items:center;">
+        <input type="number" id="g${i}" value="100" style="width:80px;" /> g
+        <button class="btn" style="width:auto;padding:6px 12px;" onclick="logFood(${i})">Log</button>
+      </span></div>`).join("");
+}
+async function logFood(i) {
+  const f = (window.__foodResults || [])[i]; if (!f) return;
+  const grams = parseFloat(document.getElementById("g" + i).value) || 100;
+  try { await api.logEntry({ food: f, grams }); setText("nutMsg", `Logged ${f.name}.`); loadEntries(); loadMacros(); }
+  catch (e) { setText("nutMsg", e.message); }
+}
+window.logFood = logFood;
 
 /* ---- Lifting screen (Phase 3): log workouts, PRs, progressive overload --- */
 let liftDraft = [];        // in-progress sets: {exercise_id, reps, weight_kg, rpe}
@@ -873,6 +990,40 @@ const AFTER_RENDER = {
         loadPRs();
         const progSel = document.getElementById("progSel"); if (progSel) loadProgress(progSel.value);
       } catch (e) { setText("liftMsg", e.message); }
+    };
+  },
+
+  nutrition: () => {
+    if (!api.connected()) return;
+    loadMacros(); loadEntries();
+    const sBtn = document.getElementById("foodSearchBtn");
+    if (sBtn) sBtn.onclick = async () => {
+      const q = document.getElementById("foodQ").value.trim(); if (!q) return;
+      setText("nutMsg", "Searching Open Food Facts…");
+      try { renderFoodResults(await api.foodSearch(q)); setText("nutMsg", ""); }
+      catch (e) { setText("nutMsg", e.message); }
+    };
+    const foodQ = document.getElementById("foodQ");
+    if (foodQ) foodQ.addEventListener("keydown", e => { if (e.key === "Enter") sBtn.click(); });
+    const bBtn = document.getElementById("barcodeBtn");
+    if (bBtn) bBtn.onclick = async () => {
+      const code = document.getElementById("barcodeIn").value.trim(); if (!code) return;
+      setText("nutMsg", "Looking up barcode…");
+      try { renderFoodResults([await api.foodBarcode(code)]); setText("nutMsg", ""); }
+      catch (e) { setText("nutMsg", e.message); }
+    };
+    const tBtn = document.getElementById("targetsBtn");
+    if (tBtn) tBtn.onclick = async () => {
+      const cur = await api.getTargets().catch(() => ({}));
+      const kcal = parseFloat(prompt("Daily energy target (kcal):", cur.kcal ?? "") || "");
+      const protein = parseFloat(prompt("Daily protein target (g):", cur.protein_g ?? "") || "");
+      const carbs = parseFloat(prompt("Daily carbs target (g):", cur.carbs_g ?? "") || "");
+      const fat = parseFloat(prompt("Daily fat target (g):", cur.fat_g ?? "") || "");
+      try {
+        await api.setTargets({ kcal: isNaN(kcal) ? null : kcal, protein_g: isNaN(protein) ? null : protein,
+          carbs_g: isNaN(carbs) ? null : carbs, fat_g: isNaN(fat) ? null : fat });
+        loadMacros();
+      } catch (e) { setText("nutMsg", e.message); }
     };
   },
 };

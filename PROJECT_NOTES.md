@@ -64,7 +64,18 @@ AI cardio suggestion engine.
     connection (workouts persisted server-side). pre_workout quote on screen.
   - 5 new tests (Epley, idempotent exercises, PR tracking, overload, validation).
     Suite: 17 passing.
-- [ ] Phase 4 — Nutrition (Open Food Facts)
+- [x] **Phase 4 — Nutrition (Open Food Facts)**
+  - Backend `/nutrition` router: OFF proxy (`/search`, `/barcode/{code}`,
+    normalised server-side, no key), food upsert (by barcode), entry logging
+    with gram-scaled macros, targets (GET/PUT), daily summary + 7-day kcal
+    series. Energy stored kcal; responses include kJ (×4.184).
+  - Frontend Fuel screen: macro cards vs targets (progress bars), OFF search +
+    barcode lookup → log with grams, today's log (delete), 7-day kcal chart,
+    set-targets prompt. nutrition quote on screen.
+  - 6 new tests (kJ, OFF normaliser, macro scaling, targets/summary remaining,
+    delete). Suite: 22 passing.
+  - DEFERRED to Phase 5 polish: meal-photo UPLOAD UI + Supabase Storage wiring
+    (the `photos` table + schema already exist).
 - [ ] Phase 5 — Analytics + AI cardio engine + PWA
 
 ## Data model (localStorage `atlas_db_v1`, mirrors future Postgres schema)
