@@ -1,0 +1,23 @@
+# Secrets — never commit real values (real backend lands in Phase 2)
+.env
+.env.*
+!.env.example
+
+# Node / build (future /frontend)
+node_modules/
+dist/
+.vite/
+
+# Python (future /backend)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
