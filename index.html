@@ -538,6 +538,13 @@ const api = {
   syncNow() { return this.req("POST", "/garmin/sync"); },
   syncStatus() { return this.req("GET", "/garmin/status"); },
   reauth(mfa_code) { return this.req("POST", "/garmin/reauth", { mfa_code: mfa_code || null }); },
+  // ---- Phase 3: lifting ----
+  exercises() { return this.req("GET", "/lifting/exercises"); },
+  addExercise(name, muscle_group) { return this.req("POST", "/lifting/exercises", { name, muscle_group }); },
+  logWorkout(payload) { return this.req("POST", "/lifting/workouts", payload); },
+  workouts(limit) { return this.req("GET", "/lifting/workouts?limit=" + (limit || 10)); },
+  prs() { return this.req("GET", "/lifting/prs"); },
+  progress(exId) { return this.req("GET", "/lifting/exercises/" + exId + "/progress"); },
 };
 window.api = api;
 
@@ -625,8 +632,7 @@ const VIEWS = {
 
   garmin: () => garminView(),
 
-  lifting: () => stubScreen("Iron Log", 3, "pre_workout",
-    "Workout logging (sets/reps/weight/RPE), an extensible exercise library, progressive-overload charts, and automatic PR tracking. The pre-workout quote above sets the tone for the logging screen."),
+  lifting: () => liftingView(),
 
   nutrition: () => stubScreen("Fuel", 4, "nutrition",
     "Food logging against daily macro/calorie targets (kcal + kJ), Open Food Facts search + barcode lookup, meal photos, and daily/weekly summaries."),
@@ -636,6 +642,82 @@ const VIEWS = {
 
   quotes: () => quoteBankView()
 };
+
+/* ---- Lifting screen (Phase 3): log workouts, PRs, progressive overload --- */
+let liftDraft = [];        // in-progress sets: {exercise_id, reps, weight_kg, rpe}
+let liftExercises = [];    // cached exercise library
+
+function liftingView() {
+  if (!api.connected()) {
+    return `
+      <div class="topline"><h1>Iron Log</h1><div class="date">${fmtDate()}</div></div>
+      ${renderQuoteBanner("pre_workout")}
+      <div class="card"><h3>Backend not connected</h3>
+        <p class="placeholder-note">Workouts are stored on the backend. Connect it on the
+        <a href="#" onclick="navigate('garmin');return false;">Garmin</a> screen, then come back to log lifts.</p></div>`;
+  }
+  return `
+    <div class="topline"><h1>Iron Log</h1><div class="date">${fmtDate()}</div></div>
+    ${renderQuoteBanner("pre_workout")}
+
+    <div class="section-title"><h2>Log a Workout</h2><div class="rule"></div></div>
+    <div class="card">
+      <div class="field">
+        <label>Add a set</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+          <select id="exSel" style="flex:2;min-width:160px;background:var(--base);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:11px;"></select>
+          <input type="number" id="repsIn" placeholder="reps" style="width:90px;" />
+          <input type="number" id="weightIn" step="0.5" placeholder="kg" style="width:90px;" />
+          <input type="number" id="rpeIn" step="0.5" placeholder="RPE" style="width:90px;" />
+          <button class="btn" style="width:auto;" id="addSetBtn">Add set</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <input type="text" id="newExName" placeholder="New exercise name" style="flex:1;" />
+        <button class="btn ghost" style="width:auto;" id="newExBtn">Add to library</button>
+      </div>
+      <div id="draftSets" style="margin-top:14px;"></div>
+      <div id="liftMsg" class="placeholder-note" style="margin-top:10px;"></div>
+      <button class="btn" style="width:auto;margin-top:10px;" id="saveWorkoutBtn">Save workout</button>
+    </div>
+
+    <div class="section-title"><h2>Personal Records</h2><div class="rule"></div></div>
+    <div id="prGrid" class="grid"><div class="card"><p class="placeholder-note">Loading…</p></div></div>
+
+    <div class="section-title"><h2>Progressive Overload</h2><div class="rule"></div></div>
+    <div class="card">
+      <select id="progSel" style="background:var(--base);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:11px;min-width:200px;"></select>
+      <div id="progChart" style="margin-top:16px;"></div>
+    </div>`;
+}
+
+function renderDraft() {
+  const wrap = document.getElementById("draftSets");
+  if (!wrap) return;
+  if (!liftDraft.length) { wrap.innerHTML = `<p class="placeholder-note">No sets yet — add some above.</p>`; return; }
+  const nameOf = id => (liftExercises.find(e => e.id === id) || {}).name || "?";
+  wrap.innerHTML = liftDraft.map((s, i) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);">
+      <span><b>${nameOf(s.exercise_id)}</b> — ${s.reps || "—"} × ${s.weight_kg != null ? s.weight_kg + " kg" : "—"}${s.rpe ? " @ RPE " + s.rpe : ""}</span>
+      <button class="btn ghost" style="width:auto;padding:4px 10px;" onclick="removeDraftSet(${i})">✕</button>
+    </div>`).join("");
+}
+function removeDraftSet(i) { liftDraft.splice(i, 1); renderDraft(); }
+window.removeDraftSet = removeDraftSet;
+
+function overloadChart(series) {
+  if (!series || !series.length) return `<p class="placeholder-note">No data yet for this lift.</p>`;
+  const max = Math.max(...series.map(p => p.top_weight_kg)) || 1;
+  return `<div style="display:flex;align-items:flex-end;gap:10px;height:160px;">` +
+    series.map(p => {
+      const h = Math.max(6, Math.round((p.top_weight_kg / max) * 140));
+      return `<div style="flex:1;text-align:center;">
+        <div title="${p.top_weight_kg} kg · 1RM≈${p.best_1rm}" style="height:${h}px;background:linear-gradient(180deg,var(--oxblood-hi),var(--oxblood));border-radius:4px 4px 0 0;"></div>
+        <div style="font-size:10px;color:var(--ink-faint);margin-top:4px;">${p.date.slice(5)}</div>
+        <div style="font-size:11px;color:var(--brass-hi);font-family:var(--font-display);">${p.top_weight_kg}</div>
+      </div>`;
+    }).join("") + `</div>`;
+}
 
 /* ---- Garmin screen: connect to backend, sync, show status + activities -- */
 function garminView() {
@@ -748,7 +830,71 @@ const AFTER_RENDER = {
 
     if (api.connected()) { loadSyncStatus(); loadActivities(); }
   },
+
+  lifting: async () => {
+    if (!api.connected()) return;
+    try {
+      liftExercises = await api.exercises();
+      const opts = liftExercises.map(e => `<option value="${e.id}">${e.name}</option>`).join("");
+      const exSel = document.getElementById("exSel"); if (exSel) exSel.innerHTML = opts;
+      const progSel = document.getElementById("progSel"); if (progSel) progSel.innerHTML = opts;
+      renderDraft();
+      loadPRs();
+      if (progSel) { progSel.onchange = () => loadProgress(progSel.value); if (liftExercises.length) loadProgress(liftExercises[0].id); }
+    } catch (e) { setText("liftMsg", e.message); }
+
+    const addSet = document.getElementById("addSetBtn");
+    if (addSet) addSet.onclick = () => {
+      const ex = parseInt(document.getElementById("exSel").value, 10);
+      const reps = parseInt(document.getElementById("repsIn").value, 10);
+      const w = parseFloat(document.getElementById("weightIn").value);
+      const rpe = parseFloat(document.getElementById("rpeIn").value);
+      if (!ex) { setText("liftMsg", "Pick an exercise."); return; }
+      liftDraft.push({ exercise_id: ex, reps: isNaN(reps) ? null : reps,
+        weight_kg: isNaN(w) ? null : w, rpe: isNaN(rpe) ? null : rpe });
+      document.getElementById("repsIn").value = ""; document.getElementById("weightIn").value = ""; document.getElementById("rpeIn").value = "";
+      setText("liftMsg", ""); renderDraft();
+    };
+
+    const newExBtn = document.getElementById("newExBtn");
+    if (newExBtn) newExBtn.onclick = async () => {
+      const name = document.getElementById("newExName").value.trim();
+      if (!name) return;
+      try { await api.addExercise(name, null); document.getElementById("newExName").value = ""; navigate("lifting"); }
+      catch (e) { setText("liftMsg", e.message); }
+    };
+
+    const saveBtn = document.getElementById("saveWorkoutBtn");
+    if (saveBtn) saveBtn.onclick = async () => {
+      if (!liftDraft.length) { setText("liftMsg", "Add at least one set."); return; }
+      try {
+        await api.logWorkout({ sets: liftDraft });
+        liftDraft = []; renderDraft(); setText("liftMsg", "Workout saved. 💪");
+        loadPRs();
+        const progSel = document.getElementById("progSel"); if (progSel) loadProgress(progSel.value);
+      } catch (e) { setText("liftMsg", e.message); }
+    };
+  },
 };
+
+async function loadPRs() {
+  const wrap = document.getElementById("prGrid"); if (!wrap) return;
+  try {
+    const prs = await api.prs();
+    wrap.innerHTML = prs.length ? prs.map(p => `
+      <div class="card"><h3>${p.exercise}</h3>
+        <div class="stat">${p.max_weight_kg}<small> kg</small></div>
+        <p class="placeholder-note">${p.max_weight_reps || "—"} reps · est. 1RM ≈ ${p.best_est_1rm_kg} kg</p>
+      </div>`).join("")
+      : `<div class="card"><p class="placeholder-note">No PRs yet — log a workout.</p></div>`;
+  } catch (e) { wrap.innerHTML = `<div class="card"><p class="placeholder-note">${e.message}</p></div>`; }
+}
+
+async function loadProgress(exId) {
+  const wrap = document.getElementById("progChart"); if (!wrap || !exId) return;
+  try { const p = await api.progress(exId); wrap.innerHTML = overloadChart(p.series); }
+  catch (e) { wrap.innerHTML = `<p class="placeholder-note">${e.message}</p>`; }
+}
 
 async function loadSyncStatus() {
   try {

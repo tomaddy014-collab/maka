@@ -32,3 +32,22 @@ def seed_quotes(db: Session) -> None:
         db.add(models.Quote(category=category, text=text,
                             author="PLACEHOLDER — verify", verified=False))
     db.commit()
+
+
+# A small starter exercise library — extend freely via POST /lifting/exercises.
+SEED_EXERCISES = [
+    ("Back Squat", "legs"), ("Front Squat", "legs"), ("Deadlift", "back"),
+    ("Romanian Deadlift", "hamstrings"), ("Bench Press", "chest"),
+    ("Incline Bench Press", "chest"), ("Overhead Press", "shoulders"),
+    ("Barbell Row", "back"), ("Pull-up", "back"), ("Lat Pulldown", "back"),
+    ("Dumbbell Curl", "biceps"), ("Triceps Pushdown", "triceps"),
+    ("Leg Press", "legs"), ("Leg Curl", "hamstrings"), ("Calf Raise", "calves"),
+]
+
+
+def seed_exercises(db: Session) -> None:
+    if db.query(models.Exercise).count() > 0:
+        return
+    for name, group in SEED_EXERCISES:
+        db.add(models.Exercise(name=name, muscle_group=group))
+    db.commit()

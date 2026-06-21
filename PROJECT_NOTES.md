@@ -54,7 +54,16 @@ AI cardio suggestion engine.
     post-render hooks (`AFTER_RENDER`) fetch live data after each navigate.
   - Note: `with TestClient(app)` is required in ad-hoc scripts so the lifespan
     runs `init_db()` (create_all) before requests.
-- [ ] Phase 3 — Weightlifting tracker
+- [x] **Phase 3 — Weightlifting tracker**
+  - Backend `/lifting` router: exercise library (seeded 15, extensible via
+    POST), workout logging (sets: reps/weight/RPE), `/prs` (heaviest weight +
+    best Epley est. 1RM per exercise), `/exercises/{id}/progress` (per-day top
+    weight, volume, best 1RM for overload charts).
+  - Frontend Lifting screen: set builder + add-to-library, save workout, PR
+    cards, exercise picker driving a CSS bar overload chart. Requires backend
+    connection (workouts persisted server-side). pre_workout quote on screen.
+  - 5 new tests (Epley, idempotent exercises, PR tracking, overload, validation).
+    Suite: 17 passing.
 - [ ] Phase 4 — Nutrition (Open Food Facts)
 - [ ] Phase 5 — Analytics + AI cardio engine + PWA
 

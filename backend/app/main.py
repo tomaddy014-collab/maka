@@ -10,8 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .db import init_db, SessionLocal
-from .seed import seed_quotes
-from .routers import auth, garmin, dashboard
+from .seed import seed_quotes, seed_exercises
+from .routers import auth, garmin, dashboard, lifting
 
 settings = get_settings()
 _scheduler = None  # APScheduler instance, created only if enabled
@@ -24,6 +24,7 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         seed_quotes(db)
+        seed_exercises(db)
     finally:
         db.close()
 
@@ -58,6 +59,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(garmin.router)
 app.include_router(dashboard.router)
+app.include_router(lifting.router)
 
 
 @app.get("/health", tags=["meta"])
