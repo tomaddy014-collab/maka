@@ -1,0 +1,14 @@
+{
+  "name": "ATLAS — Bear the Weight",
+  "short_name": "ATLAS",
+  "description": "Personal fitness, health, nutrition and weightlifting tracker.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0b0a",
+  "theme_color": "#0d0b0a",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -76,7 +76,24 @@ AI cardio suggestion engine.
     delete). Suite: 22 passing.
   - DEFERRED to Phase 5 polish: meal-photo UPLOAD UI + Supabase Storage wiring
     (the `photos` table + schema already exist).
-- [ ] Phase 5 — Analytics + AI cardio engine + PWA
+- [x] **Phase 5 — Analytics + AI cardio engine + PWA**
+  - Backend `/analytics` router: `/trends` (training load, readiness, sleep,
+    weight cross-series) and the **AI cardio engine** — `/cardio-suggestion`
+    gathers recent Garmin cardio + recovery + sleep + last-lift muscle groups,
+    calls **claude-opus-4-8** (adaptive thinking, structured-output JSON schema,
+    key server-side only) for ONE advisory session that balances fat-loss vs
+    endurance, shows reasoning + honest trade-off + recovery/lifting cross-ref.
+    `/cardio-action` logs accept/tweak/dismiss + what you did; `/cardio-history`.
+  - New `cardio_suggestions` table.
+  - Frontend Analytics screen: "Consult the Oracle" with accept/tweak/dismiss,
+    CSS cross-trend charts, suggestion history. perseverance quote.
+  - PWA: `manifest.webmanifest`, `icon.svg`, `sw.js` (app-shell offline cache;
+    API calls pass through), apple-touch meta. Installable on phone.
+  - `DEPLOY.md`: Netlify (frontend) + Railway (backend) + Supabase (DB) step-by-step.
+  - 5 new tests (trends, key-required guard, mocked engine, action+history). Suite: 25 passing.
+
+  Note: AI engine uses `claude-opus-4-8`; the Anthropic key NEVER reaches the
+  frontend — the browser calls the backend, the backend calls Claude.
 
 ## Data model (localStorage `atlas_db_v1`, mirrors future Postgres schema)
 Tables: `user`, `activities`, `sleep_records`, `body_metrics`,

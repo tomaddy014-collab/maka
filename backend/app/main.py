@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
 from .db import init_db, SessionLocal
 from .seed import seed_quotes, seed_exercises
-from .routers import auth, garmin, dashboard, lifting, nutrition
+from .routers import auth, garmin, dashboard, lifting, nutrition, analytics
 
 settings = get_settings()
 _scheduler = None  # APScheduler instance, created only if enabled
@@ -61,6 +61,7 @@ app.include_router(garmin.router)
 app.include_router(dashboard.router)
 app.include_router(lifting.router)
 app.include_router(nutrition.router)
+app.include_router(analytics.router)
 
 
 @app.get("/health", tags=["meta"])

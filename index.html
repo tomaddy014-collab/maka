@@ -4,6 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="theme-color" content="#0d0b0a" />
+<!-- PWA: installable on phone home screen, works offline -->
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon.svg" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="ATLAS" />
 <title>ATLAS — Bear the Weight</title>
 <!--
   ============================================================================
@@ -554,6 +560,11 @@ const api = {
   getTargets() { return this.req("GET", "/nutrition/targets"); },
   setTargets(t) { return this.req("PUT", "/nutrition/targets", t); },
   nutritionSummary(day) { return this.req("GET", "/nutrition/summary" + (day ? "?day=" + day : "")); },
+  // ---- Phase 5: analytics + AI cardio engine ----
+  trends(days) { return this.req("GET", "/analytics/trends?days=" + (days || 30)); },
+  cardioSuggestion() { return this.req("POST", "/analytics/cardio-suggestion"); },
+  cardioAction(id, action, note) { return this.req("POST", "/analytics/cardio-action", { suggestion_id: id, action, note: note || null }); },
+  cardioHistory() { return this.req("GET", "/analytics/cardio-history"); },
 };
 window.api = api;
 
@@ -645,11 +656,108 @@ const VIEWS = {
 
   nutrition: () => nutritionView(),
 
-  analytics: () => stubScreen("Analytics &amp; The Oracle", 5, "perseverance",
-    "Cross-trends (training load vs recovery vs sleep) and the AI cardio suggestion engine — balances fat-loss vs endurance honestly, cross-references recovery &amp; lifting, advisory only with reasoning shown. The Anthropic key stays server-side (Phase 2 backend)."),
+  analytics: () => analyticsView(),
 
   quotes: () => quoteBankView()
 };
+
+/* ---- Analytics screen (Phase 5): trends + AI cardio engine -------------- */
+function analyticsView() {
+  if (!api.connected()) {
+    return `
+      <div class="topline"><h1>Analytics &amp; The Oracle</h1><div class="date">${fmtDate()}</div></div>
+      ${renderQuoteBanner("perseverance")}
+      <div class="card"><h3>Backend not connected</h3>
+        <p class="placeholder-note">Trends and the AI cardio engine run on the backend (the
+        Anthropic key stays server-side). Connect it on the
+        <a href="#" onclick="navigate('garmin');return false;">Garmin</a> screen.</p></div>`;
+  }
+  return `
+    <div class="topline"><h1>Analytics &amp; The Oracle</h1><div class="date">${fmtDate()}</div></div>
+    ${renderQuoteBanner("perseverance")}
+
+    <div class="section-title"><h2>The Oracle — AI Cardio Suggestion</h2><div class="rule"></div></div>
+    <div class="card" style="border-color:rgba(181,138,60,.3);">
+      <p class="placeholder-note" style="margin-top:0;">Reasons over your recent Garmin cardio, recovery,
+      sleep and lifting to suggest today's session — balancing fat-loss and endurance, and honest about
+      the trade-off. <b>Advisory only — you make the final call.</b></p>
+      <button class="btn" style="width:auto;" id="oracleBtn">Consult the Oracle</button>
+      <div id="oracleOut" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="section-title"><h2>Cross-Trends (30 days)</h2><div class="rule"></div></div>
+    <div id="trendGrid" class="grid"><div class="card"><p class="placeholder-note">Loading…</p></div></div>
+
+    <div class="section-title"><h2>Recent Suggestions</h2><div class="rule"></div></div>
+    <div id="oracleHistory" class="card"><p class="placeholder-note">Loading…</p></div>`;
+}
+
+function trendChart(title, series, unit, color) {
+  if (!series || !series.length) return `<div class="card"><h3>${title}</h3><p class="placeholder-note">No data yet.</p></div>`;
+  const vals = series.map(p => p.value).filter(v => v != null);
+  const max = Math.max(...vals, 1), min = Math.min(...vals, 0);
+  const range = (max - min) || 1;
+  const bars = series.map(p => {
+    const h = p.value == null ? 2 : Math.max(3, Math.round(((p.value - min) / range) * 90) + 6);
+    return `<div title="${p.date}: ${p.value ?? "—"}" style="flex:1;height:${h}px;background:${color};border-radius:2px 2px 0 0;min-width:3px;"></div>`;
+  }).join("");
+  const latest = vals.length ? vals[vals.length - 1] : "—";
+  return `<div class="card"><h3>${title}</h3>
+    <div class="stat" style="font-size:28px;">${latest}<small> ${unit}</small></div>
+    <div style="display:flex;align-items:flex-end;gap:2px;height:100px;margin-top:8px;">${bars}</div></div>`;
+}
+
+async function loadTrends() {
+  const wrap = document.getElementById("trendGrid"); if (!wrap) return;
+  try {
+    const t = await api.trends(30);
+    wrap.innerHTML =
+      trendChart("Training Load", t.training_load, "", "linear-gradient(180deg,var(--oxblood-hi),var(--oxblood))") +
+      trendChart("Readiness", t.readiness, "/100", "linear-gradient(180deg,var(--good),#3f6233)") +
+      trendChart("Sleep", t.sleep_h, "h", "linear-gradient(180deg,var(--brass-hi),var(--brass))") +
+      trendChart("Body Weight", t.weight_kg, "kg", "linear-gradient(180deg,var(--ink-dim),var(--ink-faint))");
+  } catch (e) { wrap.innerHTML = `<div class="card"><p class="placeholder-note">${e.message}</p></div>`; }
+}
+
+function renderSuggestion(id, s) {
+  return `
+    <div class="quote" style="border-left-color:var(--brass);">
+      <div class="by" style="margin-left:0;color:var(--brass-hi);font-size:18px;">${s.session_type} · ${s.duration_min} min</div>
+      <p style="margin:6px 0 0;"><b>Intensity:</b> ${s.intensity}</p>
+      <p style="margin:8px 0 0;"><b>Why:</b> ${s.reasoning}</p>
+      <p style="margin:8px 0 0;color:var(--warn);"><b>Trade-off:</b> ${s.tradeoff}</p>
+      <p style="margin:8px 0 0;color:var(--ink-dim);"><b>Cross-reference:</b> ${s.cross_reference}</p>
+      <p class="placeholder-note" style="margin:8px 0 0;">Confidence: ${s.confidence} · advisory only — adjust freely.</p>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+      <button class="btn" style="width:auto;" onclick="oracleAct(${id},'accepted')">Accept</button>
+      <button class="btn ghost" style="width:auto;" onclick="oracleAct(${id},'tweaked')">Tweak &amp; log</button>
+      <button class="btn ghost" style="width:auto;" onclick="oracleAct(${id},'dismissed')">Dismiss</button>
+    </div>`;
+}
+
+async function oracleAct(id, action) {
+  let note = null;
+  if (action !== "dismissed") note = prompt("What did you actually do? (optional)") || null;
+  try { await api.cardioAction(id, action, note); setText("oracleOut", ""); loadOracleHistory(); }
+  catch (e) { setText("oracleOut", e.message); }
+}
+window.oracleAct = oracleAct;
+
+async function loadOracleHistory() {
+  const wrap = document.getElementById("oracleHistory"); if (!wrap) return;
+  try {
+    const h = await api.cardioHistory();
+    wrap.innerHTML = h.length ? h.map(r => `
+      <div style="padding:8px 0;border-bottom:1px solid var(--line);">
+        <b>${r.suggestion.session_type}</b> · ${r.suggestion.duration_min} min
+        <span class="placeholder-note">${new Date(r.created_at).toLocaleDateString("en-NZ")}</span>
+        ${r.action ? `<span class="pill" style="margin-left:8px;">${r.action}</span>` : ""}
+        ${r.note ? `<div class="placeholder-note">↳ ${r.note}</div>` : ""}
+      </div>`).join("")
+      : `<p class="placeholder-note">No suggestions yet — consult the Oracle above.</p>`;
+  } catch (e) { wrap.innerHTML = `<p class="placeholder-note">${e.message}</p>`; }
+}
 
 /* ---- Nutrition screen (Phase 4): OFF search/barcode, log, targets, summary - */
 function nutritionView() {
@@ -1026,6 +1134,22 @@ const AFTER_RENDER = {
       } catch (e) { setText("nutMsg", e.message); }
     };
   },
+
+  analytics: () => {
+    if (!api.connected()) return;
+    loadTrends(); loadOracleHistory();
+    const btn = document.getElementById("oracleBtn");
+    if (btn) btn.onclick = async () => {
+      setHTML("oracleOut", `<p class="placeholder-note">The Oracle is reasoning over your data…</p>`);
+      btn.disabled = true;
+      try {
+        const r = await api.cardioSuggestion();
+        setHTML("oracleOut", renderSuggestion(r.id, r.suggestion));
+      } catch (e) {
+        setHTML("oracleOut", `<p class="placeholder-note">${e.message}</p>`);
+      } finally { btn.disabled = false; }
+    };
+  },
 };
 
 async function loadPRs() {
@@ -1143,6 +1267,13 @@ document.getElementById("gateLogo").innerHTML = atlasLogo(64);
 document.getElementById("sideLogo").innerHTML = atlasLogo(40);
 buildNav();
 showGate();
+
+/* PWA: register the service worker for offline shell caching. */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {/* offline-first is best-effort */});
+  });
+}
 </script>
 </body>
 </html>

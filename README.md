@@ -35,7 +35,12 @@ verify wording and author yourself before trusting any of them. Open the
 
 ## Roadmap
 1. **Skeleton** ✅
-2. Garmin sync (adapter layer: unofficial `garth` + official Health API stub)
-3. Weightlifting tracker (progressive overload, PR tracking)
-4. Nutrition (Open Food Facts search + barcode)
-5. Analytics + advisory AI cardio engine + PWA
+2. **Garmin sync** ✅ (adapter layer: unofficial `garth` + official Health API stub)
+3. **Weightlifting tracker** ✅ (progressive overload, PR tracking)
+4. **Nutrition** ✅ (Open Food Facts search + barcode)
+5. **Analytics + advisory AI cardio engine + PWA** ✅
+
+The Python backend lives in `/backend` (FastAPI + SQLAlchemy). See
+`backend/README.md` to run it and `DEPLOY.md` for Netlify + Railway + Supabase.
+The AI cardio engine calls Claude (`claude-opus-4-8`) server-side — the
+Anthropic key never reaches the browser.

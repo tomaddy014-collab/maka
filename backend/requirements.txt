@@ -11,6 +11,7 @@ python-multipart==0.0.17
 APScheduler==3.10.4                 # simplest reliable scheduled sync (see sync_service.py)
 garth==0.4.46                       # unofficial Garmin Connect client
 httpx==0.28.0
+anthropic==0.69.0                   # AI cardio suggestion engine (server-side only)
 
 # --- dev/test ---
 pytest==8.3.4

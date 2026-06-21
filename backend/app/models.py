@@ -153,6 +153,17 @@ class NutritionTarget(Base):
 # Photos — meal + progress pics (you opted IN). Stored as Supabase object keys
 # in production; a URL/path is fine for now.
 # --------------------------------------------------------------------------- #
+class CardioSuggestion(Base):
+    """A logged AI cardio suggestion + what the user actually did (Phase 5).
+    Advisory only — stored so future suggestions can learn from outcomes."""
+    __tablename__ = "cardio_suggestions"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    suggestion: Mapped[str] = mapped_column(Text)        # JSON: the engine's output
+    user_action: Mapped[str | None] = mapped_column(String(16))  # accepted|tweaked|dismissed
+    user_note: Mapped[str | None] = mapped_column(Text)  # what they actually did
+
+
 class Photo(Base):
     __tablename__ = "photos"
     id: Mapped[int] = mapped_column(primary_key=True)
