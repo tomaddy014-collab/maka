@@ -32,7 +32,22 @@ AI cardio suggestion engine.
   - Dashboard shell + nav stubs for Phases 2–5.
   - Forward-looking localStorage data model mirroring the planned schema.
   - Quote Bank screen with verify workflow.
-- [ ] Phase 2 — Garmin sync (adapter layer, unofficial garth + official stub)
+- [x] **Phase 2 — Garmin sync (backend)** — real FastAPI backend in `/backend`
+  - Garmin **adapter layer**: one interface (`app/garmin/base.py`), two impls
+    behind `GARMIN_ADAPTER` flag — `unofficial.py` (garth, default) +
+    `official.py` (Health API stub). Factory in `factory.py`.
+  - Session handling via garth token cache (`GARMIN_TOKEN_DIR`); re-auth +
+    MFA via `POST /garmin/reauth`; expiry surfaces `needs_reauth`.
+  - SQLAlchemy models for the whole schema (Phase 2 active, 3–5 defined).
+  - Single-user auth: `APP_PASSWORD` → JWT (`/auth/login`).
+  - Sync service (manual `POST /garmin/sync` + optional in-process APScheduler
+    scheduled sync; trade-offs documented in `sync_service.py`).
+  - Dashboard endpoint (readiness/sleep/weight/recent activities; surfaces a
+    recovery quote when readiness ≤ 40). Quotes seeded server-side.
+  - 12 passing pytest tests using an in-memory DB + FakeGarminAdapter (no real
+    Garmin calls). Run: `cd backend && pytest -q`.
+  - TODO frontend: wire `index.html` Garmin screen to call the backend
+    (`VITE_API_URL`/configurable base) — next sub-step.
 - [ ] Phase 3 — Weightlifting tracker
 - [ ] Phase 4 — Nutrition (Open Food Facts)
 - [ ] Phase 5 — Analytics + AI cardio engine + PWA

@@ -1,0 +1,16 @@
+# ATLAS backend — Python dependencies (Phase 2: Garmin sync)
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+SQLAlchemy==2.0.36
+psycopg2-binary==2.9.10        # Postgres driver (Supabase); sqlite needs no driver
+pydantic==2.10.3
+pydantic-settings==2.6.1
+python-jose[cryptography]==3.3.0   # JWT for the single-user session
+passlib[bcrypt]==1.7.4              # hash the app password
+python-multipart==0.0.17
+APScheduler==3.10.4                 # simplest reliable scheduled sync (see sync_service.py)
+garth==0.4.46                       # unofficial Garmin Connect client
+httpx==0.28.0
+
+# --- dev/test ---
+pytest==8.3.4

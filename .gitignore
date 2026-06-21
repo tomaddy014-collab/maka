@@ -8,12 +8,17 @@ node_modules/
 dist/
 .vite/
 
-# Python (future /backend)
+# Python (/backend)
 __pycache__/
 *.py[cod]
 .venv/
 venv/
 *.egg-info/
+.pytest_cache/
+
+# Local DB + Garmin session tokens (never commit)
+*.db
+backend/.garmin_session/
 
 # OS / editor
 .DS_Store
