@@ -131,3 +131,11 @@ Provide via `.env` (never commit) + `.env.example` once the backend exists.
 Open `index.html` in a browser, or serve the folder:
 `python3 -m http.server 8000` → http://localhost:8000
 First run asks you to set a passphrase.
+
+## Design pass + e2e (skills)
+Vendored skills in `.claude/skills/` (see its README). Applied a ui-ux-pro-max /
+web-design-guidelines accessibility pass: visible keyboard focus rings,
+`prefers-reduced-motion` support, and a ≤400px phone breakpoint. Added a
+Playwright smoke test at `tests/e2e/smoke_test.py` (gate → screens → quote
+verify → lock); syntax-checked + selectors verified against index.html, but not
+executed here (Chromium binary download blocked by network policy) — run locally/CI.

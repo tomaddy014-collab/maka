@@ -93,6 +93,22 @@
   a { color: var(--brass-hi); text-decoration: none; }
   button { font-family: var(--font-body); cursor: pointer; }
 
+  /* Accessibility: visible keyboard focus (brass ring) on all interactive elements. */
+  a:focus-visible, button:focus-visible, input:focus-visible,
+  select:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--brass-hi);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  /* Respect users who prefer reduced motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .001ms !important;
+      transition-duration: .001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
   /* ---------------------------------------------------------------------- */
   /* LAYOUT                                                                  */
   /* ---------------------------------------------------------------------- */
@@ -230,6 +246,12 @@
     .mobile-nav .nav-btn { width: auto; white-space: nowrap; }
     .mobile-nav .nav-btn .soon { display: none; }
     .main { padding: 18px; }
+  }
+  @media (max-width: 400px) {
+    .main { padding: 14px; }
+    .grid { grid-template-columns: 1fr; }
+    .topline h1 { font-size: 32px; }
+    .gate-card { padding: 28px 20px; }
   }
 </style>
 </head>
