@@ -498,6 +498,50 @@ function bootDB() {
 }
 
 /* ========================================================================
+   BACKEND API CLIENT (Phase 2)
+   The single-file frontend talks to the FastAPI backend over HTTPS. The
+   backend URL + session token live in localStorage (the React build will
+   read the URL from VITE_API_URL instead). If no backend is configured, the
+   Garmin/dashboard screens fall back to their "not connected" state — the app
+   still works offline for everything that's client-side.
+   ======================================================================== */
+const CFG_KEY = "atlas_cfg_v1";
+function loadCfg() { try { return JSON.parse(localStorage.getItem(CFG_KEY) || "{}"); } catch { return {}; } }
+function saveCfg(c) { localStorage.setItem(CFG_KEY, JSON.stringify(c)); }
+
+const api = {
+  base() { return (loadCfg().apiUrl || "").replace(/\/+$/, ""); },
+  token() { return loadCfg().token || ""; },
+  connected() { return !!this.base() && !!this.token(); },
+  async req(method, path, body) {
+    const base = this.base();
+    if (!base) throw new Error("No backend URL configured.");
+    const headers = { "Content-Type": "application/json" };
+    const t = this.token();
+    if (t) headers["Authorization"] = "Bearer " + t;
+    const res = await fetch(base + path, {
+      method, headers, body: body ? JSON.stringify(body) : undefined
+    });
+    if (res.status === 401) { const c = loadCfg(); delete c.token; saveCfg(c); throw new Error("Session expired — log in again."); }
+    let data = null; try { data = await res.json(); } catch {}
+    if (!res.ok) throw new Error((data && data.detail) || ("Request failed (" + res.status + ")"));
+    return data;
+  },
+  async login(apiUrl, password) {
+    const cfg = loadCfg(); cfg.apiUrl = apiUrl.replace(/\/+$/, ""); saveCfg(cfg);
+    const data = await this.req("POST", "/auth/login", { password });
+    cfg.token = data.access_token; saveCfg(cfg);
+    return true;
+  },
+  logout() { const c = loadCfg(); delete c.token; saveCfg(c); },
+  dashboard() { return this.req("GET", "/dashboard"); },
+  syncNow() { return this.req("POST", "/garmin/sync"); },
+  syncStatus() { return this.req("GET", "/garmin/status"); },
+  reauth(mfa_code) { return this.req("POST", "/garmin/reauth", { mfa_code: mfa_code || null }); },
+};
+window.api = api;
+
+/* ========================================================================
    NAVIGATION + VIEWS
    Each phase gets a screen; Phases 2-5 are clearly-marked stubs so the
    shell + quote contexts are testable now.
@@ -530,6 +574,8 @@ function navigate(id) {
   const screen = SCREENS.find(s => s.id === id);
   document.getElementById("view").innerHTML = VIEWS[id](screen);
   window.scrollTo(0, 0);
+  // Run an optional async post-render hook (used to fetch live backend data).
+  if (AFTER_RENDER[id]) AFTER_RENDER[id]();
 }
 
 const fmtDate = () => new Date().toLocaleDateString("en-NZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -549,17 +595,17 @@ const VIEWS = {
     <div class="topline"><h1>The Dashboard</h1><div class="date">${fmtDate()}</div></div>
     ${renderQuoteBanner("discipline")}
 
-    <div class="section-title"><h2>Today at a Glance</h2><div class="rule"></div></div>
+    <div class="section-title"><h2>Today at a Glance</h2><div class="rule"></div>
+      <span id="dashState" class="pill">${api.connected() ? "loading…" : "not connected"}</span></div>
     <div class="grid">
-      <div class="card"><h3>Readiness</h3><div class="stat">—<small> /100</small></div>
-        <p class="placeholder-note">Garmin recovery lands in Phase 2.</p></div>
-      <div class="card"><h3>Last Activity</h3><div class="stat">—</div>
-        <p class="placeholder-note">Garmin sync, Phase 2.</p></div>
-      <div class="card"><h3>Sleep</h3><div class="stat">—<small> h</small></div>
-        <p class="placeholder-note">Garmin sleep, Phase 2.</p></div>
-      <div class="card"><h3>Body Weight</h3><div class="stat">—<small> kg</small></div>
-        <p class="placeholder-note">Body metrics, Phase 2.</p></div>
+      <div class="card"><h3>Readiness</h3><div class="stat" id="dRead">—<small> /100</small></div>
+        <p class="placeholder-note" id="dReadNote">${api.connected() ? "" : "Connect the backend on the Garmin screen."}</p></div>
+      <div class="card"><h3>Last Activity</h3><div class="stat" id="dAct" style="font-size:26px;">—</div>
+        <p class="placeholder-note" id="dActNote"></p></div>
+      <div class="card"><h3>Sleep</h3><div class="stat" id="dSleep">—<small> h</small></div></div>
+      <div class="card"><h3>Body Weight</h3><div class="stat" id="dWeight">—<small> kg</small></div></div>
     </div>
+    <div id="dRecoveryQuote"></div>
 
     <div class="section-title"><h2>Build Roadmap</h2><div class="rule"></div></div>
     <div class="grid">
@@ -577,8 +623,7 @@ const VIEWS = {
       open the <a href="#" onclick="navigate('quotes');return false;">Quote Bank</a> to review them.</p>
     </div>`,
 
-  garmin: () => stubScreen("Garmin Sync", 2, "recovery",
-    "Adapter layer (unofficial garth + official Health API stub), 'Sync now', scheduled background sync, and a recovery/sleep/activity dashboard. Low-readiness days surface a recovery quote — already wired above."),
+  garmin: () => garminView(),
 
   lifting: () => stubScreen("Iron Log", 3, "pre_workout",
     "Workout logging (sets/reps/weight/RPE), an extensible exercise library, progressive-overload charts, and automatic PR tracking. The pre-workout quote above sets the tone for the logging screen."),
@@ -591,6 +636,152 @@ const VIEWS = {
 
   quotes: () => quoteBankView()
 };
+
+/* ---- Garmin screen: connect to backend, sync, show status + activities -- */
+function garminView() {
+  const connected = api.connected();
+  const base = api.base();
+  return `
+    <div class="topline"><h1>Garmin Sync</h1><div class="date">${fmtDate()}</div></div>
+    ${renderQuoteBanner("recovery")}
+
+    <div class="section-title"><h2>Backend Connection</h2><div class="rule"></div></div>
+    <div class="card">
+      <div class="field">
+        <label for="apiUrl">Backend URL (FastAPI)</label>
+        <input type="text" id="apiUrl" placeholder="http://localhost:8001" value="${base || ""}" />
+      </div>
+      <div id="loginBlock" style="${connected ? "display:none;" : ""}">
+        <div class="field">
+          <label for="apiPw">App password</label>
+          <input type="password" id="apiPw" placeholder="APP_PASSWORD from the backend .env" />
+        </div>
+        <button class="btn" style="width:auto;" id="connectBtn">Connect</button>
+      </div>
+      <div id="connectedBlock" style="${connected ? "" : "display:none;"}">
+        <span class="pill" style="color:var(--good);border-color:rgba(92,138,74,.4);">connected</span>
+        <button class="btn ghost" style="width:auto;margin-left:8px;" id="logoutBtn">Disconnect</button>
+      </div>
+      <div id="garminMsg" class="placeholder-note" style="margin-top:12px;"></div>
+    </div>
+
+    <div class="section-title"><h2>Sync</h2><div class="rule"></div>
+      <span id="syncStatePill" class="pill">—</span></div>
+    <div class="card">
+      <button class="btn" style="width:auto;" id="syncBtn" ${connected ? "" : "disabled"}>Sync now</button>
+      <button class="btn ghost" style="width:auto;margin-left:8px;" id="reauthBtn" ${connected ? "" : "disabled"}>Re-authenticate (MFA)</button>
+      <p class="placeholder-note" id="syncMsg" style="margin-top:12px;">
+        ${connected ? "Pull recent activities, sleep, body metrics and recovery from Garmin."
+                    : "Connect the backend above to enable syncing."}
+      </p>
+    </div>
+
+    <div class="section-title"><h2>Recent Activities</h2><div class="rule"></div></div>
+    <div id="actList" class="grid">
+      <div class="card"><p class="placeholder-note">${connected ? "Loading…" : "Not connected."}</p></div>
+    </div>`;
+}
+
+/* Post-render hooks: wire buttons + fetch live data after the HTML is in. */
+const AFTER_RENDER = {
+  dashboard: async () => {
+    if (!api.connected()) return;
+    try {
+      const d = await api.dashboard();
+      setText("dashState", "live");
+      setHTML("dRead", d.readiness != null ? `${d.readiness}<small> /100</small>` : `—<small> /100</small>`);
+      setText("dReadNote", "");
+      if (d.last_activity) {
+        const a = d.last_activity;
+        setText("dAct", a.activity_type.replace(/_/g, " "));
+        setText("dActNote", `${a.distance_km != null ? a.distance_km + " km · " : ""}${a.start_time ? new Date(a.start_time).toLocaleDateString("en-NZ") : ""}`);
+      }
+      setHTML("dSleep", d.last_sleep_h != null ? `${d.last_sleep_h}<small> h</small>` : `—<small> h</small>`);
+      setHTML("dWeight", d.latest_weight_kg != null ? `${d.latest_weight_kg}<small> kg</small>` : `—<small> kg</small>`);
+      // When the backend flags low readiness it returns a recovery quote.
+      if (d.recovery_quote) {
+        const q = d.recovery_quote;
+        const tag = q.verified ? "" : `<span class="verify">⚠ unverified</span>`;
+        setHTML("dRecoveryQuote", `<div class="quote"><span class="mark">&ldquo;</span>
+          <span class="cat">recovery · readiness low</span>
+          <blockquote>${q.text}</blockquote><div class="by">— ${q.author} ${tag}</div></div>`);
+      }
+    } catch (e) { setText("dashState", "error"); setText("dReadNote", e.message); }
+  },
+
+  garmin: () => {
+    const msg = (id, t) => setText(id, t);
+    const connectBtn = document.getElementById("connectBtn");
+    if (connectBtn) connectBtn.onclick = async () => {
+      const url = document.getElementById("apiUrl").value.trim();
+      const pw = document.getElementById("apiPw").value;
+      if (!url || !pw) { msg("garminMsg", "Enter the backend URL and app password."); return; }
+      msg("garminMsg", "Connecting…");
+      try { await api.login(url, pw); navigate("garmin"); }
+      catch (e) { msg("garminMsg", e.message); }
+    };
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) logoutBtn.onclick = () => { api.logout(); navigate("garmin"); };
+
+    const syncBtn = document.getElementById("syncBtn");
+    if (syncBtn) syncBtn.onclick = async () => {
+      setText("syncMsg", "Syncing… (first Garmin login can take a moment)");
+      try {
+        const r = await api.syncNow();
+        if (r.ok) { setText("syncMsg", `Synced: ${JSON.stringify(r.counts)}`); loadSyncStatus(); loadActivities(); }
+        else if (r.needs_reauth) setText("syncMsg", `${r.error} — use Re-authenticate.`);
+        else setText("syncMsg", r.error || "Sync failed.");
+      } catch (e) { setText("syncMsg", e.message); }
+    };
+    const reauthBtn = document.getElementById("reauthBtn");
+    if (reauthBtn) reauthBtn.onclick = async () => {
+      try {
+        let r = await api.reauth(null);
+        if (r.needs_mfa) {
+          const code = prompt("Enter your Garmin MFA code:");
+          if (!code) return;
+          r = await api.reauth(code);
+        }
+        setText("syncMsg", r.ok ? "Re-authenticated. Try Sync now." : (r.message || "Re-auth failed."));
+      } catch (e) { setText("syncMsg", e.message); }
+    };
+
+    if (api.connected()) { loadSyncStatus(); loadActivities(); }
+  },
+};
+
+async function loadSyncStatus() {
+  try {
+    const s = await api.syncStatus();
+    const pill = document.getElementById("syncStatePill");
+    if (!pill) return;
+    if (s.last_synced) {
+      pill.textContent = (s.ok ? "ok · " : "failed · ") + new Date(s.last_synced).toLocaleString("en-NZ");
+      pill.style.color = s.ok ? "var(--good)" : "var(--bad)";
+    } else { pill.textContent = "never synced"; }
+  } catch {}
+}
+
+async function loadActivities() {
+  const wrap = document.getElementById("actList");
+  if (!wrap) return;
+  try {
+    const d = await api.dashboard();
+    const acts = d.recent_activities || [];
+    wrap.innerHTML = acts.length ? acts.map(a => `
+      <div class="card">
+        <h3>${a.activity_type.replace(/_/g, " ")}</h3>
+        <div class="stat" style="font-size:24px;">${a.distance_km != null ? a.distance_km + `<small> km</small>` : (a.duration_s ? Math.round(a.duration_s/60) + `<small> min</small>` : "—")}</div>
+        <p class="placeholder-note">${a.start_time ? new Date(a.start_time).toLocaleString("en-NZ") : ""}${a.avg_hr ? " · " + a.avg_hr + " bpm" : ""}${a.calories ? " · " + a.calories + " kcal" : ""}</p>
+      </div>`).join("")
+      : `<div class="card"><p class="placeholder-note">No activities yet — hit Sync now.</p></div>`;
+  } catch (e) {
+    wrap.innerHTML = `<div class="card"><p class="placeholder-note">${e.message}</p></div>`;
+  }
+}
+
+function setText(id, t) { const el = document.getElementById(id); if (el) el.textContent = t; }
+function setHTML(id, h) { const el = document.getElementById(id); if (el) el.innerHTML = h; }
 
 function roadmapBlurb(id) {
   return {

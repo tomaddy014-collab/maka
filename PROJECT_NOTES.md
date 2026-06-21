@@ -46,8 +46,14 @@ AI cardio suggestion engine.
     recovery quote when readiness ≤ 40). Quotes seeded server-side.
   - 12 passing pytest tests using an in-memory DB + FakeGarminAdapter (no real
     Garmin calls). Run: `cd backend && pytest -q`.
-  - TODO frontend: wire `index.html` Garmin screen to call the backend
-    (`VITE_API_URL`/configurable base) — next sub-step.
+  - Frontend wired: `index.html` has an `api` client (backend URL + JWT in
+    localStorage `atlas_cfg_v1`). Garmin screen connects (URL + APP_PASSWORD),
+    runs "Sync now", MFA re-auth, shows sync status + recent activities.
+    Dashboard pulls live readiness/sleep/weight + low-readiness recovery quote.
+    Falls back to "not connected" state when no backend configured. Async
+    post-render hooks (`AFTER_RENDER`) fetch live data after each navigate.
+  - Note: `with TestClient(app)` is required in ad-hoc scripts so the lifespan
+    runs `init_db()` (create_all) before requests.
 - [ ] Phase 3 — Weightlifting tracker
 - [ ] Phase 4 — Nutrition (Open Food Facts)
 - [ ] Phase 5 — Analytics + AI cardio engine + PWA
