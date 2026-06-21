@@ -198,6 +198,8 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .sess-name{font-weight:500;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sess-meta{font-size:12px;color:var(--text2);margin-top:2px}
 .stu-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:.5px solid var(--border);font-size:13px;border-radius:var(--rs);transition:background .2s var(--ease),transform .2s var(--ease)}
+.code-chip{font-family:monospace;font-size:12px;font-weight:600;letter-spacing:.04em;padding:4px 9px;border-radius:100px;background:var(--green-bg);color:var(--green);cursor:pointer;flex-shrink:0;white-space:nowrap}
+.code-chip:hover{filter:brightness(.95)}
 .stu-item:hover{background:var(--bg2);transform:translateX(3px)}
 .rep-card{background:var(--bg);border:.5px solid var(--border);border-radius:var(--r);padding:1.25rem;margin-bottom:1rem;animation:riseIn .45s var(--ease-spring) backwards;transition:box-shadow .3s var(--ease),transform .3s var(--ease)}
 .rep-card:hover{box-shadow:0 10px 32px rgba(0,0,0,0.06);transform:translateY(-2px)}
@@ -1457,12 +1459,26 @@ function loadClassList(){
     if(!data.length){el.innerHTML=emptyState('users','No students yet. Add them above, or import a CSV — pronouns and year levels power your comments and student hubs.');return}
     var gC={boy:'background:#e6f1fb;color:#185fa5',girl:'background:#fce8f3;color:#8b1a5e',nonbinary:'background:#f0ede8;color:#5a564e'};
     var gL={boy:'He/him',girl:'She/her',nonbinary:'They/them'};
-    el.innerHTML='<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+data.length+' students — click to open hub</div>'+data.map(function(s){var gb=s.gender&&gL[s.gender]?'<span style="font-size:10px;padding:2px 7px;border-radius:100px;font-weight:600;'+gC[s.gender]+'">'+gL[s.gender]+'</span>':'';return'<div class="stu-item" id="stu-'+s.id+'" style="cursor:pointer" onclick="openHub(\''+s.id+'\',\''+esc(s.name)+'\')"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0">'+esc(s.name[0].toUpperCase())+'</div><div style="flex:1;min-width:0"><div style="font-weight:500;font-size:14px">'+esc(s.name)+'</div><div style="font-size:12px;color:var(--text2);margin-top:1px">'+esc(s.year_level||'No year set')+'</div></div>'+gb+'<button class="btn btn-sm" onclick="event.stopPropagation();openHub(\''+s.id+'\',\''+esc(s.name)+'\')" aria-label="Open hub for '+esc(s.name)+'">'+ic('external')+'Hub</button><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delStu(\''+s.id+'\',\''+esc(s.name)+'\')" style="margin-left:4px" aria-label="Remove '+esc(s.name)+'">×</button></div>'}).join('');
+    el.innerHTML='<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+data.length+' students — click to open hub</div>'+data.map(function(s){var gb=s.gender&&gL[s.gender]?'<span style="font-size:10px;padding:2px 7px;border-radius:100px;font-weight:600;'+gC[s.gender]+'">'+gL[s.gender]+'</span>':'';var code=s.access_code||'';return'<div class="stu-item" id="stu-'+s.id+'" style="cursor:pointer" onclick="openHub(\''+s.id+'\',\''+esc(s.name)+'\')"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0">'+esc(s.name[0].toUpperCase())+'</div><div style="flex:1;min-width:0"><div style="font-weight:500;font-size:14px">'+esc(s.name)+'</div><div style="font-size:12px;color:var(--text2);margin-top:1px">'+esc(s.year_level||'No year set')+'</div></div>'+gb+'<span class="code-chip" title="Student login code" onclick="event.stopPropagation();copyCode(\''+esc(code)+'\',this)">'+(code?esc(code):'—')+'</span><button class="btn btn-sm" onclick="event.stopPropagation();regenCode(\''+s.id+'\')" aria-label="Generate new code for '+esc(s.name)+'">'+ic('refresh')+'</button><button class="btn btn-sm" onclick="event.stopPropagation();openHub(\''+s.id+'\',\''+esc(s.name)+'\')" aria-label="Open hub for '+esc(s.name)+'">'+ic('external')+'Hub</button><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delStu(\''+s.id+'\',\''+esc(s.name)+'\')" style="margin-left:4px" aria-label="Remove '+esc(s.name)+'">×</button></div>'}).join('');
   }).catch(function(e){el.innerHTML='<div class="err">'+esc(e.message)+'</div>'});
 }
 function openHub(id,name){
   var tid=USER?USER.id:'';
   window.open('student.html?sid='+encodeURIComponent(id)+'&tid='+encodeURIComponent(tid)+'&name='+encodeURIComponent(name),'_blank');
+}
+function copyCode(code,el){
+  if(!code)return;
+  navigator.clipboard.writeText(code).then(function(){
+    var prev=el.textContent;el.textContent='Copied!';setTimeout(function(){el.textContent=prev},1200);
+  }).catch(function(){});
+}
+function regenCode(id){
+  if(!sb||!USER)return;
+  var newCode=Math.random().toString(36).slice(2,8).toUpperCase();
+  sb.from('students').update({access_code:newCode}).eq('id',id).then(function(res){
+    if(res.error){showToast('Could not generate code: '+res.error.message,'err');return}
+    loadClassList();showToast('New student login code generated','ok');
+  }).catch(function(e){showToast(e.message,'err')});
 }
 function openAddStu(){if(!sb||!USER){alert('Sign in to add students.');return}document.getElementById('new-stu-name').value='';document.getElementById('new-stu-year').selectedIndex=0;document.getElementById('new-stu-gender').selectedIndex=0;openModal('add-stu-modal');setTimeout(function(){document.getElementById('new-stu-name').focus()},100)}
 function addStu(){
