@@ -19,7 +19,9 @@ import sys
 from playwright.sync_api import sync_playwright, expect
 
 BASE = "http://localhost:8000"
-SCREENS = ["dashboard", "garmin", "lifting", "nutrition", "analytics", "quotes"]
+# Screens that render a context-aware quote BANNER. The Quote Bank ("quotes")
+# is excluded — it shows quote *cards* + a verify workflow, asserted separately.
+QUOTE_SCREENS = ["dashboard", "garmin", "lifting", "nutrition", "analytics"]
 
 
 def run():
@@ -38,8 +40,8 @@ def run():
         page.wait_for_selector(".app.active", timeout=5000)
         expect(page.locator("#view h1")).to_contain_text("Dashboard")
 
-        # Every screen renders and shows a context-aware quote banner.
-        for screen in SCREENS:
+        # Every non-Quote-Bank screen renders and shows a context-aware quote banner.
+        for screen in QUOTE_SCREENS:
             page.click(f'.nav-btn[data-screen="{screen}"]')
             page.wait_for_timeout(150)
             assert page.locator("#view .quote").count() >= 1, f"no quote on {screen}"
