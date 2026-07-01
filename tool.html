@@ -223,7 +223,10 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 @media(max-width:600px){.grid2{grid-template-columns:1fr}.dash-grid{grid-template-columns:repeat(2,1fr)}.main{padding:1rem .75rem}nav{padding:0 .75rem}}
 
 /* "How to improve" — warm gold-accent cards */
-.sbox.improve{background:rgba(200,132,10,0.06);border-left:3px solid var(--gold);color:var(--text)}
+.sbox.improve{background:rgba(200,132,10,0.06);border-left:3px solid var(--gold);color:var(--text);display:flex;gap:9px;align-items:flex-start}
+.sbox.improve .ico{color:var(--gold);flex-shrink:0;margin-top:2px}
+.sbox .quote{font-style:italic;color:var(--text2);border-left:2px solid var(--border2);padding:2px 0 2px 9px;margin-bottom:6px;font-size:12.5px;line-height:1.5}
+.sbox .quote::before{content:'\201C'}.sbox .quote::after{content:'\201D'}
 
 /* Toast notifications */
 #toast-wrap{position:fixed;right:20px;bottom:20px;z-index:2000;display:flex;flex-direction:column;gap:10px;align-items:flex-end;pointer-events:none}
@@ -563,6 +566,8 @@ function skeletonRows(n){var h='';for(var i=0;i<(n||4);i++)h+='<div class="skel 
 function emptyState(icon,msg){return'<div class="empty-state">'+ic(icon)+'<div>'+msg+'</div></div>'}
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function stripExt(n){return String(n).replace(/\.[^.]+$/,'')}
+// Fold a verbatim student quote into feedback text so it persists to the hub/portal.
+function withQuote(q,t){q=(q||'').trim();t=t||'';return q?('“'+q+'” — '+t):t}
 function getStyle(){return(PROFILE&&PROFILE.writing_style&&PROFILE.writing_style.trim())||DEFAULT_STYLE}
 function getKey(){var k=(document.getElementById('apikey').value||'').trim()||(PROFILE&&PROFILE.gemini_key)||'';if(!k){alert('Please enter your Gemini API key.');return null}return k}
 var ICONS={
@@ -973,9 +978,13 @@ async function markOne(key,file,rubric,area,level,task,style,idx){
       '  "criteriaTotal": "X/25",',
       '  "overallScore": "one of: Beginning / Approaching / Achieved / Exceeds",',
       '  "criteria": [{"name": "exact criterion name from rubric", "score": 1-5}],',
-      '  "improve1": "First warm specific improvement tip written directly to the student (you/your). One clear sentence.",',
-      '  "improve2": "Second warm specific improvement tip written directly to the student (you/your). One clear sentence."',
-      '}'
+      '  "quote1": "A SHORT exact quote copied word-for-word from the student\'s writing that relates to improve1. Copy it verbatim, do not paraphrase. Use \\"\\" (empty) if the work has no readable text to quote.",',
+      '  "improve1": "First improvement tip, written warmly and directly to the student (you/your). Refer to the quote1 example and say specifically HOW to improve it (e.g. what to add, change or try). One or two clear sentences.",',
+      '  "quote2": "A SHORT exact quote copied word-for-word from the student\'s writing that relates to improve2. Copy it verbatim, do not paraphrase. Use \\"\\" (empty) if not applicable.",',
+      '  "improve2": "Second improvement tip, written warmly and directly to the student (you/your). Refer to the quote2 example and say specifically HOW to improve it. One or two clear sentences."',
+      '}',
+      '',
+      'The quotes MUST be genuine text taken directly from this student\'s work — never invented. Ground every tip in what the student actually wrote so they can see exactly what to work on.'
     ].join('\n');
     var onBusy=function(a,max){progressItems[idx].phase='Gemini busy — retrying ('+a+'/'+(max-1)+')…';renderProg()};
     var r=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:'File: "'+file.name+'"\n\n'+p1}],onBusy));
@@ -989,9 +998,10 @@ async function markOne(key,file,rubric,area,level,task,style,idx){
       '1. Check scores are fair and not harsh for NZC Level '+level+'. A student meeting the expectation should be around 4/5 per criterion. If any score looks harsh for work that reasonably meets a criterion, raise it.',
       '2. Recalculate criteriaTotal as the sum of all scores formatted as "X/25".',
       '3. Set overallScore: 22-25=Exceeds, 16-21=Achieved, 10-15=Approaching, 1-9=Beginning.',
-      '4. Rewrite improve1 and improve2 to be warm, specific and actionable for a Year 7-8 student.',
+      '4. Keep quote1 and quote2 EXACTLY as they are — they are verbatim quotes from the student\'s work and must never be changed or invented.',
+      '5. Rewrite improve1 and improve2 to be warm, specific and actionable for a Year 7-8 student.',
       '   - Write directly to the student using "you/your".',
-      '   - Each must be one clear sentence focused on HOW to improve.',
+      '   - Each tip must refer to its quote and explain specifically HOW to improve that example. One or two clear sentences.',
       '   - Do not use harsh or discouraging language.',
       '',
       'Teacher writing style to match: '+style,
@@ -1016,7 +1026,7 @@ async function remarkStu(idx){
   var res=await markOne(key,files[idx],rub,area,level,task,getStyle(),idx);
   res._file=files[idx];if(prev.assignTo)res.assignTo=prev.assignTo;
   results[idx]=res;document.getElementById('progress').style.display='none';renderResults(results);
-  if(currentSessId&&!res._error&&sb&&USER)sb.from('student_results').upsert({session_id:currentSessId,teacher_id:USER.id,file_name:resultSaveName(res),overall_score:res.overallScore,criteria_total:res.criteriaTotal,criteria:res.criteria,strengths:res.improve1||res.strengths||'',next_steps:res.improve2?[res.improve2]:(res.nextSteps||[]),nzc_reference:res.nzcReference},{onConflict:'session_id,file_name'}).then(function(){}).catch(function(){});
+  if(currentSessId&&!res._error&&sb&&USER)sb.from('student_results').upsert({session_id:currentSessId,teacher_id:USER.id,file_name:resultSaveName(res),overall_score:res.overallScore,criteria_total:res.criteriaTotal,criteria:res.criteria,strengths:withQuote(res.quote1,res.improve1||res.strengths||''),next_steps:res.improve2?[withQuote(res.quote2,res.improve2)]:(res.nextSteps||[]),nzc_reference:res.nzcReference},{onConflict:'session_id,file_name'}).then(function(){}).catch(function(){});
 }
 
 var MARKING=false;
@@ -1093,8 +1103,8 @@ function saveSess(name,area,level,task,rubric,res){
           overall_score:r.overallScore,
           criteria_total:r.criteriaTotal,
           criteria:r.criteria,
-          strengths:r.improve1||r.strengths||'',
-          next_steps:r.improve2?[r.improve2]:(r.nextSteps||[]),
+          strengths:withQuote(r.quote1,r.improve1||r.strengths||''),
+          next_steps:r.improve2?[withQuote(r.quote2,r.improve2)]:(r.nextSteps||[]),
           nzc_reference:r.nzcReference,
           pdf_path:paths[i]||null
         }})).then(function(){}).catch(function(){});
@@ -1129,7 +1139,7 @@ function saveAllToProfiles(){
       return sb.from('student_results').upsert(valid.map(function(r,i){return{
         session_id:currentSessId,teacher_id:USER.id,file_name:resultSaveName(r),
         overall_score:r.overallScore,criteria_total:r.criteriaTotal,criteria:r.criteria,
-        strengths:r.improve1||r.strengths||'',next_steps:r.improve2?[r.improve2]:(r.nextSteps||[]),
+        strengths:withQuote(r.quote1,r.improve1||r.strengths||''),next_steps:r.improve2?[withQuote(r.quote2,r.improve2)]:(r.nextSteps||[]),
         nzc_reference:r.nzcReference,pdf_path:paths[i]||null
       }}),{onConflict:'session_id,file_name'});
     }).then(function(up){
@@ -1168,6 +1178,8 @@ function renderResultCard(r,idx,editable){
   var overall=r.overallScore||r.overall_score||'';
   var remarkBtn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkStu('+idx+')">'+ic('refresh')+'Re-mark</button>':'';
   var i1=r.improve1||r.strengths||'',i2=r.improve2||(r.next_steps&&r.next_steps[0])||'';
+  var q1=(r.quote1||'').trim(),q2=(r.quote2||'').trim();
+  var tip=function(quote,text){var h='<div class="sbox improve">'+ic('bulb')+'<div>';if(quote)h+='<div class="quote">'+esc(quote)+'</div>';h+='<span>'+esc(text)+'</span></div></div>';return h};
   var fileLabel=r.fileName||r.file_name||'';
   var stuName=editable?assignedStudentFor(r):'';
   var nameHtml=stuName
@@ -1185,8 +1197,8 @@ function renderResultCard(r,idx,editable){
   }
   if(i1||i2){
     html+='<div class="slbl">How to improve</div>';
-    if(i1)html+='<div class="sbox improve" style="margin-bottom:6px">'+ic('bulb')+esc(i1)+'</div>';
-    if(i2)html+='<div class="sbox improve">'+ic('bulb')+esc(i2)+'</div>';
+    if(i1)html+='<div style="margin-bottom:6px">'+tip(q1,i1)+'</div>';
+    if(i2)html+=tip(q2,i2);
   }
   if(editable){
     var assigned=assignedStudentFor(r);
