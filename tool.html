@@ -1052,7 +1052,26 @@ async function gemini(key,parts,onRetry){
   if(lastErr==='network')throw new Error("Couldn't reach Gemini — check your internet connection and try again.");
   throw new Error('Gemini is still busy after '+maxTries+' tries — please try again in a moment.');
 }
-function parseJSON(raw){var s=raw.indexOf('{'),e=raw.lastIndexOf('}');if(s===-1||e===-1)throw new Error('No JSON in response');return JSON.parse(raw.slice(s,e+1))}
+// Extract the FIRST balanced JSON object, ignoring braces inside strings — robust to
+// trailing text, extra objects, or commentary the model sometimes appends.
+function parseJSON(raw){
+  raw=String(raw);
+  var start=raw.indexOf('{');
+  if(start===-1)throw new Error('No JSON in response');
+  var depth=0,inStr=false,esc=false;
+  for(var i=start;i<raw.length;i++){
+    var ch=raw[i];
+    if(inStr){
+      if(esc)esc=false;else if(ch==='\\')esc=true;else if(ch==='"')inStr=false;
+    }else if(ch==='"')inStr=true;
+    else if(ch==='{')depth++;
+    else if(ch==='}'){depth--;if(depth===0)return JSON.parse(raw.slice(start,i+1))}
+  }
+  // Fallback: last-brace slice (handles a truncated tail after a complete object)
+  var e=raw.lastIndexOf('}');
+  if(e>start)return JSON.parse(raw.slice(start,e+1));
+  throw new Error('No JSON in response');
+}
 
 function renderProg(){
   var done=progressItems.filter(function(p){return p.status==='done'||p.status==='error'}).length,tot=progressItems.length;
