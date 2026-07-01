@@ -249,6 +249,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 [data-theme="dark"] .sbox .tryex{background:rgba(255,255,255,0.05)}
 .sbox .trylbl{font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.05em;font-size:10px;margin-right:5px}
 .ccomment{font-size:12px;color:var(--text2);line-height:1.45;margin-top:3px;font-weight:400}
+.summary-box{font-size:13.5px;line-height:1.6;color:var(--text);background:var(--bg2);border-radius:var(--rs);padding:11px 13px;margin:12px 0}
 .etext{cursor:text;border-radius:3px;transition:background .15s var(--ease),box-shadow .15s var(--ease);outline:none}
 .etext:hover{background:rgba(200,132,10,0.1)}
 .etext:focus{background:var(--bg);box-shadow:0 0 0 2px var(--gold);padding:0 2px}
@@ -621,13 +622,13 @@ function fbGet(r){
     if(r.improve1)tips.push({quote:(r.quote1||'').trim(),suggestion:r.improve1});
     if(r.improve2)tips.push({quote:(r.quote2||'').trim(),suggestion:r.improve2});
   }
-  var goal=(r.goal||'').trim(),accuracy=Array.isArray(r.accuracy)?r.accuracy:[];
-  if(!goal&&!accuracy.length){var meta=fbParseMeta(r.nzc_reference||r.nzcReference);goal=meta.goal;accuracy=meta.accuracy}
-  return{praise:praise,tips:tips,goal:goal,accuracy:accuracy};
+  var goal=(r.goal||'').trim(),accuracy=Array.isArray(r.accuracy)?r.accuracy:[],summary=(r.summary||'').trim();
+  if(!goal&&!accuracy.length&&!summary){var meta=fbParseMeta(r.nzc_reference||r.nzcReference);goal=meta.goal;accuracy=meta.accuracy;summary=meta.summary}
+  return{praise:praise,tips:tips,goal:goal,accuracy:accuracy,summary:summary};
 }
-// goal + accuracy fixes are stored as JSON in the otherwise-unused nzc_reference column.
-function fbParseMeta(s){if(!s)return{goal:'',accuracy:[]};try{var o=JSON.parse(s);if(o&&typeof o==='object')return{goal:o.goal||'',accuracy:Array.isArray(o.accuracy)?o.accuracy:[]}}catch(e){}return{goal:'',accuracy:[]}}
-function fbMetaSave(r){var g=(r.goal||'').trim(),a=Array.isArray(r.accuracy)?r.accuracy.filter(function(x){return x&&(x.wrong||x.correct)}):[];if(g||a.length)return JSON.stringify({goal:g,accuracy:a});return r.nzc_reference||r.nzcReference||null}
+// summary + goal + accuracy are stored as JSON in the otherwise-unused nzc_reference column.
+function fbParseMeta(s){if(!s)return{goal:'',accuracy:[],summary:''};try{var o=JSON.parse(s);if(o&&typeof o==='object')return{goal:o.goal||'',accuracy:Array.isArray(o.accuracy)?o.accuracy:[],summary:o.summary||''}}catch(e){}return{goal:'',accuracy:[],summary:''}}
+function fbMetaSave(r){var g=(r.goal||'').trim(),a=Array.isArray(r.accuracy)?r.accuracy.filter(function(x){return x&&(x.wrong||x.correct)}):[],sm=(r.summary||'').trim();if(g||a.length||sm)return JSON.stringify({goal:g,accuracy:a,summary:sm});return r.nzc_reference||r.nzcReference||null}
 // Flatten one tip into a single readable line for storage / CSV / plain-text contexts.
 function fbTipToStr(t){if(t.text)return t.text;return(t.quote?('You wrote “'+t.quote+'”. '):'')+(t.suggestion||'')+(t.example?(' Try: “'+t.example+'”'):'')}
 // DB column mappers (praise -> strengths text, tips -> next_steps text[]).
@@ -1103,6 +1104,7 @@ async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLi
       'OUTPUT FORMAT — return ONLY raw JSON, no markdown, no explanation:',
       '{',
       '  "fileName": "filename here",',
+      '  "summary": "A warm 2-3 sentence overall comment written directly to the student (you/your) that ties their result together: open with what they did well, then their main next step, in plain encouraging language. This is the opening summary of their feedback.",',
       '  "criteria": [{"name": "exact criterion name from rubric", "score": 1-5, "comment": "One short sentence to the student about THIS criterion — what they did or what would lift it. Warm, plain, you/your."}],',
       '  "praiseQuote": "A SHORT exact quote copied word-for-word from the student\'s writing that shows something they did genuinely well. Verbatim — never invented. Use \\"\\" (empty) if the work has no readable text.",',
       '  "praise": "Warm, specific praise written directly to the student (you/your) about praiseQuote — name WHY it works well. One or two sentences.",',
@@ -1144,7 +1146,7 @@ async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLi
       '',
       'Original marking: '+JSON.stringify(r),
       '',
-      'Return ONLY the updated raw JSON with the same keys (fileName, criteria, praiseQuote, praise, improve, accuracy, goal). No markdown, no explanation.'
+      'Return ONLY the updated raw JSON with the same keys (fileName, summary, criteria, praiseQuote, praise, improve, accuracy, goal). Keep summary as a warm 2-3 sentence overall comment to the student. No markdown, no explanation.'
     ].join('\n');
     var mm=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:p2}],onBusy));
     mm.fileName=r.fileName;
@@ -1154,6 +1156,7 @@ async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLi
     if(!mm.praise&&r.praise)mm.praise=r.praise;
     if(!mm.praiseQuote&&r.praiseQuote)mm.praiseQuote=r.praiseQuote;
     if(!mm.goal&&r.goal)mm.goal=r.goal;
+    if(!mm.summary&&r.summary)mm.summary=r.summary;
     if((!Array.isArray(mm.accuracy)||!mm.accuracy.length)&&Array.isArray(r.accuracy))mm.accuracy=r.accuracy;
     // Integrity backstop: strip any ability/level-labelling language before it can be stored or shown.
     scrubResultLevelLanguage(mm);
@@ -1194,6 +1197,7 @@ function scrubLevelLanguage(t){
 }
 function scrubResultLevelLanguage(r){
   if(!r)return;
+  if(r.summary)r.summary=scrubLevelLanguage(r.summary);
   if(r.praise)r.praise=scrubLevelLanguage(r.praise);
   if(Array.isArray(r.criteria))r.criteria.forEach(function(c){if(c&&c.comment)c.comment=scrubLevelLanguage(c.comment)});
   if(Array.isArray(r.improve))r.improve.forEach(function(i){if(!i)return;if(i.suggestion)i.suggestion=scrubLevelLanguage(i.suggestion);if(i.example)i.example=scrubLevelLanguage(i.example);if(i.text)i.text=scrubLevelLanguage(i.text)});
@@ -1390,6 +1394,8 @@ function renderResultCard(r,idx,editable){
     :'<span class="rname">'+esc(fileLabel)+'</span>';
   var html='<div class="rcard">';
   html+='<div class="rhead"><div style="min-width:0;display:flex;flex-direction:column;gap:2px">'+nameHtml+'</div><div style="display:flex;align-items:center;gap:6px"><span class="pill '+pillCls(pct)+'">'+esc(overall)+' · '+esc(tot)+'</span>'+remarkBtn+'</div></div>';
+  var fbSummary=fbGet(r).summary;
+  if(fbSummary||editable)html+='<div class="summary-box">'+ed(editable,idx,'summary',fbSummary)+'</div>';
   if(crit.length){
     html+='<table class="ctable"><thead><tr><th>Criterion</th><th style="width:90px;text-align:center">Score</th></tr></thead><tbody>';
     crit.forEach(function(c,ci){
@@ -1811,11 +1817,12 @@ function printSheets(){
     var sc=(r.criteria||[]).map(function(c){return parseInt(c.score)||0}),tot=sc.reduce(function(a,b){return a+b},0);
     var trows=(r.criteria||[]).map(function(c){var s=parseInt(c.score)||0,d='';for(var x=1;x<=5;x++)d+='<span style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:3px;background:'+(x<=s?'#2d5a27':'#ddd')+'"></span>';return'<tr><td style="padding:8px 4px 8px 0;border-bottom:1px solid #eee;width:35%;font-size:13px">'+esc(c.name||'')+'</td><td style="padding:8px 4px;border-bottom:1px solid #eee;width:20%;white-space:nowrap">'+d+' '+s+'/5</td><td style="padding:8px 0;border-bottom:1px solid #eee;font-size:12px;color:#555;line-height:1.5">'+esc(c.comment||'')+'</td></tr>'}).join('');
     var fb=fbGet(r);
+    var summaryHtml=fb.summary?'<div style="font-size:13.5px;line-height:1.6;color:#333;background:#f6f5f2;border-radius:8px;padding:12px 14px;margin-bottom:16px">'+esc(fb.summary)+'</div>':'';
     var praiseHtml=(fb.praise&&fb.praise.text)?'<div style="background:#f0f7ee;border-radius:8px;padding:12px 14px;margin-bottom:8px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#2d5a27;margin-bottom:4px">What you did well</div>'+(fb.praise.quote?'<div style="font-style:italic;color:#555;font-size:12.5px;margin-bottom:4px">“'+esc(fb.praise.quote)+'”</div>':'')+'<div style="font-size:13px;line-height:1.6;color:#333">'+esc(fb.praise.text)+'</div></div>':'';
     var tipsHtml=fb.tips.length?'<div style="background:#faf6ee;border-radius:8px;padding:12px 14px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8a5a06;margin-bottom:6px">How to improve</div>'+fb.tips.map(function(t){var b='<div style="font-size:13px;line-height:1.6;color:#333;margin-bottom:8px">';if(t.quote)b+='<div style="font-style:italic;color:#666;font-size:12.5px;margin-bottom:2px">“'+esc(t.quote)+'”</div>';if(t.text)b+=esc(t.text);else{if(t.suggestion)b+=esc(t.suggestion);if(t.example)b+='<div style="margin-top:3px"><strong>Try:</strong> '+esc(t.example)+'</div>'}return b+'</div>'}).join('')+'</div>':'';
     var fixHtml=(fb.accuracy&&fb.accuracy.length)?'<div style="margin-top:8px;font-size:12.5px;color:#333"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-right:8px">Spelling &amp; punctuation</span>'+fb.accuracy.map(function(a){return'<span style="white-space:nowrap;margin-right:12px"><span style="color:#a32d2d;text-decoration:line-through">'+esc(a.wrong||'')+'</span> → <span style="color:#2d5a27;font-weight:600">'+esc(a.correct||'')+'</span></span>'}).join('')+'</div>':'';
     var goalHtml=fb.goal?'<div style="margin-top:10px;background:#eef4fb;border-left:3px solid #185fa5;border-radius:8px;padding:10px 14px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#185fa5;margin-bottom:3px">Your goal for next time</div><div style="font-size:13px;line-height:1.55;color:#333">'+esc(fb.goal)+'</div></div>':'';
-    return'<div class="psheet" style="font-family:-apple-system,sans-serif"><div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;margin-bottom:24px;border-bottom:2px solid #1a1a1a"><div><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:6px">Māka · NZC Feedback</div><div style="font-size:24px;font-weight:700;margin-bottom:3px">'+esc(stripExt(r.fileName))+'</div><div style="font-size:13px;color:#666">'+esc(task)+'</div></div><div style="text-align:right"><div style="font-size:32px;font-weight:800;color:#2d5a27;line-height:1">'+tot+'/25</div><div style="font-size:12px;font-weight:600;color:#2d5a27;margin-top:4px">'+esc(r.overallScore||'')+'</div></div></div><table style="width:100%;border-collapse:collapse;margin-bottom:18px"><thead><tr><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 4px 8px 0;border-bottom:1px solid #ddd">Criterion</th><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 4px 8px;border-bottom:1px solid #ddd">Score</th><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 0 8px;border-bottom:1px solid #ddd">Comment</th></tr></thead><tbody>'+trows+'</tbody></table>'+praiseHtml+tipsHtml+fixHtml+goalHtml+'</div>';
+    return'<div class="psheet" style="font-family:-apple-system,sans-serif"><div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;margin-bottom:24px;border-bottom:2px solid #1a1a1a"><div><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:6px">Māka · NZC Feedback</div><div style="font-size:24px;font-weight:700;margin-bottom:3px">'+esc(stripExt(r.fileName))+'</div><div style="font-size:13px;color:#666">'+esc(task)+'</div></div><div style="text-align:right"><div style="font-size:32px;font-weight:800;color:#2d5a27;line-height:1">'+tot+'/25</div><div style="font-size:12px;font-weight:600;color:#2d5a27;margin-top:4px">'+esc(r.overallScore||'')+'</div></div></div>'+summaryHtml+'<table style="width:100%;border-collapse:collapse;margin-bottom:18px"><thead><tr><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 4px 8px 0;border-bottom:1px solid #ddd">Criterion</th><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 4px 8px;border-bottom:1px solid #ddd">Score</th><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 0 8px;border-bottom:1px solid #ddd">Comment</th></tr></thead><tbody>'+trows+'</tbody></table>'+praiseHtml+tipsHtml+fixHtml+goalHtml+'</div>';
   }).join('');window.print();
 }
 function exportCSV(){
@@ -1856,6 +1863,8 @@ function exportAllReportCards(){
       doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(grey[0],grey[1],grey[2]);
       var meta=[r.overallScore||r.overall_score||'',sessLabel,task].filter(Boolean).join('  ·  ');
       var ml=doc.splitTextToSize(meta,pw-m*2);doc.text(ml,m,y);y+=ml.length*12+6;
+      var fbSum=fbGet(r).summary;
+      if(fbSum){doc.setTextColor(60,60,60);doc.setFontSize(10.5);var sml=doc.splitTextToSize(fbSum,pw-m*2);need(sml.length*13);doc.text(sml,m,y);y+=sml.length*13+8;doc.setFontSize(10)}
       doc.setDrawColor(235,232,226);doc.line(m,y,pw-m,y);y+=18;
       (r.criteria||[]).forEach(function(c){
         need(18);var nm=(c.name||'').split('—')[0].trim();var s=parseInt(c.score)||0;
