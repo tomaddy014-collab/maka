@@ -987,13 +987,34 @@ async function markOne(key,file,rubric,area,level,task,style,idx){
     var onBusy=function(a,max){progressItems[idx].phase='Gemini busy — retrying ('+a+'/'+(max-1)+')…';renderProg()};
     var r=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:'File: "'+file.name+'"\n\n'+p1}],onBusy));
     r.fileName=r.fileName||file.name;
-    // Grade total and band are computed in-app (deterministic + fast) instead of a second AI pass.
-    finaliseGrade(r);
+    // Second AI pass: an independent moderation review of the scores and feedback.
+    progressItems[idx].phase='Moderating…';renderProg();
+    var p2=[
+      'You are moderating NZC Level '+level+' student marking. Be fair and encouraging for Years 7-8 students.',
+      '',
+      'Review this marking against the student work and:',
+      '1. Check each score is fair and not harsh for NZC Level '+level+'. A student meeting the expectation should be around 4/5 per criterion. Raise any score that looks harsh for work that reasonably meets a criterion; lower any that is clearly too generous.',
+      '2. Keep quote1 and quote2 EXACTLY as they are — they are verbatim quotes from the student\'s work and must never be changed or invented.',
+      '3. Refine improve1 and improve2 so they are warm, specific and actionable for a Year 7-8 student.',
+      '   - Write directly to the student using "you/your".',
+      '   - Each tip must refer to its quote and explain specifically HOW to improve that example. One or two clear sentences.',
+      '   - Do not use harsh or discouraging language.',
+      '',
+      'Teacher writing style to match: '+style,
+      '',
+      'Original marking: '+JSON.stringify(r),
+      '',
+      'Return ONLY the updated raw JSON with the same keys (fileName, criteria, quote1, improve1, quote2, improve2). No markdown, no explanation.'
+    ].join('\n');
+    var mod=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:p2}],onBusy));
+    mod.fileName=r.fileName;
+    // Grade total + band are computed in-app from the moderated scores — deterministic, no arithmetic slips.
+    finaliseGrade(mod);
     progressItems[idx].status='done';progressItems[idx].phase='';renderProg();
-    return r;
+    return mod;
   }catch(e){progressItems[idx].status='error';progressItems[idx].phase='';progressItems[idx].err=e.message;renderProg();return{fileName:file.name,_error:e.message}}
 }
-// Compute criteriaTotal + overallScore from the criterion scores so grading is consistent and needs no extra API call.
+// Compute criteriaTotal + overallScore from the criterion scores so the total is always arithmetically correct.
 function gradeBand(total){return total>=22?'Exceeds':total>=16?'Achieved':total>=10?'Approaching':'Beginning'}
 function finaliseGrade(r){
   var crit=(r&&r.criteria)||[];
