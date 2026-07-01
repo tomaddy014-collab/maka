@@ -1108,29 +1108,30 @@ function saveSess(name,area,level,task,rubric,res){
     if(sres.error){ss.innerHTML='';showToast('Could not save: '+sres.error.message,'err');return}
     currentSessId=sres.data.id;
     var valid=res.filter(function(r){return!r._error});
-    if(valid.length){
-      // Upload PDFs to storage then save results
-      Promise.all(valid.map(function(r,i){
-        var fileObj=r._file||files.find(function(f){return f.name===r.fileName});
-        return fileObj?uploadPDF(fileObj,USER.id):Promise.resolve(null);
-      })).then(function(paths){
-        sb.from('student_results').insert(valid.map(function(r,i){return{
-          session_id:sres.data.id,
-          teacher_id:USER.id,
-          file_name:resultSaveName(r),
-          overall_score:r.overallScore,
-          criteria_total:r.criteriaTotal,
-          criteria:r.criteria,
-          strengths:withQuote(r.quote1,r.improve1||r.strengths||''),
-          next_steps:r.improve2?[withQuote(r.quote2,r.improve2)]:(r.nextSteps||[]),
-          nzc_reference:r.nzcReference,
-          pdf_path:paths[i]||null
-        }})).then(function(){}).catch(function(){});
-      });
-    }
-    ss.innerHTML='';showToast('Saved — '+valid.length+' students in "'+name+'"','ok');
-    persistResults();loadDashSessions();loadCompareSessions();
-  }).catch(function(e){ss.innerHTML='';showToast('Could not save: '+e.message,'err')});
+    if(!valid.length){ss.innerHTML='';showToast('Saved session "'+name+'" (no marked work to attach)','ok');persistResults();loadDashSessions();loadCompareSessions();return}
+    // Upload PDFs to storage then save results
+    Promise.all(valid.map(function(r,i){
+      var fileObj=r._file||files.find(function(f){return f.name===r.fileName});
+      return fileObj?uploadPDF(fileObj,USER.id):Promise.resolve(null);
+    })).then(function(paths){
+      return sb.from('student_results').insert(valid.map(function(r,i){return{
+        session_id:sres.data.id,
+        teacher_id:USER.id,
+        file_name:resultSaveName(r),
+        overall_score:r.overallScore,
+        criteria_total:r.criteriaTotal,
+        criteria:r.criteria,
+        strengths:withQuote(r.quote1,r.improve1||r.strengths||''),
+        next_steps:r.improve2?[withQuote(r.quote2,r.improve2)]:(r.nextSteps||[]),
+        nzc_reference:r.nzcReference,
+        pdf_path:paths[i]||null
+      }}));
+    }).then(function(ins){
+      if(ins&&ins.error)throw new Error(ins.error.message);
+      ss.innerHTML='';showToast('Saved — '+valid.length+' students in "'+name+'"','ok');
+      persistResults();loadDashSessions();loadCompareSessions();
+    }).catch(function(e){console.error('Save results failed:',e);ss.innerHTML='';showToast('Could not save results: '+(e.message||e),'err')});
+  }).catch(function(e){console.error('Save session failed:',e);ss.innerHTML='';showToast('Could not save: '+(e.message||e),'err')});
 }
 
 // Re-sync every result to its assigned student profile in one click (respects the dropdown).
@@ -1168,7 +1169,7 @@ function saveAllToProfiles(){
       return sb.from('student_results').delete().eq('session_id',currentSessId).in('file_name',orphans);
     });
   }).then(function(){persistResults();done(true,'Saved to '+valid.length+' student profile'+(valid.length!==1?'s':''))})
-    .catch(function(e){done(false,'Could not save: '+(e.message||e))});
+    .catch(function(e){console.error('Save to profiles failed:',e);done(false,'Could not save: '+(e.message||e))});
 }
 
 function pillCls(pct){return pct>=75?'ph':pct>=50?'pm':'pl'}
@@ -1599,8 +1600,10 @@ function printSheets(){
   document.getElementById('print-out').innerHTML=results.filter(function(r){return!r._error}).map(function(r,i,arr){
     var sc=(r.criteria||[]).map(function(c){return parseInt(c.score)||0}),tot=sc.reduce(function(a,b){return a+b},0);
     var trows=(r.criteria||[]).map(function(c){var s=parseInt(c.score)||0,d='';for(var x=1;x<=5;x++)d+='<span style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:3px;background:'+(x<=s?'#2d5a27':'#ddd')+'"></span>';return'<tr><td style="padding:8px 4px 8px 0;border-bottom:1px solid #eee;width:35%;font-size:13px">'+esc(c.name||'')+'</td><td style="padding:8px 4px;border-bottom:1px solid #eee;width:20%;white-space:nowrap">'+d+' '+s+'/5</td><td style="padding:8px 0;border-bottom:1px solid #eee;font-size:12px;color:#555;line-height:1.5">'+esc(c.comment||'')+'</td></tr>'}).join('');
-    var ns=(r.nextSteps||[]).map(function(s){return'<li style="padding:3px 0 3px 16px;position:relative;font-size:13px"><span style="position:absolute;left:0">→</span>'+esc(s)+'</li>'}).join('');
-    return'<div style="max-width:680px;margin:0 auto;padding:48px 0;font-family:-apple-system,sans-serif"><div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;margin-bottom:24px;border-bottom:2px solid #1a1a1a"><div><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:6px">Māka · NZC Feedback</div><div style="font-size:24px;font-weight:700;margin-bottom:3px">'+esc(stripExt(r.fileName))+'</div><div style="font-size:13px;color:#666">'+esc(task)+'</div></div><div style="text-align:right"><div style="font-size:32px;font-weight:800;color:#2d5a27;line-height:1">'+tot+'/25</div><div style="font-size:12px;font-weight:600;color:#2d5a27;margin-top:4px">'+esc(r.overallScore||'')+'</div></div></div><table style="width:100%;border-collapse:collapse;margin-bottom:18px"><thead><tr><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 4px 8px 0;border-bottom:1px solid #ddd">Criterion</th><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 4px 8px;border-bottom:1px solid #ddd">Score</th><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 0 8px;border-bottom:1px solid #ddd">Comment</th></tr></thead><tbody>'+trows+'</tbody></table>'+(r.strengths?'<div style="background:#f0f7ee;border-radius:8px;padding:12px 14px;margin-bottom:8px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#2d5a27;margin-bottom:4px">Strengths</div><div style="font-size:13px;line-height:1.6;color:#333">'+esc(r.strengths)+'</div></div>':'')+(ns?'<div style="background:#f7f6f3;border-radius:8px;padding:12px 14px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#666;margin-bottom:6px">Next steps</div><ul style="list-style:none">'+ns+'</ul></div>':'')+'</div>'+(i<arr.length-1?'<div style="page-break-after:always"></div>':'');
+    var pStrength=withQuote(r.quote1,r.improve1||r.strengths||'');
+    var pSteps=(r.nextSteps&&r.nextSteps.length)?r.nextSteps:(r.improve2?[withQuote(r.quote2,r.improve2)]:[]);
+    var ns=pSteps.map(function(s){return'<li style="padding:3px 0 3px 16px;position:relative;font-size:13px"><span style="position:absolute;left:0">→</span>'+esc(s)+'</li>'}).join('');
+    return'<div style="max-width:680px;margin:0 auto;padding:48px 0;font-family:-apple-system,sans-serif"><div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;margin-bottom:24px;border-bottom:2px solid #1a1a1a"><div><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:6px">Māka · NZC Feedback</div><div style="font-size:24px;font-weight:700;margin-bottom:3px">'+esc(stripExt(r.fileName))+'</div><div style="font-size:13px;color:#666">'+esc(task)+'</div></div><div style="text-align:right"><div style="font-size:32px;font-weight:800;color:#2d5a27;line-height:1">'+tot+'/25</div><div style="font-size:12px;font-weight:600;color:#2d5a27;margin-top:4px">'+esc(r.overallScore||'')+'</div></div></div><table style="width:100%;border-collapse:collapse;margin-bottom:18px"><thead><tr><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 4px 8px 0;border-bottom:1px solid #ddd">Criterion</th><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 4px 8px;border-bottom:1px solid #ddd">Score</th><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 0 8px;border-bottom:1px solid #ddd">Comment</th></tr></thead><tbody>'+trows+'</tbody></table>'+(pStrength?'<div style="background:#f0f7ee;border-radius:8px;padding:12px 14px;margin-bottom:8px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#2d5a27;margin-bottom:4px">How to improve</div><div style="font-size:13px;line-height:1.6;color:#333">'+esc(pStrength)+'</div></div>':'')+(ns?'<div style="background:#f7f6f3;border-radius:8px;padding:12px 14px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#666;margin-bottom:6px">Next steps</div><ul style="list-style:none">'+ns+'</ul></div>':'')+'</div>'+(i<arr.length-1?'<div style="page-break-after:always"></div>':'');
   }).join('');window.print();
 }
 function exportCSV(){
@@ -1648,8 +1651,8 @@ function exportAllReportCards(){
         doc.setTextColor(grey[0],grey[1],grey[2]);doc.text(s+'/5',pw-m,y,{align:'right'});y+=15;
         if(c.comment){doc.setTextColor(110,110,110);doc.setFontSize(9);var cl=doc.splitTextToSize(c.comment,pw-m*2-14);need(cl.length*11);doc.text(cl,m+14,y);y+=cl.length*11+3;doc.setFontSize(10)}
       });
-      var strengths=r.strengths||r.improve1||'';
-      var steps=r.nextSteps||(r.improve2?[r.improve2]:[]);
+      var strengths=r.strengths||withQuote(r.quote1,r.improve1||'');
+      var steps=(r.nextSteps&&r.nextSteps.length)?r.nextSteps:(r.improve2?[withQuote(r.quote2,r.improve2)]:[]);
       if(strengths){y+=6;need(16);doc.setTextColor(green[0],green[1],green[2]);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text('STRENGTHS',m+6,y);y+=13;doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(80,80,80);var sl=doc.splitTextToSize(strengths,pw-m*2-12);need(sl.length*13);doc.text(sl,m+6,y);y+=sl.length*13+4}
       if(steps&&steps.length){y+=4;need(16);doc.setTextColor(gold[0],gold[1],gold[2]);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text('NEXT STEPS',m+6,y);y+=13;doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(80,80,80);steps.forEach(function(t){var tl=doc.splitTextToSize('– '+t,pw-m*2-12);need(tl.length*13+4);doc.text(tl,m+6,y);y+=tl.length*13+2})}
     });
