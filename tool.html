@@ -1123,6 +1123,8 @@ async function markOne(key,file,rubric,area,level,task,style,idx){
     if(!mod.praiseQuote&&r.praiseQuote)mod.praiseQuote=r.praiseQuote;
     if(!mod.goal&&r.goal)mod.goal=r.goal;
     if((!Array.isArray(mod.accuracy)||!mod.accuracy.length)&&Array.isArray(r.accuracy))mod.accuracy=r.accuracy;
+    // Integrity backstop: strip any ability/level-labelling language before it can be stored or shown.
+    scrubResultLevelLanguage(mod);
     // Grade total + band are computed in-app from the moderated scores — deterministic, no arithmetic slips.
     finaliseGrade(mod);
     progressItems[idx].status='done';progressItems[idx].phase='';renderProg();
@@ -1137,6 +1139,31 @@ function preserveComments(mod,orig){
     var src=oc[i]&&(oc[i].name===c.name||!c.name)?oc[i]:oc.find(function(o){return o.name===c.name});
     if(src&&src.comment)c.comment=src.comment;
   });
+}
+// Integrity backstop — remove wording that labels/ranks the student's ability or compares them to others.
+// Conservative, grammar-safe removals only; the teacher still reviews and can edit.
+function scrubLevelLanguage(t){
+  if(!t)return t;
+  var s=String(t);
+  // "for/at/to your|a|an|the (current) (reading/writing) level"
+  s=s.replace(/,?\s*\b(for|at|to)\s+(your|a|an|the)\s+(current\s+)?(reading\s+|writing\s+)?level\b/gi,'');
+  // "for a beginner/struggling/advanced ... writer/student/learner"
+  s=s.replace(/\bfor\s+(a\s+|an\s+)?(beginner|beginning|struggling|weak(er)?|advanced|stronger|lower[- ]ability|higher[- ]ability|low[- ]ability|high[- ]ability)\s+(writer|student|learner)s?\b/gi,'');
+  // deficit adjective + noun -> keep the noun ("struggling writer" -> "writer")
+  s=s.replace(/\b(struggling|weak|weaker|low[- ]ability|lower[- ]ability|basic|beginner|beginning)\s+(writer|student|learner)\b/gi,'$2');
+  // comparisons to other students
+  s=s.replace(/\b(compared to|than)\s+(the\s+|your\s+)?(other\s+)?(students|classmates|peers|writers)\b/gi,'');
+  // tidy up whitespace/orphan punctuation left behind, recapitalise
+  s=s.replace(/\s{2,}/g,' ').replace(/\s+([,.!?;:])/g,'$1').replace(/^[\s,.;:]+/,'').trim();
+  if(s)s=s.charAt(0).toUpperCase()+s.slice(1);
+  return s;
+}
+function scrubResultLevelLanguage(r){
+  if(!r)return;
+  if(r.praise)r.praise=scrubLevelLanguage(r.praise);
+  if(Array.isArray(r.criteria))r.criteria.forEach(function(c){if(c&&c.comment)c.comment=scrubLevelLanguage(c.comment)});
+  if(Array.isArray(r.improve))r.improve.forEach(function(i){if(!i)return;if(i.suggestion)i.suggestion=scrubLevelLanguage(i.suggestion);if(i.example)i.example=scrubLevelLanguage(i.example);if(i.text)i.text=scrubLevelLanguage(i.text)});
+  if(r.goal)r.goal=scrubLevelLanguage(r.goal);
 }
 // Compute criteriaTotal + overallScore from the criterion scores so the total is always arithmetically correct.
 function gradeBand(total){return total>=22?'Exceeds':total>=16?'Achieved':total>=10?'Approaching':'Beginning'}
