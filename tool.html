@@ -1047,18 +1047,30 @@ function renderProg(){
   }).join('')+'</ul>';
 }
 
-async function markOne(key,file,rubric,area,level,task,style,idx){
-  progressItems[idx].status='working';progressItems[idx].phase='Marking…';renderProg();
+// Concurrency limiter — lets a fixed number of jobs run at once; the rest queue and start as slots free.
+function makeLimiter(n){
+  var active=0,q=[];
+  function pump(){while(active<n&&q.length){var job=q.shift();active++;Promise.resolve().then(job.fn).then(job.res,job.rej).then(function(){active--;pump()})}}
+  return function(fn){return new Promise(function(res,rej){q.push({fn:fn,res:res,rej:rej});pump()})};
+}
+// Two-stage: marking and moderation are throttled independently, so a file entering
+// moderation immediately frees a marking slot for the next file (mark + moderate run in parallel).
+async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLimit){
+  var ml=markLimit||function(fn){return Promise.resolve().then(fn)};
+  var md=modLimit||function(fn){return Promise.resolve().then(fn)};
+  var mime,b64,r,onBusy=function(a,max){progressItems[idx].phase='Gemini busy — retrying ('+a+'/'+(max-1)+')…';renderProg()};
   try{
-    var mime=file.type==='application/pdf'?'application/pdf':file.type,b64=await toB64(file);
+    r=await ml(async function(){
+    progressItems[idx].status='working';progressItems[idx].phase='Marking…';renderProg();
+    mime=file.type==='application/pdf'?'application/pdf':file.type;b64=await toB64(file);
     var p1=[
       'You are a warm, encouraging NZ Years 7-8 teacher marking student work against the refreshed New Zealand Curriculum.',
       'Learning area: '+area+'. NZC Level: '+level+'. Task: '+(task||'General assessment')+'.',
       '',
       'IMPORTANT RULES:',
       '1. Mark ONLY against the exact criteria listed below. Do NOT invent new criteria or rename them.',
-      '2. Calibrate to NZC Level '+level+'. A student who solidly MEETS the Level '+level+' expectation scores 4/5 on that criterion. Reserve 5/5 for work that clearly goes beyond the expectation. Give 3/5 when the work is approaching the expectation, and 1-2/5 only when a criterion is barely attempted or missing.',
-      '3. Mark generously and give students the benefit of the doubt — these are 11-13 year olds. If evidence for a criterion is present and reasonable, do not dock marks for minor imperfections. Only give low scores where a criterion is genuinely absent or clearly incomplete.',
+      '2. Calibrate to NZC Level '+level+', and mark ENCOURAGINGLY. A student who meets the Level '+level+' expectation scores 4/5; award 5/5 whenever the work meets the expectation well or goes beyond (do not hold 5 back for perfection). Give 3/5 when a criterion is partly there, and 1-2/5 ONLY when it is largely missing. Most reasonable Year 7-8 attempts should land in the 3-5 range per criterion.',
+      '3. Mark generously and give the benefit of the doubt — these are 11-13 year olds. Never dock marks for minor slips (spelling, neatness, length) if the underlying skill is shown. When you are genuinely unsure between two scores, ALWAYS choose the higher one.',
       '4. Use warm, clear, age-appropriate language (Years 7-8 students, aged 11-13).',
       '5. AUTO-DIFFERENTIATE the feedback to the level of THIS piece of writing. Judge the student\'s demonstrated writing level from the work itself, then pitch every comment, tip and example to match: for a student who is clearly struggling, use short simple sentences, very plain words, extra warmth and one small concrete step at a time; for a strong, fluent writer, use richer vocabulary and more challenging next steps. The feedback should feel written for THIS child, not a generic Year 7-8.',
       '6. DIFFERENTIATION SAFEGUARDS — protect the student\'s dignity:',
@@ -1090,16 +1102,18 @@ async function markOne(key,file,rubric,area,level,task,style,idx){
       'Give a "comment" for EVERY criterion. Give 2 to 3 items in "improve", each targeting a different criterion where the student can most easily gain marks, and each with a genuine worked "example". List up to 3 REAL spelling or punctuation fixes taken directly from the work in "accuracy" (use [] if the writing is technically accurate — never invent errors). Every quote MUST be real text taken directly from this student\'s work — never invented.',
       'TONE: write every comment, praise, suggestion, example and goal directly TO the student (you/your), warm and encouraging, in short plain words a 11-13 year old reads easily. Never talk about the student in third person and never sound harsh.'
     ].join('\n');
-    var onBusy=function(a,max){progressItems[idx].phase='Gemini busy — retrying ('+a+'/'+(max-1)+')…';renderProg()};
-    var r=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:'File: "'+file.name+'"\n\n'+p1}],onBusy));
-    r.fileName=r.fileName||file.name;
+    var rr=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:'File: "'+file.name+'"\n\n'+p1}],onBusy));
+    rr.fileName=rr.fileName||file.name;
+    return rr;
+    });
+    var mod=await md(async function(){
     // Second AI pass: an independent moderation review of the scores and feedback.
     progressItems[idx].phase='Moderating…';renderProg();
     var p2=[
       'You are moderating NZC Level '+level+' student marking. Be fair and encouraging for Years 7-8 students.',
       '',
       'Review this marking against the student work and:',
-      '1. Check each score is fair and not harsh for NZC Level '+level+'. A student meeting the expectation should be around 4/5 per criterion. Raise any score that looks harsh for work that reasonably meets a criterion; lower any that is clearly too generous.',
+      '1. Check each score is fair and NOT harsh for NZC Level '+level+'. A student meeting the expectation should be 4/5, and work that meets it well deserves 5/5. Raise any score that looks harsh for work that reasonably meets a criterion. Do not lower scores unless a criterion is clearly largely missing. When unsure between two scores, choose the higher.',
       '2. Keep every quote (praiseQuote and each improve[].quote) EXACTLY as it is — they are verbatim quotes from the student\'s work and must never be changed or invented.',
       '3. Make sure every criterion has a helpful "comment", the "praise" is genuine and specific, each improve item has a clear "suggestion" and realistic worked "example", the "accuracy" fixes are real (never invented), and the "goal" is one encouraging next-time target.',
       '   - Write everything directly to the student using "you/your". Warm, plain, age-appropriate for 11-13 year olds. Never harsh or discouraging.',
@@ -1114,19 +1128,21 @@ async function markOne(key,file,rubric,area,level,task,style,idx){
       '',
       'Return ONLY the updated raw JSON with the same keys (fileName, criteria, praiseQuote, praise, improve, accuracy, goal). No markdown, no explanation.'
     ].join('\n');
-    var mod=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:p2}],onBusy));
-    mod.fileName=r.fileName;
+    var mm=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:p2}],onBusy));
+    mm.fileName=r.fileName;
     // Safeguard: if moderation dropped per-criterion comments (or a whole field), fall back to the first pass.
-    preserveComments(mod,r);
-    if(!Array.isArray(mod.improve)||!mod.improve.length)mod.improve=r.improve;
-    if(!mod.praise&&r.praise)mod.praise=r.praise;
-    if(!mod.praiseQuote&&r.praiseQuote)mod.praiseQuote=r.praiseQuote;
-    if(!mod.goal&&r.goal)mod.goal=r.goal;
-    if((!Array.isArray(mod.accuracy)||!mod.accuracy.length)&&Array.isArray(r.accuracy))mod.accuracy=r.accuracy;
+    preserveComments(mm,r);
+    if(!Array.isArray(mm.improve)||!mm.improve.length)mm.improve=r.improve;
+    if(!mm.praise&&r.praise)mm.praise=r.praise;
+    if(!mm.praiseQuote&&r.praiseQuote)mm.praiseQuote=r.praiseQuote;
+    if(!mm.goal&&r.goal)mm.goal=r.goal;
+    if((!Array.isArray(mm.accuracy)||!mm.accuracy.length)&&Array.isArray(r.accuracy))mm.accuracy=r.accuracy;
     // Integrity backstop: strip any ability/level-labelling language before it can be stored or shown.
-    scrubResultLevelLanguage(mod);
+    scrubResultLevelLanguage(mm);
     // Grade total + band are computed in-app from the moderated scores — deterministic, no arithmetic slips.
-    finaliseGrade(mod);
+    finaliseGrade(mm);
+    return mm;
+    });
     progressItems[idx].status='done';progressItems[idx].phase='';renderProg();
     return mod;
   }catch(e){progressItems[idx].status='error';progressItems[idx].phase='';progressItems[idx].err=e.message;renderProg();return{fileName:file.name,_error:e.message}}
@@ -1166,7 +1182,7 @@ function scrubResultLevelLanguage(r){
   if(r.goal)r.goal=scrubLevelLanguage(r.goal);
 }
 // Compute criteriaTotal + overallScore from the criterion scores so the total is always arithmetically correct.
-function gradeBand(total){return total>=22?'Exceeds':total>=16?'Achieved':total>=10?'Approaching':'Beginning'}
+function gradeBand(total){return total>=21?'Exceeds':total>=14?'Achieved':total>=8?'Approaching':'Beginning'}
 function finaliseGrade(r){
   var crit=(r&&r.criteria)||[];
   var total=crit.reduce(function(s,c){return s+(parseInt(c.score)||0)},0);
@@ -1203,18 +1219,13 @@ async function runMarking(){
     document.getElementById('rsec').style.display='block';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='block';document.getElementById('save-status').innerHTML='';
     progressItems=files.map(function(f){return{name:f.name,status:'pending',phase:'',err:''}});renderProg();
     var out=new Array(files.length);
-    // Continuous pipeline: keep CONCURRENCY files in flight. As soon as one moves from
-    // marking into moderating (or finishes), the freed slot pulls the next file in — so
-    // moderations overlap with the marking of later files instead of waiting for a whole batch.
-    var CONCURRENCY=3,next=0;
-    async function worker(){
-      while(next<files.length){
-        var i=next++;
-        out[i]=await markOne(key,files[i],rub,area,level,task,style,i);
-        await sleep(400); // small stagger so slots don't all re-fire at once
-      }
-    }
-    await Promise.all(Array.from({length:Math.min(CONCURRENCY,files.length)},worker));
+    // True two-stage pipeline: marking (up to 3) and moderation (up to 3) are throttled
+    // separately, so the moment a file starts moderating, a marking slot frees and the next
+    // file begins marking straight away — marking and moderation run in parallel throughout.
+    var markLimit=makeLimiter(3),modLimit=makeLimiter(3);
+    await Promise.all(files.map(function(f,i){
+      return markOne(key,f,rub,area,level,task,style,i,markLimit,modLimit).then(function(res){out[i]=res});
+    }));
     for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r&&r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(2500);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markOne(key,files[i],rub,area,level,task,style,i)}));fail.forEach(function(i,j){out[i]=ret[j]})}
     out.forEach(function(r,i){r._file=files[i]});
     results=out;document.getElementById('progress').style.display='none';renderResults(out);
@@ -1469,7 +1480,7 @@ function renderResults(res){
   }
   res.forEach(function(r,idx){
     if(r._error)return;
-    document.querySelectorAll('[data-ci][data-ri="'+idx+'"]').forEach(function(td){makeEditable(td,function(v){var ci=parseInt(td.dataset.ci),s=Math.max(1,Math.min(5,parseInt(v)||results[idx].criteria[ci].score));results[idx].criteria[ci].score=s;var tot=results[idx].criteria.map(function(c){return parseInt(c.score)||0}).reduce(function(a,b){return a+b},0);results[idx].criteriaTotal=tot+'/25';if(tot>=21)results[idx].overallScore='Exceeds';else if(tot>=16)results[idx].overallScore='Achieved';else if(tot>=11)results[idx].overallScore='Approaching';else results[idx].overallScore='Beginning';renderResults(results)})});
+    document.querySelectorAll('[data-ci][data-ri="'+idx+'"]').forEach(function(td){makeEditable(td,function(v){var ci=parseInt(td.dataset.ci),s=Math.max(1,Math.min(5,parseInt(v)||results[idx].criteria[ci].score));results[idx].criteria[ci].score=s;var tot=results[idx].criteria.map(function(c){return parseInt(c.score)||0}).reduce(function(a,b){return a+b},0);results[idx].criteriaTotal=tot+'/25';results[idx].overallScore=gradeBand(tot);renderResults(results)})});
   });
 }
 function renderResultSet(res,container){container.innerHTML=res.map(function(r,i){return renderResultCard(r,i,false)}).join('')}
