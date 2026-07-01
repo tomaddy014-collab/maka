@@ -225,8 +225,14 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 /* "How to improve" — warm gold-accent cards */
 .sbox.improve{background:rgba(200,132,10,0.06);border-left:3px solid var(--gold);color:var(--text);display:flex;gap:9px;align-items:flex-start}
 .sbox.improve .ico{color:var(--gold);flex-shrink:0;margin-top:2px}
+.sbox.praise{background:rgba(45,90,39,0.07);border-left:3px solid var(--green);color:var(--text);display:flex;gap:9px;align-items:flex-start}
+.sbox.praise .ico{color:var(--green);flex-shrink:0;margin-top:2px}
 .sbox .quote{font-style:italic;color:var(--text2);border-left:2px solid var(--border2);padding:2px 0 2px 9px;margin-bottom:6px;font-size:12.5px;line-height:1.5}
 .sbox .quote::before{content:'\201C'}.sbox .quote::after{content:'\201D'}
+.sbox .tryex{margin-top:6px;font-size:12.5px;line-height:1.5;color:var(--text);background:rgba(0,0,0,0.03);border-radius:6px;padding:6px 9px}
+[data-theme="dark"] .sbox .tryex{background:rgba(255,255,255,0.05)}
+.sbox .trylbl{font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.05em;font-size:10px;margin-right:5px}
+.ccomment{font-size:12px;color:var(--text2);line-height:1.45;margin-top:3px;font-weight:400}
 
 /* Toast notifications */
 #toast-wrap{position:fixed;right:20px;bottom:20px;z-index:2000;display:flex;flex-direction:column;gap:10px;align-items:flex-end;pointer-events:none}
@@ -568,6 +574,49 @@ function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function stripExt(n){return String(n).replace(/\.[^.]+$/,'')}
 // Fold a verbatim student quote into feedback text so it persists to the hub/portal.
 function withQuote(q,t){q=(q||'').trim();t=t||'';return q?('“'+q+'” — '+t):t}
+// ── Feedback model ──────────────────────────────────────────────────────────
+// Normalises a result (live structured, DB row, or legacy) into {praise:{quote,text}|null, tips:[...]}.
+function fbGet(r){
+  var praise=null;
+  if(r.praise||r.praiseQuote)praise={quote:(r.praiseQuote||'').trim(),text:(r.praise||'').trim()};
+  else if(r.strengths)praise={quote:'',text:String(r.strengths)};
+  var tips=[];
+  if(Array.isArray(r.improve)&&r.improve.length){
+    tips=r.improve.map(function(i){return{quote:(i.quote||'').trim(),suggestion:(i.suggestion||'').trim(),example:(i.example||'').trim()}});
+  }else if(r.next_steps&&r.next_steps.length){
+    tips=r.next_steps.map(function(s){return{text:String(s)}});
+  }else if(r.nextSteps&&r.nextSteps.length){
+    tips=r.nextSteps.map(function(s){return{text:String(s)}});
+  }else if(r.improve1||r.improve2){ // legacy live shape
+    if(r.improve1)tips.push({quote:(r.quote1||'').trim(),suggestion:r.improve1});
+    if(r.improve2)tips.push({quote:(r.quote2||'').trim(),suggestion:r.improve2});
+  }
+  return{praise:praise,tips:tips};
+}
+// Flatten one tip into a single readable line for storage / CSV / plain-text contexts.
+function fbTipToStr(t){if(t.text)return t.text;return(t.quote?('You wrote “'+t.quote+'”. '):'')+(t.suggestion||'')+(t.example?(' Try: “'+t.example+'”'):'')}
+// DB column mappers (praise -> strengths text, tips -> next_steps text[]).
+function fbStrengthsSave(r){var p=fbGet(r).praise;return p?withQuote(p.quote,p.text):''}
+function fbStepsSave(r){return fbGet(r).tips.map(fbTipToStr).filter(Boolean)}
+// Shared feedback HTML for result cards (tool side).
+function fbRender(r){
+  var fb=fbGet(r),h='';
+  if(fb.praise&&fb.praise.text){
+    h+='<div class="slbl">What you did well</div>';
+    h+='<div class="sbox praise">'+ic('check')+'<div>'+(fb.praise.quote?'<div class="quote">'+esc(fb.praise.quote)+'</div>':'')+'<span>'+esc(fb.praise.text)+'</span></div></div>';
+  }
+  if(fb.tips.length){
+    h+='<div class="slbl" style="margin-top:12px">How to improve</div>';
+    fb.tips.forEach(function(t){
+      h+='<div class="sbox improve" style="margin-bottom:6px">'+ic('bulb')+'<div>';
+      if(t.quote)h+='<div class="quote">'+esc(t.quote)+'</div>';
+      if(t.text)h+='<span>'+esc(t.text)+'</span>';
+      else{if(t.suggestion)h+='<span>'+esc(t.suggestion)+'</span>';if(t.example)h+='<div class="tryex"><span class="trylbl">Try</span> '+esc(t.example)+'</div>'}
+      h+='</div></div>';
+    });
+  }
+  return h;
+}
 function getStyle(){return(PROFILE&&PROFILE.writing_style&&PROFILE.writing_style.trim())||DEFAULT_STYLE}
 function getKey(){var k=(document.getElementById('apikey').value||'').trim()||(PROFILE&&PROFILE.gemini_key)||'';if(!k){alert('Please enter your Gemini API key.');return null}return k}
 var ICONS={
@@ -975,14 +1024,19 @@ async function markOne(key,file,rubric,area,level,task,style,idx){
       'OUTPUT FORMAT — return ONLY raw JSON, no markdown, no explanation:',
       '{',
       '  "fileName": "filename here",',
-      '  "criteria": [{"name": "exact criterion name from rubric", "score": 1-5}],',
-      '  "quote1": "A SHORT exact quote copied word-for-word from the student\'s writing that relates to improve1. Copy it verbatim, do not paraphrase. Use \\"\\" (empty) if the work has no readable text to quote.",',
-      '  "improve1": "First improvement tip, written warmly and directly to the student (you/your). Refer to the quote1 example and say specifically HOW to improve it (e.g. what to add, change or try). One or two clear sentences.",',
-      '  "quote2": "A SHORT exact quote copied word-for-word from the student\'s writing that relates to improve2. Copy it verbatim, do not paraphrase. Use \\"\\" (empty) if not applicable.",',
-      '  "improve2": "Second improvement tip, written warmly and directly to the student (you/your). Refer to the quote2 example and say specifically HOW to improve it. One or two clear sentences."',
+      '  "criteria": [{"name": "exact criterion name from rubric", "score": 1-5, "comment": "One short sentence to the student about THIS criterion — what they did or what would lift it. Warm, plain, you/your."}],',
+      '  "praiseQuote": "A SHORT exact quote copied word-for-word from the student\'s writing that shows something they did genuinely well. Verbatim — never invented. Use \\"\\" (empty) if the work has no readable text.",',
+      '  "praise": "Warm, specific praise written directly to the student (you/your) about praiseQuote — name WHY it works well. One or two sentences.",',
+      '  "improve": [',
+      '    {',
+      '      "quote": "A SHORT verbatim quote from the student\'s own writing to work on. Never invented. Empty \\"\\" if the work has no readable text.",',
+      '      "suggestion": "Warm, specific advice to the student (you/your) on HOW to improve that quote.",',
+      '      "example": "A short model rewrite showing what a stronger version of that quote could look like — realistic for a Year 7-8 student."',
+      '    }',
+      '  ]',
       '}',
       '',
-      'The quotes MUST be genuine text taken directly from this student\'s work — never invented. Ground every tip in what the student actually wrote so they can see exactly what to work on.'
+      'Give a "comment" for EVERY criterion. Give 2 to 3 items in "improve", each targeting a different criterion where the student can most easily gain marks, and each with a genuine worked "example". Every quote MUST be real text taken directly from this student\'s work — never invented.'
     ].join('\n');
     var onBusy=function(a,max){progressItems[idx].phase='Gemini busy — retrying ('+a+'/'+(max-1)+')…';renderProg()};
     var r=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:'File: "'+file.name+'"\n\n'+p1}],onBusy));
@@ -994,17 +1048,16 @@ async function markOne(key,file,rubric,area,level,task,style,idx){
       '',
       'Review this marking against the student work and:',
       '1. Check each score is fair and not harsh for NZC Level '+level+'. A student meeting the expectation should be around 4/5 per criterion. Raise any score that looks harsh for work that reasonably meets a criterion; lower any that is clearly too generous.',
-      '2. Keep quote1 and quote2 EXACTLY as they are — they are verbatim quotes from the student\'s work and must never be changed or invented.',
-      '3. Refine improve1 and improve2 so they are warm, specific and actionable for a Year 7-8 student.',
-      '   - Write directly to the student using "you/your".',
-      '   - Each tip must refer to its quote and explain specifically HOW to improve that example. One or two clear sentences.',
-      '   - Do not use harsh or discouraging language.',
+      '2. Keep every quote (praiseQuote and each improve[].quote) EXACTLY as it is — they are verbatim quotes from the student\'s work and must never be changed or invented.',
+      '3. Make sure every criterion has a helpful "comment", the "praise" is genuine and specific, and each improve item has a clear "suggestion" and a realistic worked "example".',
+      '   - Write directly to the student using "you/your". Warm, plain, age-appropriate. Never harsh or discouraging.',
+      '   - Keep 2 to 3 improve items, each with a genuine example rewrite.',
       '',
       'Teacher writing style to match: '+style,
       '',
       'Original marking: '+JSON.stringify(r),
       '',
-      'Return ONLY the updated raw JSON with the same keys (fileName, criteria, quote1, improve1, quote2, improve2). No markdown, no explanation.'
+      'Return ONLY the updated raw JSON with the same keys (fileName, criteria, praiseQuote, praise, improve). No markdown, no explanation.'
     ].join('\n');
     var mod=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:p2}],onBusy));
     mod.fileName=r.fileName;
@@ -1033,7 +1086,7 @@ async function remarkStu(idx){
   var res=await markOne(key,files[idx],rub,area,level,task,getStyle(),idx);
   res._file=files[idx];if(prev.assignTo)res.assignTo=prev.assignTo;
   results[idx]=res;document.getElementById('progress').style.display='none';renderResults(results);
-  if(currentSessId&&!res._error&&sb&&USER)sb.from('student_results').upsert({session_id:currentSessId,teacher_id:USER.id,file_name:resultSaveName(res),overall_score:res.overallScore,criteria_total:res.criteriaTotal,criteria:res.criteria,strengths:withQuote(res.quote1,res.improve1||res.strengths||''),next_steps:res.improve2?[withQuote(res.quote2,res.improve2)]:(res.nextSteps||[]),nzc_reference:res.nzcReference},{onConflict:'session_id,file_name'}).then(function(){}).catch(function(){});
+  if(currentSessId&&!res._error&&sb&&USER)sb.from('student_results').upsert({session_id:currentSessId,teacher_id:USER.id,file_name:resultSaveName(res),overall_score:res.overallScore,criteria_total:res.criteriaTotal,criteria:res.criteria,strengths:fbStrengthsSave(res),next_steps:fbStepsSave(res),nzc_reference:res.nzcReference},{onConflict:'session_id,file_name'}).then(function(){}).catch(function(){});
 }
 
 var MARKING=false;
@@ -1121,8 +1174,8 @@ function saveSess(name,area,level,task,rubric,res){
         overall_score:r.overallScore,
         criteria_total:r.criteriaTotal,
         criteria:r.criteria,
-        strengths:withQuote(r.quote1,r.improve1||r.strengths||''),
-        next_steps:r.improve2?[withQuote(r.quote2,r.improve2)]:(r.nextSteps||[]),
+        strengths:fbStrengthsSave(r),
+        next_steps:fbStepsSave(r),
         nzc_reference:r.nzcReference,
         pdf_path:paths[i]||null
       }}));
@@ -1158,7 +1211,7 @@ function saveAllToProfiles(){
       return sb.from('student_results').upsert(valid.map(function(r,i){return{
         session_id:currentSessId,teacher_id:USER.id,file_name:resultSaveName(r),
         overall_score:r.overallScore,criteria_total:r.criteriaTotal,criteria:r.criteria,
-        strengths:withQuote(r.quote1,r.improve1||r.strengths||''),next_steps:r.improve2?[withQuote(r.quote2,r.improve2)]:(r.nextSteps||[]),
+        strengths:fbStrengthsSave(r),next_steps:fbStepsSave(r),
         nzc_reference:r.nzcReference,pdf_path:paths[i]||null
       }}),{onConflict:'session_id,file_name'});
     }).then(function(up){
@@ -1196,9 +1249,6 @@ function renderResultCard(r,idx,editable){
   var pct=sc.length?Math.round(total/(sc.length*5)*100):0;
   var overall=r.overallScore||r.overall_score||'';
   var remarkBtn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkStu('+idx+')">'+ic('refresh')+'Re-mark</button>':'';
-  var i1=r.improve1||r.strengths||'',i2=r.improve2||(r.next_steps&&r.next_steps[0])||'';
-  var q1=(r.quote1||'').trim(),q2=(r.quote2||'').trim();
-  var tip=function(quote,text){var h='<div class="sbox improve">'+ic('bulb')+'<div>';if(quote)h+='<div class="quote">'+esc(quote)+'</div>';h+='<span>'+esc(text)+'</span></div></div>';return h};
   var fileLabel=r.fileName||r.file_name||'';
   var stuName=editable?assignedStudentFor(r):'';
   var nameHtml=stuName
@@ -1209,16 +1259,13 @@ function renderResultCard(r,idx,editable){
   if(crit.length){
     html+='<table class="ctable"><thead><tr><th>Criterion</th><th style="width:90px;text-align:center">Score</th></tr></thead><tbody>';
     crit.forEach(function(c,ci){
-      html+='<tr><td class="cn">'+esc(c.name||'')+'</td><td class="cs" style="text-align:center" data-ci="'+ci+'" data-ri="'+idx+'">'+dots(parseInt(c.score)||0)+'</td></tr>';
+      var cm=c.comment?'<div class="ccomment">'+esc(c.comment)+'</div>':'';
+      html+='<tr><td class="cn">'+esc(c.name||'')+cm+'</td><td class="cs" style="text-align:center;vertical-align:top" data-ci="'+ci+'" data-ri="'+idx+'">'+dots(parseInt(c.score)||0)+'</td></tr>';
     });
     html+='</tbody></table>';
     html+='<div class="total-row">Total: <strong>'+esc(tot)+'</strong></div>';
   }
-  if(i1||i2){
-    html+='<div class="slbl">How to improve</div>';
-    if(i1)html+='<div style="margin-bottom:6px">'+tip(q1,i1)+'</div>';
-    if(i2)html+=tip(q2,i2);
-  }
+  html+=fbRender(r);
   if(editable){
     var assigned=assignedStudentFor(r);
     var hint=CLASS_STUDENTS.length?'':' (add students in the Class tab first)';
@@ -1306,7 +1353,7 @@ function renderResults(res){
   });
 }
 function renderResultSet(res,container){container.innerHTML=res.map(function(r,i){return renderResultCard(r,i,false)}).join('')}
-function normResult(r){return{fileName:r.file_name,overallScore:r.overall_score,criteriaTotal:r.criteria_total,criteria:r.criteria||[],improve1:r.strengths||'',improve2:(r.next_steps&&r.next_steps[0])||'',nzcReference:r.nzc_reference}}
+function normResult(r){return{fileName:r.file_name,overallScore:r.overall_score,criteriaTotal:r.criteria_total,criteria:r.criteria||[],strengths:r.strengths||'',next_steps:r.next_steps||[],nzcReference:r.nzc_reference}}
 
 function loadDashSessions(){
   if(!sb||!USER)return;
@@ -1434,7 +1481,7 @@ async function genComments(){
     }
     var byStudent={};
     allWeek.forEach(function(r){var fn=r.file_name?r.file_name.split(/[\s\-_.]/)[0]:'Unknown';if(!byStudent[fn])byStudent[fn]={name:fn,sessions:[]};byStudent[fn].sessions.push({subject:(r.sessions&&r.sessions.learning_area)||'Subject',task:(r.sessions&&r.sessions.task)||'',overallScore:r.overall_score||'',total:r.criteria_total||'',strengths:r.strengths||''})});
-    results.filter(function(r){return!r._error}).forEach(function(r){var fn=r.fileName?r.fileName.split(/[\s\-_.]/)[0]:'Unknown';if(!byStudent[fn])byStudent[fn]={name:fn,sessions:[]};byStudent[fn].sessions.push({subject:document.getElementById('la').value,task:document.getElementById('task').value||'',overallScore:r.overallScore||'',total:r.criteriaTotal||'',strengths:r.strengths||''})});
+    results.filter(function(r){return!r._error}).forEach(function(r){var fn=r.fileName?r.fileName.split(/[\s\-_.]/)[0]:'Unknown';if(!byStudent[fn])byStudent[fn]={name:fn,sessions:[]};byStudent[fn].sessions.push({subject:document.getElementById('la').value,task:document.getElementById('task').value||'',overallScore:r.overallScore||'',total:r.criteriaTotal||'',strengths:fbStrengthsSave(r)})});
     var stuList=Object.values(byStudent);
     if(!stuList.length){cprog.style.display='none';alert('No students found for this week.');return}
     cprog.innerHTML='<div style="font-size:13px;color:var(--text2);display:flex;align-items:center;gap:8px"><div class="spinner"></div>Generating weekly posts for '+stuList.length+' students…</div>';
@@ -1600,16 +1647,16 @@ function printSheets(){
   document.getElementById('print-out').innerHTML=results.filter(function(r){return!r._error}).map(function(r,i,arr){
     var sc=(r.criteria||[]).map(function(c){return parseInt(c.score)||0}),tot=sc.reduce(function(a,b){return a+b},0);
     var trows=(r.criteria||[]).map(function(c){var s=parseInt(c.score)||0,d='';for(var x=1;x<=5;x++)d+='<span style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:3px;background:'+(x<=s?'#2d5a27':'#ddd')+'"></span>';return'<tr><td style="padding:8px 4px 8px 0;border-bottom:1px solid #eee;width:35%;font-size:13px">'+esc(c.name||'')+'</td><td style="padding:8px 4px;border-bottom:1px solid #eee;width:20%;white-space:nowrap">'+d+' '+s+'/5</td><td style="padding:8px 0;border-bottom:1px solid #eee;font-size:12px;color:#555;line-height:1.5">'+esc(c.comment||'')+'</td></tr>'}).join('');
-    var pStrength=withQuote(r.quote1,r.improve1||r.strengths||'');
-    var pSteps=(r.nextSteps&&r.nextSteps.length)?r.nextSteps:(r.improve2?[withQuote(r.quote2,r.improve2)]:[]);
-    var ns=pSteps.map(function(s){return'<li style="padding:3px 0 3px 16px;position:relative;font-size:13px"><span style="position:absolute;left:0">→</span>'+esc(s)+'</li>'}).join('');
-    return'<div style="max-width:680px;margin:0 auto;padding:48px 0;font-family:-apple-system,sans-serif"><div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;margin-bottom:24px;border-bottom:2px solid #1a1a1a"><div><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:6px">Māka · NZC Feedback</div><div style="font-size:24px;font-weight:700;margin-bottom:3px">'+esc(stripExt(r.fileName))+'</div><div style="font-size:13px;color:#666">'+esc(task)+'</div></div><div style="text-align:right"><div style="font-size:32px;font-weight:800;color:#2d5a27;line-height:1">'+tot+'/25</div><div style="font-size:12px;font-weight:600;color:#2d5a27;margin-top:4px">'+esc(r.overallScore||'')+'</div></div></div><table style="width:100%;border-collapse:collapse;margin-bottom:18px"><thead><tr><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 4px 8px 0;border-bottom:1px solid #ddd">Criterion</th><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 4px 8px;border-bottom:1px solid #ddd">Score</th><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 0 8px;border-bottom:1px solid #ddd">Comment</th></tr></thead><tbody>'+trows+'</tbody></table>'+(pStrength?'<div style="background:#f0f7ee;border-radius:8px;padding:12px 14px;margin-bottom:8px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#2d5a27;margin-bottom:4px">How to improve</div><div style="font-size:13px;line-height:1.6;color:#333">'+esc(pStrength)+'</div></div>':'')+(ns?'<div style="background:#f7f6f3;border-radius:8px;padding:12px 14px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#666;margin-bottom:6px">Next steps</div><ul style="list-style:none">'+ns+'</ul></div>':'')+'</div>'+(i<arr.length-1?'<div style="page-break-after:always"></div>':'');
+    var fb=fbGet(r);
+    var praiseHtml=(fb.praise&&fb.praise.text)?'<div style="background:#f0f7ee;border-radius:8px;padding:12px 14px;margin-bottom:8px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#2d5a27;margin-bottom:4px">What you did well</div>'+(fb.praise.quote?'<div style="font-style:italic;color:#555;font-size:12.5px;margin-bottom:4px">“'+esc(fb.praise.quote)+'”</div>':'')+'<div style="font-size:13px;line-height:1.6;color:#333">'+esc(fb.praise.text)+'</div></div>':'';
+    var tipsHtml=fb.tips.length?'<div style="background:#faf6ee;border-radius:8px;padding:12px 14px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8a5a06;margin-bottom:6px">How to improve</div>'+fb.tips.map(function(t){var b='<div style="font-size:13px;line-height:1.6;color:#333;margin-bottom:8px">';if(t.quote)b+='<div style="font-style:italic;color:#666;font-size:12.5px;margin-bottom:2px">“'+esc(t.quote)+'”</div>';if(t.text)b+=esc(t.text);else{if(t.suggestion)b+=esc(t.suggestion);if(t.example)b+='<div style="margin-top:3px"><strong>Try:</strong> '+esc(t.example)+'</div>'}return b+'</div>'}).join('')+'</div>':'';
+    return'<div style="max-width:680px;margin:0 auto;padding:48px 0;font-family:-apple-system,sans-serif"><div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;margin-bottom:24px;border-bottom:2px solid #1a1a1a"><div><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:6px">Māka · NZC Feedback</div><div style="font-size:24px;font-weight:700;margin-bottom:3px">'+esc(stripExt(r.fileName))+'</div><div style="font-size:13px;color:#666">'+esc(task)+'</div></div><div style="text-align:right"><div style="font-size:32px;font-weight:800;color:#2d5a27;line-height:1">'+tot+'/25</div><div style="font-size:12px;font-weight:600;color:#2d5a27;margin-top:4px">'+esc(r.overallScore||'')+'</div></div></div><table style="width:100%;border-collapse:collapse;margin-bottom:18px"><thead><tr><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 4px 8px 0;border-bottom:1px solid #ddd">Criterion</th><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 4px 8px;border-bottom:1px solid #ddd">Score</th><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 0 8px;border-bottom:1px solid #ddd">Comment</th></tr></thead><tbody>'+trows+'</tbody></table>'+praiseHtml+tipsHtml+'</div>'+(i<arr.length-1?'<div style="page-break-after:always"></div>':'');
   }).join('');window.print();
 }
 function exportCSV(){
   if(!results.length){alert('No results yet.');return}
   var rows=[['File','Overall','Total','Strengths','Next step 1','Next step 2','Next step 3','NZC']];
-  results.forEach(function(r){var ns=r.nextSteps||[];rows.push([r.fileName||'',r.overallScore||'',r.criteriaTotal||'',r.strengths||'',ns[0]||'',ns[1]||'',ns[2]||'',r.nzcReference||''])});
+  results.forEach(function(r){var ns=fbStepsSave(r);rows.push([r.fileName||'',r.overallScore||'',r.criteriaTotal||'',fbStrengthsSave(r),ns[0]||'',ns[1]||'',ns[2]||'',r.nzcReference||''])});
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(function(r){return r.map(function(v){return'"'+String(v).replace(/"/g,'""')+'"'}).join(',')}).join('\n')],{type:'text/csv'}));a.download='marking_results.csv';a.click();
 }
 // ── Bulk PDF export: one report card per student, all in one file ─────────────
@@ -1651,10 +1698,9 @@ function exportAllReportCards(){
         doc.setTextColor(grey[0],grey[1],grey[2]);doc.text(s+'/5',pw-m,y,{align:'right'});y+=15;
         if(c.comment){doc.setTextColor(110,110,110);doc.setFontSize(9);var cl=doc.splitTextToSize(c.comment,pw-m*2-14);need(cl.length*11);doc.text(cl,m+14,y);y+=cl.length*11+3;doc.setFontSize(10)}
       });
-      var strengths=r.strengths||withQuote(r.quote1,r.improve1||'');
-      var steps=(r.nextSteps&&r.nextSteps.length)?r.nextSteps:(r.improve2?[withQuote(r.quote2,r.improve2)]:[]);
-      if(strengths){y+=6;need(16);doc.setTextColor(green[0],green[1],green[2]);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text('STRENGTHS',m+6,y);y+=13;doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(80,80,80);var sl=doc.splitTextToSize(strengths,pw-m*2-12);need(sl.length*13);doc.text(sl,m+6,y);y+=sl.length*13+4}
-      if(steps&&steps.length){y+=4;need(16);doc.setTextColor(gold[0],gold[1],gold[2]);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text('NEXT STEPS',m+6,y);y+=13;doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(80,80,80);steps.forEach(function(t){var tl=doc.splitTextToSize('– '+t,pw-m*2-12);need(tl.length*13+4);doc.text(tl,m+6,y);y+=tl.length*13+2})}
+      var fb=fbGet(r);
+      if(fb.praise&&fb.praise.text){y+=6;need(16);doc.setTextColor(green[0],green[1],green[2]);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text('WHAT YOU DID WELL',m+6,y);y+=13;doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(80,80,80);var pv=fb.praise.quote?withQuote(fb.praise.quote,fb.praise.text):fb.praise.text;var sl=doc.splitTextToSize(pv,pw-m*2-12);need(sl.length*13);doc.text(sl,m+6,y);y+=sl.length*13+4}
+      if(fb.tips.length){y+=4;need(16);doc.setTextColor(gold[0],gold[1],gold[2]);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text('HOW TO IMPROVE',m+6,y);y+=13;doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(80,80,80);fb.tips.forEach(function(t){var line=t.text||fbTipToStr(t);var tl=doc.splitTextToSize('– '+line,pw-m*2-12);need(tl.length*13+4);doc.text(tl,m+6,y);y+=tl.length*13+2})}
     });
     var fname=sessLabel.split('·')[0].trim().replace(/\s+/g,'-')||'class';
     doc.save(fname+'-report-cards.pdf');

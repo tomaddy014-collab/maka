@@ -163,6 +163,9 @@ canvas{width:100%!important}
 .sbox{font-size:13px;color:var(--text2);line-height:1.6;padding:11px 13px;background:var(--bg);border-radius:var(--rs)}
 .sbox.improve{background:var(--gold-soft);border-left:3px solid var(--gold);color:var(--text);display:flex;gap:9px;align-items:flex-start}
 .sbox.improve .ico{font-size:15px;color:var(--gold);margin-top:1px}
+.sbox.praise{background:var(--green-bg);border-left:3px solid var(--green);color:var(--text);display:flex;gap:9px;align-items:flex-start}
+.sbox.praise .ico{font-size:15px;color:var(--green);margin-top:1px}
+.ctable .ccomment{font-size:11.5px;color:var(--text2);line-height:1.45;margin-top:3px}
 .chevron{color:var(--text3);transition:transform .35s var(--ease-spring);flex-shrink:0;display:inline-flex;font-size:18px}
 .chevron.open{transform:rotate(90deg)}
 .view-work{margin-top:14px;border-radius:100px}
@@ -545,9 +548,9 @@ function renderSessions(){
     var tot=parseInt((r.criteria_total||'0').split('/')[0])||0;
     var pct=Math.round(tot/25*100);
     var crit=r.criteria||[];
-    var critRows=crit.map(function(c){return'<tr><td class="cn">'+esc(c.name||'')+'</td><td class="cs">'+dots(parseInt(c.score)||0)+'</td></tr>'}).join('');
-    var i1=r.strengths||'';
-    var i2=(r.next_steps&&r.next_steps[0])||'';
+    var critRows=crit.map(function(c){var cm=c.comment?'<div class="ccomment">'+esc(c.comment)+'</div>':'';return'<tr><td class="cn">'+esc(c.name||'')+cm+'</td><td class="cs" style="vertical-align:top">'+dots(parseInt(c.score)||0)+'</td></tr>'}).join('');
+    var praise=r.strengths||'';
+    var tips=(r.next_steps&&r.next_steps.length)?r.next_steps:[];
     var date=r.sessions&&r.sessions.created_at?fmtDate(r.sessions.created_at):'';
     var area=r.sessions&&r.sessions.learning_area?r.sessions.learning_area:'';
     return'<div class="sess-card">'
@@ -558,9 +561,8 @@ function renderSessions(){
       +'<div class="sess-body" id="s'+i+'">'
         +(critRows?'<table class="ctable"><thead><tr><th>Criterion</th><th>Score</th></tr></thead><tbody>'+critRows+'</tbody></table>':'')
         +'<div class="total-row">Total: <strong>'+esc(r.criteria_total||'')+'</strong></div>'
-        +((i1||i2)?'<div class="slbl">How to improve</div>':'')
-        +(i1?'<div class="sbox improve" style="margin-bottom:6px">'+ic('bulb')+'<span>'+esc(i1)+'</span></div>':'')
-        +(i2?'<div class="sbox improve">'+ic('bulb')+'<span>'+esc(i2)+'</span></div>':'')
+        +(praise?'<div class="slbl">What you did well</div><div class="sbox praise">'+ic('award')+'<span>'+esc(praise)+'</span></div>':'')
+        +(tips.length?'<div class="slbl" style="margin-top:12px">How to improve</div>'+tips.map(function(t){return'<div class="sbox improve" style="margin-bottom:6px">'+ic('bulb')+'<span>'+esc(t)+'</span></div>'}).join(''):'')
         +(r.pdf_path?'<button class="btn btn-green view-work" onclick="viewPDF(\''+esc(r.pdf_path||'')+'\',this)">'+ic('file')+' View your work</button>':'')
       +'</div>'
     +'</div>';
