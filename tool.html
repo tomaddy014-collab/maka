@@ -224,9 +224,9 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
   /* 1 per page: each sheet on its own page */
   #print-out:not(.two-up) .psheet{page-break-after:always}
   #print-out:not(.two-up) .psheet:last-child{page-break-after:auto}
-  /* 2 per page: keep each sheet whole, force a break after every 2nd */
-  #print-out.two-up .psheet{max-width:none;padding:0 0 8mm;margin:0 0 8mm;page-break-inside:avoid;break-inside:avoid}
-  #print-out.two-up .psheet:nth-of-type(2n){page-break-after:always}
+  /* 2 per page: each sheet takes an equal half-page block, kept whole, break after every 2nd */
+  #print-out.two-up .psheet{max-width:none;box-sizing:border-box;min-height:126mm;padding:0 0 6mm;margin:0;page-break-inside:avoid;break-inside:avoid;border-bottom:1px dashed #ccc}
+  #print-out.two-up .psheet:nth-of-type(2n){page-break-after:always;border-bottom:none}
 }
 .print-out{display:none}
 .print-per{font-family:'DM Sans',sans-serif;font-size:12.5px;padding:7px 10px;border-radius:var(--rs);border:1px solid var(--border2);background:var(--bg);color:var(--text);cursor:pointer}
