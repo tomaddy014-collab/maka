@@ -1061,11 +1061,25 @@ async function markOne(key,file,rubric,area,level,task,style,idx){
     ].join('\n');
     var mod=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:p2}],onBusy));
     mod.fileName=r.fileName;
+    // Safeguard: if moderation dropped per-criterion comments (or a whole field), fall back to the first pass.
+    preserveComments(mod,r);
+    if(!Array.isArray(mod.improve)||!mod.improve.length)mod.improve=r.improve;
+    if(!mod.praise&&r.praise)mod.praise=r.praise;
+    if(!mod.praiseQuote&&r.praiseQuote)mod.praiseQuote=r.praiseQuote;
     // Grade total + band are computed in-app from the moderated scores — deterministic, no arithmetic slips.
     finaliseGrade(mod);
     progressItems[idx].status='done';progressItems[idx].phase='';renderProg();
     return mod;
   }catch(e){progressItems[idx].status='error';progressItems[idx].phase='';progressItems[idx].err=e.message;renderProg();return{fileName:file.name,_error:e.message}}
+}
+// Carry per-criterion comments from the first pass forward if moderation omitted them (match by index, then by name).
+function preserveComments(mod,orig){
+  var mc=(mod&&mod.criteria)||[],oc=(orig&&orig.criteria)||[];
+  mc.forEach(function(c,i){
+    if(c&&c.comment)return;
+    var src=oc[i]&&(oc[i].name===c.name||!c.name)?oc[i]:oc.find(function(o){return o.name===c.name});
+    if(src&&src.comment)c.comment=src.comment;
+  });
 }
 // Compute criteriaTotal + overallScore from the criterion scores so the total is always arithmetically correct.
 function gradeBand(total){return total>=22?'Exceeds':total>=16?'Achieved':total>=10?'Approaching':'Beginning'}
