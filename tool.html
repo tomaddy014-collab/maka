@@ -1051,10 +1051,20 @@ async function runMarking(){
     var sname=document.getElementById('session-name').value.trim()||('Session '+new Date().toLocaleDateString('en-NZ'));
     document.getElementById('rsec').style.display='block';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='block';document.getElementById('save-status').innerHTML='';
     progressItems=files.map(function(f){return{name:f.name,status:'pending',phase:'',err:''}});renderProg();
-    var out=[];
-    var BATCH=5,GAP=1500;
-    for(var b=0;b<files.length;b+=BATCH){var br=await Promise.all(files.slice(b,b+BATCH).map(function(f,j){return markOne(key,f,rub,area,level,task,style,b+j)}));out=out.concat(br);if(b+BATCH<files.length)await sleep(GAP)}
-    for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(2500);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markOne(key,files[i],rub,area,level,task,style,i)}));fail.forEach(function(i,j){out[i]=ret[j]})}
+    var out=new Array(files.length);
+    // Continuous pipeline: keep CONCURRENCY files in flight. As soon as one moves from
+    // marking into moderating (or finishes), the freed slot pulls the next file in — so
+    // moderations overlap with the marking of later files instead of waiting for a whole batch.
+    var CONCURRENCY=3,next=0;
+    async function worker(){
+      while(next<files.length){
+        var i=next++;
+        out[i]=await markOne(key,files[i],rub,area,level,task,style,i);
+        await sleep(400); // small stagger so slots don't all re-fire at once
+      }
+    }
+    await Promise.all(Array.from({length:Math.min(CONCURRENCY,files.length)},worker));
+    for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r&&r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(2500);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markOne(key,files[i],rub,area,level,task,style,i)}));fail.forEach(function(i,j){out[i]=ret[j]})}
     out.forEach(function(r,i){r._file=files[i]});
     results=out;document.getElementById('progress').style.display='none';renderResults(out);
     var okCount=out.filter(function(r){return!r._error}).length;
