@@ -115,6 +115,11 @@ canvas{width:100%!important}
 .sbox.praise{background:var(--green-bg);border-left:3px solid var(--green);color:var(--text);display:flex;gap:9px;align-items:flex-start}
 .sbox.praise .ico{font-size:15px;color:var(--green);margin-top:1px}
 .ctable .ccomment{font-size:11.5px;color:var(--text2);line-height:1.45;margin-top:3px}
+.sbox .quote{font-style:italic;color:var(--text2);border-left:2px solid var(--border2);padding:2px 0 2px 9px;margin-bottom:6px;font-size:12.5px;line-height:1.5}
+.sbox .quote::before{content:'\201C'}.sbox .quote::after{content:'\201D'}
+.sbox .tryex{margin-top:6px;font-size:12.5px;line-height:1.5;color:var(--text);background:rgba(0,0,0,0.03);border-radius:6px;padding:6px 9px}
+[data-theme="dark"] .sbox .tryex{background:rgba(255,255,255,0.05)}
+.sbox .trylbl{font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.05em;font-size:10px;margin-right:5px}
 .chevron{color:var(--text3);transition:transform .35s var(--ease-spring);flex-shrink:0;display:inline-flex;font-size:18px}
 .chevron.open{transform:rotate(90deg)}
 .err{font-size:13px;color:var(--danger-text);background:var(--danger-bg);padding:11px 13px;border-radius:var(--rs);line-height:1.5}
@@ -168,6 +173,9 @@ var ICONS={
 };
 function ic(name){return'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[name]||'')+'</svg>'}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+// Feedback is stored as folded text; parse it back so the student's own words show as a quote.
+function parsePraise(s){s=String(s||'');var m=s.match(/^“([^”]*)”\s*—\s*([\s\S]*)$/);return m?{quote:m[1],text:m[2].trim()}:{quote:'',text:s}}
+function parseTip(s){s=String(s||'');var quote='',body=s;var m=s.match(/^You wrote “([^”]*)”\.\s*([\s\S]*)$/);if(m){quote=m[1];body=m[2]}var ex='',em=body.match(/\s*Try:\s*“([^”]*)”\s*$/);if(em){ex=em[1];body=body.slice(0,em.index)}return{quote:quote,text:body.trim(),example:ex}}
 function fmtDate(d){return new Date(d).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'})}
 function pillCls(pct){return pct>=75?'ph':pct>=50?'pm':'pl'}
 function dots(sc){var h='';for(var i=1;i<=5;i++)h+='<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:3px;background:'+(i<=sc?'var(--green)':'var(--border2)')+'"></span>';return h+'<span style="font-size:11px;color:var(--text2);margin-left:3px;font-variant-numeric:tabular-nums">'+sc+'/5</span>'}
@@ -334,8 +342,8 @@ function renderSessions(){
       +'<div class="sess-body" id="s'+i+'">'
         +(critRows?'<table class="ctable"><thead><tr><th>Criterion</th><th>Score</th></tr></thead><tbody>'+critRows+'</tbody></table>':'')
         +'<div class="total-row">Total: <strong>'+esc(r.criteria_total||'')+'</strong></div>'
-        +(praise?'<div class="slbl">What you did well</div><div class="sbox praise">'+ic('award')+'<span>'+esc(praise)+'</span></div>':'')
-        +(tips.length?'<div class="slbl" style="margin-top:12px">How to improve</div>'+tips.map(function(t){return'<div class="sbox improve" style="margin-bottom:6px">'+ic('bulb')+'<span>'+esc(t)+'</span></div>'}).join(''):'')
+        +(praise?(function(){var p=parsePraise(praise);return'<div class="slbl">What you did well</div><div class="sbox praise">'+ic('award')+'<div>'+(p.quote?'<div class="quote">'+esc(p.quote)+'</div>':'')+'<span>'+esc(p.text)+'</span></div></div>'})():'')
+        +(tips.length?'<div class="slbl" style="margin-top:12px">How to improve</div>'+tips.map(function(t){var pt=parseTip(t);var h='<div class="sbox improve" style="margin-bottom:6px">'+ic('bulb')+'<div>';if(pt.quote)h+='<div class="quote">'+esc(pt.quote)+'</div>';h+='<span>'+esc(pt.text)+'</span>';if(pt.example)h+='<div class="tryex"><span class="trylbl">Try</span> '+esc(pt.example)+'</div>';return h+'</div></div>'}).join(''):'')
       +'</div>'
     +'</div>';
   }).join('');
