@@ -1002,7 +1002,16 @@ document.getElementById('printbtn').onclick=printSheets;
 document.getElementById('markbtn').onclick=runMarking;
 updMark();updateStepState();
 
-function toB64(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1])};r.onerror=rej;r.readAsDataURL(file)})}
+function toB64(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1])};r.onerror=function(){rej(new Error('Could not read this file — it may be corrupted or still downloading.'))};r.readAsDataURL(file)})}
+// Turn raw Gemini API errors into clear, actionable guidance for teachers.
+function friendlyGeminiError(status,msg){
+  msg=msg||'';
+  if((status===400&&/api.?key|not valid|invalid/i.test(msg))||status===401)return'Your Gemini API key looks invalid. Open Settings, paste a fresh key from aistudio.google.com, and try again.';
+  if(status===403)return'Your Gemini API key was refused — it may be wrong, restricted, or disabled. Check it in Settings.';
+  if(status===404)return'The Gemini model is unavailable right now — please try again shortly.';
+  if(status===400)return'Gemini could not read this file (400). Try a clearer scan, or re-save it as a PDF/JPG and re-upload.';
+  return msg||('Gemini error '+status);
+}
 async function gemini(key,parts,onRetry){
   var url='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key;
   var body=JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0.3,maxOutputTokens:8192}});
@@ -1013,7 +1022,7 @@ async function gemini(key,parts,onRetry){
       // Hard client errors (bad key, bad request) — surface immediately, no point retrying
       if(resp.status===400||resp.status===401||resp.status===403||resp.status===404){
         var ed=await resp.json().catch(function(){return{}});
-        throw new Error((ed.error&&ed.error.message)||('Gemini error '+resp.status));
+        throw new Error(friendlyGeminiError(resp.status,(ed.error&&ed.error.message)||''));
       }
       if(!resp.ok){
         // 429 (rate limit / busy), 500, 503 etc — transient, fall through to retry
@@ -1028,8 +1037,9 @@ async function gemini(key,parts,onRetry){
       }
     }catch(e){
       // Re-throw clearly fatal errors; retry everything else (busy, network, parse, empty)
-      if(/error 40|api key|api_key|invalid|permission|not valid|unregistered/i.test(e.message||''))throw e;
-      lastErr=e.message||'Gemini error';
+      if(/error 40|api key|api_key|invalid|permission|not valid|unregistered|refused|usage limit/i.test(e.message||''))throw e;
+      if(/failed to fetch|networkerror|network request failed/i.test(e.message||''))lastErr='network';
+      else lastErr=e.message||'Gemini error';
     }
     if(attempt<maxTries){
       if(typeof onRetry==='function')onRetry(attempt,maxTries,Math.round(delay/1000));
@@ -1037,6 +1047,8 @@ async function gemini(key,parts,onRetry){
       delay=Math.min(Math.round(delay*1.7),30000);
     }
   }
+  if(/429|quota|resource_exhausted/i.test(lastErr))throw new Error('Gemini has hit its usage limit — wait a minute and try again, or check your quota at aistudio.google.com.');
+  if(lastErr==='network')throw new Error("Couldn't reach Gemini — check your internet connection and try again.");
   throw new Error('Gemini is still busy after '+maxTries+' tries — please try again in a moment.');
 }
 function parseJSON(raw){var s=raw.indexOf('{'),e=raw.lastIndexOf('}');if(s===-1||e===-1)throw new Error('No JSON in response');return JSON.parse(raw.slice(s,e+1))}
@@ -1236,6 +1248,13 @@ async function runMarking(){
     out.forEach(function(r,i){r._file=files[i]});
     results=out;document.getElementById('progress').style.display='none';renderResults(out);
     var okCount=out.filter(function(r){return!r._error}).length;
+    var failCount=out.length-okCount;
+    if(failCount){
+      // One clear summary instead of leaving teachers to hunt through cards.
+      var firstErr=(out.find(function(r){return r&&r._error})||{})._error||'';
+      if(okCount===0&&firstErr)showToast(firstErr,'err',8000);
+      else showToast(failCount+" file"+(failCount>1?"s":"")+" couldn't be marked — open the red card"+(failCount>1?"s":"")+" to retry",'warn',7000);
+    }
     document.getElementById('session-label').textContent=sname+' · '+okCount+' students';
     document.getElementById('rsec').scrollIntoView({behavior:'smooth',block:'start'});
     document.getElementById('cmp-a').textContent=out.length+' students — '+sname;
