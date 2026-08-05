@@ -168,6 +168,18 @@ canvas{width:100%!important}
 .sbox.praise .ico{font-size:15px;color:var(--green);margin-top:1px}
 .ctable .ccomment{font-size:11.5px;color:var(--text2);line-height:1.45;margin-top:3px}
 .summary-box{font-size:13.5px;line-height:1.65;color:var(--text);background:var(--bg2);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px}
+.qtable{width:100%;border-collapse:collapse;margin-bottom:10px}
+.qtable td{vertical-align:top;padding:9px 6px 9px 0;border-bottom:1px solid var(--border)}
+.qtable tr:last-child td{border-bottom:none}
+.qtable .qn{width:26px;font-weight:700;color:var(--text2);font-variant-numeric:tabular-nums}
+.qtable .qmcell{width:34px;text-align:right}
+.qtext{font-size:13px;font-weight:500;line-height:1.4}
+.qans{font-size:12.5px;color:var(--text2);margin-top:3px;line-height:1.45}
+.qans .qa-lbl{font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-right:4px}
+.qans.qcorrect{color:var(--green)}
+.qmark{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:14px}
+.qmark.qok{background:var(--green-bg);color:var(--green)}
+.qmark.qno{background:var(--danger-bg);color:var(--danger-text)}
 .sbox .quote{font-style:italic;color:var(--text2);border-left:2px solid var(--border2);padding:2px 0 2px 9px;margin-bottom:6px;font-size:12.5px;line-height:1.5}
 .sbox .quote::before{content:'\201C'}.sbox .quote::after{content:'\201D'}
 .sbox .tryex{margin-top:6px;font-size:12.5px;line-height:1.5;color:var(--text);background:rgba(0,0,0,0.03);border-radius:6px;padding:6px 9px}
@@ -347,6 +359,8 @@ var ICONS={
   trophy:'<path d="M6 9a6 6 0 0 0 12 0V3H6Z"/><path d="M6 5H3v2a3 3 0 0 0 3 3"/><path d="M18 5h3v2a3 3 0 0 1-3 3"/><path d="M9 21h6"/><path d="M12 17v4"/>',
   flame:'<path d="M12 2s4 4 4 8a4 4 0 0 1-8 0c0-1 .5-2 1-2.5C9 9 8 11 8 13a4 4 0 0 0 8 0c0-4-4-8-4-11Z"/>',
   chevron:'<path d="M9 18l6-6-6-6"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/>'
 };
@@ -356,7 +370,8 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 // Feedback is stored as folded text; parse it back so the student's own words show as a quote.
 function parsePraise(s){s=String(s||'');var m=s.match(/^“([^”]*)”\s*—\s*([\s\S]*)$/);return m?{quote:m[1],text:m[2].trim()}:{quote:'',text:s}}
 function parseTip(s){s=String(s||'');var quote='',body=s;var m=s.match(/^You wrote “([^”]*)”\.\s*([\s\S]*)$/);if(m){quote=m[1];body=m[2]}var ex='',em=body.match(/\s*Try:\s*“([^”]*)”\s*$/);if(em){ex=em[1];body=body.slice(0,em.index)}return{quote:quote,text:body.trim(),example:ex}}
-function parseMeta(s){if(!s)return{goal:'',accuracy:[],summary:''};try{var o=JSON.parse(s);if(o&&typeof o==='object')return{goal:o.goal||'',accuracy:Array.isArray(o.accuracy)?o.accuracy:[],summary:o.summary||''}}catch(e){}return{goal:'',accuracy:[],summary:''}}
+function parseMeta(s){if(!s)return{goal:'',accuracy:[],summary:'',type:'',questions:[]};try{var o=JSON.parse(s);if(o&&typeof o==='object')return{goal:o.goal||'',accuracy:Array.isArray(o.accuracy)?o.accuracy:[],summary:o.summary||'',type:o.type||'',questions:Array.isArray(o.questions)?o.questions:[],total:o.total,score:o.score,percent:o.percent}}catch(e){}return{goal:'',accuracy:[],summary:'',type:'',questions:[]}}
+function isTest(r){return parseMeta(r.nzc_reference).type==='test'}
 function stripExt(n){return String(n).replace(/\.[^.]+$/,'')}
 function fmtDate(d){return new Date(d).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'})}
 function pillCls(pct){return pct>=75?'ph':pct>=50?'pm':'pl'}
@@ -369,7 +384,7 @@ function toggleTheme(){
   var dark=document.documentElement.getAttribute('data-theme')==='dark';
   if(dark){document.documentElement.removeAttribute('data-theme');try{localStorage.setItem('maka-theme','light')}catch(e){}}
   else{document.documentElement.setAttribute('data-theme','dark');try{localStorage.setItem('maka-theme','dark')}catch(e){}}
-  applyThemeLabel();if(ALL_RESULTS.length>=2)setTimeout(drawChart,30);
+  applyThemeLabel();if(ALL_RESULTS.filter(function(r){return!isTest(r)}).length>=2)setTimeout(drawChart,30);
 }
 window.addEventListener('DOMContentLoaded',applyThemeLabel);
 </script>
@@ -419,7 +434,8 @@ function renderPage(){
   var gC={boy:'background:var(--info-bg);color:var(--info-text)',girl:'background:#fce8f3;color:#8b1a5e',nonbinary:'background:var(--bg2);color:var(--text2)'};
   var gender=STUDENT.gender&&gL[STUDENT.gender]?'<span class="gender-chip" style="'+gC[STUDENT.gender]+'">'+gL[STUDENT.gender]+'</span>':'';
 
-  var totals=ALL_RESULTS.map(function(r){return parseInt((r.criteria_total||'0').split('/')[0])||0});
+  var WRITING=ALL_RESULTS.filter(function(r){return!isTest(r)});
+  var totals=WRITING.map(function(r){return parseInt((r.criteria_total||'0').split('/')[0])||0});
   var avg=totals.length?(totals.reduce(function(a,b){return a+b},0)/totals.length).toFixed(1):'—';
   var best=totals.length?Math.max.apply(null,totals):'—';
   var latest=totals.length?totals[totals.length-1]:null;
@@ -427,7 +443,7 @@ function renderPage(){
   var trend=latest!==null&&prev!==null?latest-prev:null;
   var trendHtml=trend===null?'<span style="color:var(--text3);font-size:1.3rem">—</span>':trend>0?'<span class="delta d-up">↑ +'+trend+'</span>':trend<0?'<span class="delta d-dn">↓ '+trend+'</span>':'<span class="delta d-eq">→ 0</span>';
 
-  var latestRes=ALL_RESULTS.length?ALL_RESULTS[ALL_RESULTS.length-1]:null;
+  var latestRes=WRITING.length?WRITING[WRITING.length-1]:null;
   var latestTot=latestRes?(parseInt((latestRes.criteria_total||'0').split('/')[0])||0):null;
   var latestGrade=latestRes?(latestRes.overall_score||''):'';
   var gradeMap={'Exceeds':'grade-exceeds','Achieved':'grade-achieved','Approaching':'grade-approaching','Beginning':'grade-beginning'};
@@ -476,7 +492,7 @@ function renderPage(){
         <div class="sect-title"><span class="ico-chip">${ic('chart')}</span>Progress over time
           ${ALL_RESULTS.length<2?'':'<div class="chart-toggle" role="tablist"><button role="tab" id="ct-total" class="chart-tab active" onclick="setChartMode(\'total\')">Total</button><button role="tab" id="ct-crit" class="chart-tab" onclick="setChartMode(\'criteria\')">By criterion</button></div>'}
         </div>
-        ${ALL_RESULTS.length<2?'<div class="empty">'+ic('chart')+'<div>Mark at least 2 sessions to see the progress chart.</div></div>':'<div class="chart-wrap"><canvas id="progress-chart"></canvas></div><div id="chart-legend" class="chart-legend"></div>'}
+        ${WRITING.length<2?'<div class="empty">'+ic('chart')+'<div>Mark at least 2 writing sessions to see the progress chart.</div></div>':'<div class="chart-wrap"><canvas id="progress-chart"></canvas></div><div id="chart-legend" class="chart-legend"></div>'}
       </div>
 
       <div class="card">
@@ -512,7 +528,7 @@ function renderPage(){
     if(res.data&&res.data.gemini_key)document.getElementById('rep-key').value=res.data.gemini_key;
   }).catch(function(){});
 
-  if(ALL_RESULTS.length>=2)setTimeout(drawChart,50);
+  if(ALL_RESULTS.filter(function(r){return!isTest(r)}).length>=2)setTimeout(drawChart,50);
 
   // Count-up stat numbers + bar fills
   setTimeout(function(){
@@ -560,18 +576,39 @@ function sparkline(vals,col){
 }
 
 // ── SESSION LIST ──────────────────────────────────────────────────────────────
+function renderTestSession(r,i,meta,area,date){
+  var qs=meta.questions||[];
+  var score=meta.score!=null?meta.score:qs.filter(function(q){return q&&q.correct}).length;
+  var total=meta.total!=null?meta.total:qs.length,pct=total?Math.round(score/total*100):0;
+  var tips=(r.next_steps&&r.next_steps.length)?r.next_steps:[];
+  var qrows=qs.map(function(q,qi){var ok=!!q.correct;return'<tr><td class="qn">'+esc(String(q.n||qi+1))+'</td><td class="qcell"><div class="qtext">'+esc(q.question||'')+'</div><div class="qans"><span class="qa-lbl">Answer:</span> '+esc(q.studentAnswer||'—')+'</div>'+(!ok&&q.correctAnswer?'<div class="qans qcorrect"><span class="qa-lbl">Correct:</span> '+esc(q.correctAnswer)+'</div>':'')+'</td><td class="qmcell"><span class="qmark '+(ok?'qok':'qno')+'">'+(ok?ic('check'):ic('x'))+'</span></td></tr>'}).join('');
+  return'<div class="sess-card">'
+    +'<div class="sess-hd" tabindex="0" role="button" aria-expanded="false" onclick="toggleSess(\'s'+i+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleSess(\'s'+i+'\')}">'
+      +'<div style="min-width:0"><div class="sess-name">'+esc((r.sessions&&r.sessions.name)||'Test')+'</div><div class="sess-meta">'+(area?esc(area):'')+(date?(area?' · ':'')+date:'')+'</div></div>'
+      +'<div style="display:flex;align-items:center;gap:10px"><span class="pill '+pillCls(pct)+'">'+score+'/'+total+' · '+pct+'%</span><span class="chevron" id="chev-s'+i+'">'+ic('chevron')+'</span></div>'
+    +'</div>'
+    +'<div class="sess-body" id="s'+i+'">'
+      +(meta.summary?'<div class="summary-box">'+esc(meta.summary)+'</div>':'')
+      +(qrows?'<table class="ctable qtable"><tbody>'+qrows+'</tbody></table>':'')
+      +'<div class="total-row">Score: <strong>'+score+' / '+total+'</strong></div>'
+      +(tips.length?'<div class="slbl">How to improve</div>'+tips.map(function(t){return'<div class="sbox improve">'+ic('bulb')+'<div><span>'+esc(t)+'</span></div></div>'}).join(''):'')
+      +(r.pdf_path?'<button class="btn btn-green view-work" onclick="viewPDF(\''+esc(r.pdf_path||'')+'\',this)">'+ic('file')+' View the test</button>':'')
+    +'</div>'
+  +'</div>';
+}
 function renderSessions(){
   if(!ALL_RESULTS.length)return'<div class="empty">'+ic('layers')+'<div>No sessions yet. PDFs named with this student\'s first name will appear here automatically after marking.</div></div>';
   return ALL_RESULTS.slice().reverse().map(function(r,i){
+    var meta=parseMeta(r.nzc_reference);
+    var date=r.sessions&&r.sessions.created_at?fmtDate(r.sessions.created_at):'';
+    var area=r.sessions&&r.sessions.learning_area?r.sessions.learning_area:'';
+    if(meta.type==='test')return renderTestSession(r,i,meta,area,date);
     var tot=parseInt((r.criteria_total||'0').split('/')[0])||0;
     var pct=Math.round(tot/25*100);
     var crit=r.criteria||[];
     var critRows=crit.map(function(c){var cm=c.comment?'<div class="ccomment">'+esc(c.comment)+'</div>':'';return'<tr><td class="cn">'+esc(c.name||'')+cm+'</td><td class="cs" style="vertical-align:top">'+dots(parseInt(c.score)||0)+'</td></tr>'}).join('');
     var praise=r.strengths||'';
     var tips=(r.next_steps&&r.next_steps.length)?r.next_steps:[];
-    var meta=parseMeta(r.nzc_reference);
-    var date=r.sessions&&r.sessions.created_at?fmtDate(r.sessions.created_at):'';
-    var area=r.sessions&&r.sessions.learning_area?r.sessions.learning_area:'';
     return'<div class="sess-card">'
       +'<div class="sess-hd" tabindex="0" role="button" aria-expanded="false" onclick="toggleSess(\'s'+i+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleSess(\'s'+i+'\')}">'
         +'<div style="min-width:0"><div class="sess-name">'+esc((r.sessions&&r.sessions.name)||'Session')+'</div><div class="sess-meta">'+(area?esc(area):'')+(date?(area?' · ':'')+date:'')+'</div></div>'
@@ -651,6 +688,7 @@ function setChartMode(m){
 }
 function isDark(){return document.documentElement.getAttribute('data-theme')==='dark'}
 function drawChart(){
+  var CRES=ALL_RESULTS.filter(function(r){return!isTest(r)});
   var canvas=document.getElementById('progress-chart');
   if(!canvas)return;
   var ctx=canvas.getContext('2d');
@@ -665,11 +703,11 @@ function drawChart(){
   var gridCol=dark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)';
   var axisCol=dark?'rgba(236,233,227,0.5)':'rgba(0,0,0,0.4)';
   var dotFill=dark?'#1c1b19':'#fff';
-  var labels=ALL_RESULTS.map(function(r){return r.sessions&&r.sessions.name?(r.sessions.name.substring(0,20)):'Session'});
+  var labels=CRES.map(function(r){return r.sessions&&r.sessions.name?(r.sessions.name.substring(0,20)):'Session'});
 
   var pad={t:20,r:20,b:50,l:40};
   var cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
-  var n=ALL_RESULTS.length;
+  var n=CRES.length;
   var xStep=n>1?cw/(n-1):cw;
   function xPos(i){return pad.l+(n>1?i*xStep:cw/2)}
 
@@ -677,7 +715,7 @@ function drawChart(){
 
   if(CHART_MODE==='criteria'){
     var names=[];
-    ALL_RESULTS.forEach(function(r){(r.criteria||[]).forEach(function(c){var nm=(c.name||'').split('—')[0].trim();if(nm&&names.indexOf(nm)===-1)names.push(nm)})});
+    CRES.forEach(function(r){(r.criteria||[]).forEach(function(c){var nm=(c.name||'').split('—')[0].trim();if(nm&&names.indexOf(nm)===-1)names.push(nm)})});
     if(!names.length){setChartMode('total');return}
     var maxV=5;
     function yPos(v){return pad.t+ch-(v/maxV)*ch}
@@ -685,7 +723,7 @@ function drawChart(){
     [0,1,2,3,4,5].forEach(function(v){var y=yPos(v);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();ctx.fillStyle=axisCol;ctx.font='10px DM Sans,sans-serif';ctx.textAlign='right';ctx.fillText(v,pad.l-6,y+3)});
     names.forEach(function(nm,si){
       var col=CRIT_COLORS[si%CRIT_COLORS.length];
-      var series=ALL_RESULTS.map(function(r){var found=(r.criteria||[]).find(function(c){return(c.name||'').split('—')[0].trim()===nm});return found?(parseInt(found.score)||0):null});
+      var series=CRES.map(function(r){var found=(r.criteria||[]).find(function(c){return(c.name||'').split('—')[0].trim()===nm});return found?(parseInt(found.score)||0):null});
       ctx.beginPath();ctx.strokeStyle=col;ctx.lineWidth=2.2;ctx.lineJoin='round';ctx.lineCap='round';
       var started=false;
       series.forEach(function(v,i){if(v===null)return;var x=xPos(i),y=yPos(v);started?ctx.lineTo(x,y):ctx.moveTo(x,y);started=true});
@@ -693,10 +731,10 @@ function drawChart(){
       series.forEach(function(v,i){if(v===null)return;var x=xPos(i),y=yPos(v);ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);ctx.fillStyle=dotFill;ctx.fill();ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke()});
     });
     ctx.fillStyle=axisCol;ctx.font='10px DM Sans,sans-serif';ctx.textAlign='center';
-    ALL_RESULTS.forEach(function(r,i){var lbl=labels[i];if(lbl.length>12)lbl=lbl.substring(0,12)+'…';ctx.save();ctx.translate(xPos(i),pad.t+ch+14);ctx.rotate(-0.4);ctx.fillText(lbl,0,0);ctx.restore()});
+    CRES.forEach(function(r,i){var lbl=labels[i];if(lbl.length>12)lbl=lbl.substring(0,12)+'…';ctx.save();ctx.translate(xPos(i),pad.t+ch+14);ctx.rotate(-0.4);ctx.fillText(lbl,0,0);ctx.restore()});
     if(legend)legend.innerHTML=names.map(function(nm,si){return'<span class="lg"><span class="sw" style="background:'+CRIT_COLORS[si%CRIT_COLORS.length]+'"></span>'+esc(nm)+'</span>'}).join('');
   }else{
-    var data=ALL_RESULTS.map(function(r){return parseInt((r.criteria_total||'0').split('/')[0])||0});
+    var data=CRES.map(function(r){return parseInt((r.criteria_total||'0').split('/')[0])||0});
     var maxVal=25,green=dark?'#7fb87a':'#2d5a27';
     function yPosT(v){return pad.t+ch-(v/maxVal)*ch}
     ctx.strokeStyle=gridCol;ctx.lineWidth=1;
@@ -850,7 +888,7 @@ function saveEdit(){
     STUDENT.name=name;STUDENT.year_level=year;STUDENT.gender=gender;
     STUDENT_NAME=name;
     closeModal();renderPage();
-    if(ALL_RESULTS.length>=2)setTimeout(drawChart,50);
+    if(ALL_RESULTS.filter(function(r){return!isTest(r)}).length>=2)setTimeout(drawChart,50);
   }).catch(function(e){alert(e.message)});
 }
 function deleteStudent(){
@@ -871,7 +909,7 @@ function initSupabase(){
 }
 initSupabase();
 (function(){var nv=document.querySelector('nav');if(!nv)return;window.addEventListener('scroll',function(){nv.classList.toggle('scrolled',window.scrollY>4)},{passive:true})})();
-window.addEventListener('resize',function(){if(ALL_RESULTS.length>=2)drawChart()});
+window.addEventListener('resize',function(){if(ALL_RESULTS.filter(function(r){return!isTest(r)}).length>=2)drawChart()});
 </script>
 </body>
 </html>

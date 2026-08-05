@@ -117,6 +117,18 @@ canvas{width:100%!important}
 .sbox.praise .ico{font-size:15px;color:var(--green);margin-top:1px}
 .ctable .ccomment{font-size:11.5px;color:var(--text2);line-height:1.45;margin-top:3px}
 .summary-box{font-size:13.5px;line-height:1.65;color:var(--text);background:var(--bg2);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px}
+.qtable{width:100%;border-collapse:collapse;margin-bottom:10px}
+.qtable td{vertical-align:top;padding:9px 6px 9px 0;border-bottom:1px solid var(--border)}
+.qtable tr:last-child td{border-bottom:none}
+.qtable .qn{width:26px;font-weight:700;color:var(--text2);font-variant-numeric:tabular-nums}
+.qtable .qmcell{width:34px;text-align:right}
+.qtext{font-size:13px;font-weight:500;line-height:1.4}
+.qans{font-size:12.5px;color:var(--text2);margin-top:3px;line-height:1.45}
+.qans .qa-lbl{font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-right:4px}
+.qans.qcorrect{color:var(--green)}
+.qmark{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:14px}
+.qmark.qok{background:var(--green-bg);color:var(--green)}
+.qmark.qno{background:var(--danger-bg);color:var(--danger-text)}
 .sbox .quote{font-style:italic;color:var(--text2);border-left:2px solid var(--border2);padding:2px 0 2px 9px;margin-bottom:6px;font-size:12.5px;line-height:1.5}
 .sbox .quote::before{content:'\201C'}.sbox .quote::after{content:'\201D'}
 .sbox .tryex{margin-top:6px;font-size:12.5px;line-height:1.5;color:var(--text);background:rgba(0,0,0,0.03);border-radius:6px;padding:6px 9px}
@@ -177,6 +189,8 @@ var ICONS={
   flame:'<path d="M12 2s4 4 4 8a4 4 0 0 1-8 0c0-1 .5-2 1-2.5C9 9 8 11 8 13a4 4 0 0 0 8 0c0-4-4-8-4-11Z"/>',
   bulb:'<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z"/>',
   chevron:'<path d="M9 18l6-6-6-6"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/>'
 };
@@ -185,7 +199,8 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 // Feedback is stored as folded text; parse it back so the student's own words show as a quote.
 function parsePraise(s){s=String(s||'');var m=s.match(/^“([^”]*)”\s*—\s*([\s\S]*)$/);return m?{quote:m[1],text:m[2].trim()}:{quote:'',text:s}}
 function parseTip(s){s=String(s||'');var quote='',body=s;var m=s.match(/^You wrote “([^”]*)”\.\s*([\s\S]*)$/);if(m){quote=m[1];body=m[2]}var ex='',em=body.match(/\s*Try:\s*“([^”]*)”\s*$/);if(em){ex=em[1];body=body.slice(0,em.index)}return{quote:quote,text:body.trim(),example:ex}}
-function parseMeta(s){if(!s)return{goal:'',accuracy:[],summary:''};try{var o=JSON.parse(s);if(o&&typeof o==='object')return{goal:o.goal||'',accuracy:Array.isArray(o.accuracy)?o.accuracy:[],summary:o.summary||''}}catch(e){}return{goal:'',accuracy:[],summary:''}}
+function parseMeta(s){if(!s)return{goal:'',accuracy:[],summary:'',type:'',questions:[]};try{var o=JSON.parse(s);if(o&&typeof o==='object')return{goal:o.goal||'',accuracy:Array.isArray(o.accuracy)?o.accuracy:[],summary:o.summary||'',type:o.type||'',questions:Array.isArray(o.questions)?o.questions:[],total:o.total,score:o.score,percent:o.percent}}catch(e){}return{goal:'',accuracy:[],summary:'',type:'',questions:[]}}
+function isTest(r){return parseMeta(r.nzc_reference).type==='test'}
 function fmtDate(d){return new Date(d).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'})}
 function pillCls(pct){return pct>=75?'ph':pct>=50?'pm':'pl'}
 function dots(sc){var h='';for(var i=1;i<=5;i++)h+='<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:3px;background:'+(i<=sc?'var(--green)':'var(--border2)')+'"></span>';return h+'<span style="font-size:11px;color:var(--text2);margin-left:3px;font-variant-numeric:tabular-nums">'+sc+'/5</span>'}
@@ -195,7 +210,7 @@ function toggleTheme(){
   var dark=document.documentElement.getAttribute('data-theme')==='dark';
   if(dark){document.documentElement.removeAttribute('data-theme');try{localStorage.setItem('maka-theme','light')}catch(e){}}
   else{document.documentElement.setAttribute('data-theme','dark');try{localStorage.setItem('maka-theme','dark')}catch(e){}}
-  applyThemeLabel();if(ALL_RESULTS.length>=2)setTimeout(drawChart,30);
+  applyThemeLabel();if(ALL_RESULTS.filter(function(r){return!isTest(r)}).length>=2)setTimeout(drawChart,30);
 }
 window.addEventListener('DOMContentLoaded',applyThemeLabel);
 document.getElementById('logout-link').addEventListener('click',function(e){
@@ -228,7 +243,8 @@ async function loadAll(){
 }
 
 function renderPage(){
-  var totals=ALL_RESULTS.map(function(r){return parseInt((r.criteria_total||'0').split('/')[0])||0});
+  var WRITING=ALL_RESULTS.filter(function(r){return!isTest(r)});
+  var totals=WRITING.map(function(r){return parseInt((r.criteria_total||'0').split('/')[0])||0});
   var avg=totals.length?(totals.reduce(function(a,b){return a+b},0)/totals.length).toFixed(1):'—';
   var best=totals.length?Math.max.apply(null,totals):'—';
   var latest=totals.length?totals[totals.length-1]:null;
@@ -236,7 +252,7 @@ function renderPage(){
   var trend=latest!==null&&prev!==null?latest-prev:null;
   var trendHtml=trend===null?'<span style="color:var(--text3);font-size:1.3rem">—</span>':trend>0?'<span class="delta d-up">↑ +'+trend+'</span>':trend<0?'<span class="delta d-dn">↓ '+trend+'</span>':'<span class="delta d-eq">→ 0</span>';
 
-  var latestRes=ALL_RESULTS.length?ALL_RESULTS[ALL_RESULTS.length-1]:null;
+  var latestRes=WRITING.length?WRITING[WRITING.length-1]:null;
   var latestTot=latestRes?(parseInt((latestRes.criteria_total||'0').split('/')[0])||0):null;
   var latestGrade=latestRes?(latestRes.overall_score||''):'';
   var gradeMap={'Exceeds':'grade-exceeds','Achieved':'grade-achieved','Approaching':'grade-approaching','Beginning':'grade-beginning'};
@@ -275,7 +291,7 @@ function renderPage(){
     <div class="mid-grid">
       <div class="card" id="chart-card">
         <div class="sect-title"><span class="ico-chip">${ic('chart')}</span>Progress over time</div>
-        ${ALL_RESULTS.length<2?'<div class="empty">'+ic('chart')+'<div>Mark at least 2 sessions to see your progress chart.</div></div>':'<div class="chart-wrap"><canvas id="progress-chart"></canvas></div>'}
+        ${WRITING.length<2?'<div class="empty">'+ic('chart')+'<div>Mark at least 2 writing sessions to see your progress chart.</div></div>':'<div class="chart-wrap"><canvas id="progress-chart"></canvas></div>'}
       </div>
       <div class="card">
         <div class="sect-title"><span class="ico-chip">${ic('target')}</span>Average by criterion</div>
@@ -289,7 +305,7 @@ function renderPage(){
     </div>
   `;
 
-  if(ALL_RESULTS.length>=2)setTimeout(drawChart,50);
+  if(WRITING.length>=2)setTimeout(drawChart,50);
 
   setTimeout(function(){
     document.querySelectorAll('.stat-num').forEach(function(el){
@@ -333,18 +349,38 @@ function sparkline(vals,col){
   return'<svg width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" style="flex-shrink:0;overflow:visible" role="img" aria-label="Trend: '+(trend>0?'up':trend<0?'down':'flat')+'"><polyline points="'+pts.join(' ')+'" fill="none" stroke="'+col+'" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="'+lx+'" cy="'+ly+'" r="2.1" fill="'+col+'"/></svg>';
 }
 
+function renderTestSession(r,i,meta,area,date){
+  var qs=meta.questions||[];
+  var score=meta.score!=null?meta.score:qs.filter(function(q){return q&&q.correct}).length;
+  var total=meta.total!=null?meta.total:qs.length,pct=total?Math.round(score/total*100):0;
+  var tips=(r.next_steps&&r.next_steps.length)?r.next_steps:[];
+  var qrows=qs.map(function(q,qi){var ok=!!q.correct;return'<tr><td class="qn">'+esc(String(q.n||qi+1))+'</td><td class="qcell"><div class="qtext">'+esc(q.question||'')+'</div><div class="qans"><span class="qa-lbl">Your answer:</span> '+esc(q.studentAnswer||'—')+'</div>'+(!ok&&q.correctAnswer?'<div class="qans qcorrect"><span class="qa-lbl">Correct:</span> '+esc(q.correctAnswer)+'</div>':'')+'</td><td class="qmcell"><span class="qmark '+(ok?'qok':'qno')+'">'+(ok?ic('check'):ic('x'))+'</span></td></tr>'}).join('');
+  return'<div class="sess-card">'
+    +'<div class="sess-hd" tabindex="0" role="button" aria-expanded="false" onclick="toggleSess(\'s'+i+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleSess(\'s'+i+'\')}">'
+      +'<div style="min-width:0"><div class="sess-name">'+esc((r.sessions&&r.sessions.name)||'Test')+'</div><div class="sess-meta">'+(area?esc(area):'')+(date?(area?' · ':'')+date:'')+'</div></div>'
+      +'<div style="display:flex;align-items:center;gap:10px"><span class="pill '+pillCls(pct)+'">'+score+'/'+total+' · '+pct+'%</span><span class="chevron" id="chev-s'+i+'">'+ic('chevron')+'</span></div>'
+    +'</div>'
+    +'<div class="sess-body" id="s'+i+'">'
+      +(meta.summary?'<div class="summary-box">'+esc(meta.summary)+'</div>':'')
+      +(qrows?'<table class="ctable qtable"><tbody>'+qrows+'</tbody></table>':'')
+      +'<div class="total-row">Score: <strong>'+score+' / '+total+'</strong></div>'
+      +(tips.length?'<div class="slbl">How to improve</div>'+tips.map(function(t){return'<div class="sbox improve">'+ic('bulb')+'<div><span>'+esc(t)+'</span></div></div>'}).join(''):'')
+    +'</div>'
+  +'</div>';
+}
 function renderSessions(){
   if(!ALL_RESULTS.length)return'<div class="empty">'+ic('layers')+'<div>No sessions yet. Check back after your teacher marks your work.</div></div>';
   return ALL_RESULTS.slice().reverse().map(function(r,i){
+    var meta=parseMeta(r.nzc_reference);
+    var date=r.sessions&&r.sessions.created_at?fmtDate(r.sessions.created_at):'';
+    var area=r.sessions&&r.sessions.learning_area?r.sessions.learning_area:'';
+    if(meta.type==='test')return renderTestSession(r,i,meta,area,date);
     var tot=parseInt((r.criteria_total||'0').split('/')[0])||0;
     var pct=Math.round(tot/25*100);
     var crit=r.criteria||[];
     var critRows=crit.map(function(c){var cm=c.comment?'<div class="ccomment">'+esc(c.comment)+'</div>':'';return'<tr><td class="cn">'+esc(c.name||'')+cm+'</td><td class="cs" style="vertical-align:top">'+dots(parseInt(c.score)||0)+'</td></tr>'}).join('');
     var praise=r.strengths||'';
     var tips=(r.next_steps&&r.next_steps.length)?r.next_steps:[];
-    var meta=parseMeta(r.nzc_reference);
-    var date=r.sessions&&r.sessions.created_at?fmtDate(r.sessions.created_at):'';
-    var area=r.sessions&&r.sessions.learning_area?r.sessions.learning_area:'';
     return'<div class="sess-card">'
       +'<div class="sess-hd" tabindex="0" role="button" aria-expanded="false" onclick="toggleSess(\'s'+i+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleSess(\'s'+i+'\')}">'
         +'<div style="min-width:0"><div class="sess-name">'+esc((r.sessions&&r.sessions.name)||'Session')+'</div><div class="sess-meta">'+(area?esc(area):'')+(date?(area?' · ':'')+date:'')+'</div></div>'
@@ -388,7 +424,7 @@ function drawChart(){
   var axisCol=dark?'rgba(236,233,227,0.5)':'rgba(0,0,0,0.4)';
   var dotFill=dark?'#1c1b19':'#fff';
   var lineCol=dark?'#7fb87a':'#2d5a27';
-  var totals=ALL_RESULTS.map(function(r){return parseInt((r.criteria_total||'0').split('/')[0])||0});
+  var totals=ALL_RESULTS.filter(function(r){return!isTest(r)}).map(function(r){return parseInt((r.criteria_total||'0').split('/')[0])||0});
   var n=totals.length;
 
   var pad={t:20,r:20,b:30,l:36};
