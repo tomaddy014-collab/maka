@@ -179,6 +179,7 @@ canvas{width:100%!important}
 .qans.qcorrect{color:var(--green)}
 .qmark{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:14px}
 .qmark.qok{background:var(--green-bg);color:var(--green)}
+.qmark.qpart{background:var(--warn-bg);color:var(--warn-text);font-weight:700}
 .qmark.qno{background:var(--danger-bg);color:var(--danger-text)}
 .rev-block{background:var(--bg2);border-radius:var(--rs);padding:11px 14px;margin-bottom:14px}
 .rev-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 9px;border-radius:100px;background:var(--info-bg);color:var(--info-text)}
@@ -605,22 +606,24 @@ function sparkline(vals,col){
 }
 
 // ── SESSION LIST ──────────────────────────────────────────────────────────────
+function qMark(q){if(!q)return 0;if(q.mark===1||q.mark===0.5||q.mark===0)return q.mark;var n=parseFloat(q.mark);if(n===1||n===0.5||n===0)return n;return q.correct?1:0}
+function fmtMark(n){return Number.isInteger(n)?String(n):n.toFixed(1)}
 function renderTestSession(r,i,meta,area,date){
   var qs=meta.questions||[];
-  var score=meta.score!=null?meta.score:qs.filter(function(q){return q&&q.correct}).length;
+  var score=meta.score!=null?meta.score:qs.reduce(function(a,q){return a+qMark(q)},0);
   var total=meta.total!=null?meta.total:qs.length,pct=total?Math.round(score/total*100):0;
   var tips=(r.next_steps&&r.next_steps.length)?r.next_steps:[];
-  var qrows=qs.map(function(q,qi){var ok=!!q.correct;return'<tr><td class="qn">'+esc(String(q.n||qi+1))+'</td><td class="qcell"><div class="qtext">'+esc(q.question||'')+'</div><div class="qans"><span class="qa-lbl">Answer:</span> '+esc(q.studentAnswer||'—')+'</div>'+(!ok&&q.correctAnswer?'<div class="qans qcorrect"><span class="qa-lbl">Correct:</span> '+esc(q.correctAnswer)+'</div>':'')+'</td><td class="qmcell"><span class="qmark '+(ok?'qok':'qno')+'">'+(ok?ic('check'):ic('x'))+'</span></td></tr>'}).join('');
+  var qrows=qs.map(function(q,qi){var m=qMark(q),cls=m>=1?'qok':m>0?'qpart':'qno',sym=m>=1?ic('check'):m>0?'½':ic('x');return'<tr><td class="qn">'+esc(String(q.n||qi+1))+'</td><td class="qcell"><div class="qtext">'+esc(q.question||'')+'</div><div class="qans"><span class="qa-lbl">Answer:</span> '+esc(q.studentAnswer||'—')+'</div>'+(m<1&&q.correctAnswer?'<div class="qans qcorrect"><span class="qa-lbl">Correct:</span> '+esc(q.correctAnswer)+'</div>':'')+'</td><td class="qmcell"><span class="qmark '+cls+'">'+sym+'</span></td></tr>'}).join('');
   return'<div class="sess-card">'
     +'<div class="sess-hd" tabindex="0" role="button" aria-expanded="false" onclick="toggleSess(\'s'+i+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleSess(\'s'+i+'\')}">'
       +'<div style="min-width:0"><div class="sess-name">'+esc((r.sessions&&r.sessions.name)||'Test')+'</div><div class="sess-meta">'+(area?esc(area):'')+(date?(area?' · ':'')+date:'')+'</div></div>'
-      +'<div style="display:flex;align-items:center;gap:10px"><span class="pill '+pillCls(pct)+'">'+score+'/'+total+' · '+pct+'%</span><span class="chevron" id="chev-s'+i+'">'+ic('chevron')+'</span></div>'
+      +'<div style="display:flex;align-items:center;gap:10px"><span class="pill '+pillCls(pct)+'">'+fmtMark(score)+'/'+total+' · '+pct+'%</span><span class="chevron" id="chev-s'+i+'">'+ic('chevron')+'</span></div>'
     +'</div>'
     +'<div class="sess-body" id="s'+i+'">'
       +(meta.summary?'<div class="summary-box">'+esc(meta.summary)+'</div>':'')
       +revBlockHTML(r,meta,true)
       +(qrows?'<table class="ctable qtable"><tbody>'+qrows+'</tbody></table>':'')
-      +'<div class="total-row">Score: <strong>'+score+' / '+total+'</strong></div>'
+      +'<div class="total-row">Score: <strong>'+fmtMark(score)+' / '+total+'</strong></div>'
       +(tips.length?'<div class="slbl">How to improve</div>'+tips.map(function(t){return'<div class="sbox improve">'+ic('bulb')+'<div><span>'+esc(t)+'</span></div></div>'}).join(''):'')
       +(r.pdf_path?'<button class="btn btn-green view-work" onclick="viewPDF(\''+esc(r.pdf_path||'')+'\',this)">'+ic('file')+' View the test</button>':'')
     +'</div>'

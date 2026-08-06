@@ -287,6 +287,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .qnote{font-size:12px;color:var(--text3);margin-top:3px;font-style:italic}
 .qmark{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:14px}
 .qmark.qok{background:var(--green-bg);color:var(--green)}
+.qmark.qpart{background:var(--warn-bg);color:var(--warn-text);font-weight:700}
 .qmark.qno{background:var(--danger-bg);color:var(--danger-text)}
 .qmark[role=button]{cursor:pointer}
 .qmark[role=button]:hover{filter:brightness(.94)}
@@ -1493,11 +1494,15 @@ async function runMarking(){
 }
 // ── TEST / COMPREHENSION MARKING (logic-based, no rubric) ───────────────────
 function testBand(pct){return pct>=85?'Excellent':pct>=70?'Good':pct>=50?'Developing':'Needs practice'}
+// A question's mark: 1 (full), 0.5 (partial) or 0 — supports old results that used boolean `correct`.
+function qMark(q){if(!q)return 0;if(q.mark===1||q.mark===0.5||q.mark===0)return q.mark;var n=parseFloat(q.mark);if(n===1||n===0.5||n===0)return n;return q.correct?1:0}
+function fmtMark(n){return Number.isInteger(n)?String(n):n.toFixed(1)}
 function finaliseTest(r){
   var qs=Array.isArray(r.questions)?r.questions:[];r.questions=qs;
-  var score=qs.filter(function(q){return q&&q.correct}).length,total=qs.length;
+  qs.forEach(function(q){if(q){q.mark=qMark(q);q.correct=q.mark>=1}});
+  var score=qs.reduce(function(a,q){return a+qMark(q)},0),total=qs.length;
   r.score=score;r.total=total;r.percent=total?Math.round(score/total*100):0;
-  r.criteriaTotal=score+'/'+total;r.overallScore=testBand(r.percent);r.criteria=[];r.type='test';
+  r.criteriaTotal=fmtMark(score)+'/'+total;r.overallScore=testBand(r.percent);r.criteria=[];r.type='test';
   return r;
 }
 async function markTest(key,file,paper,answerKey,area,level,idx,limit,revCtx){
@@ -1515,17 +1520,18 @@ async function markTest(key,file,paper,answerKey,area,level,idx,limit,revCtx){
         '',
         answerKey?('ANSWER KEY (the correct answers to use):\n'+answerKey):'No answer key was given — work out the correct answer to each question directly from the passage above.',
         '',
-        'ONE student\'s answers are provided (as an attached file or as typed text above). Read what the student wrote and mark EVERY question in the test right or wrong using logic:',
-        '- Accept answers that are correct in meaning even if worded differently, abbreviated, or with minor spelling mistakes.',
-        '- For literal / "find a word" questions the answer must match the passage.',
-        '- Mark a partly-right answer correct only if it captures the key idea. If the student left it blank, mark it wrong with an empty studentAnswer.',
-        '- Be fair and consistent, not harsh.',
+        'ONE student\'s answers are provided (as an attached file or as typed text above). Read what the student wrote and give EVERY question a "mark" of 1, 0.5, or 0 using logic:',
+        '- 1 = correct. A SHORT answer is fine — if a one-word or few-word answer is technically correct, give the FULL mark. Do NOT require full sentences, extra detail, or restating the question. Accept correct meaning even if worded differently, abbreviated, or with minor spelling mistakes.',
+        '- 0.5 = partly correct: the right idea is there but it is incomplete, OR the question needs two things and only one is given, OR it is close but slightly off.',
+        '- 0 = wrong, or blank (use an empty studentAnswer for blanks).',
+        '- For literal / "find a word" questions the answer must match the passage to earn 1.',
+        '- Be fair and generous — reward a student who clearly knows the answer even if they wrote very little.',
         '',
         'OUTPUT FORMAT — return ONLY raw JSON, no markdown, no explanation:',
         '{',
         '  "fileName": "'+file.name+'",',
         '  "studentName": "The student\'s name if it is written on the work (e.g. at the top of the page), else empty.",',
-        '  "questions": [{"n": 1, "question": "the question text", "studentAnswer": "exactly what the student wrote, or empty if blank", "correct": true, "correctAnswer": "the correct answer", "note": "one short reason — especially when marked wrong"}],',
+        '  "questions": [{"n": 1, "question": "the question text", "studentAnswer": "exactly what the student wrote, or empty if blank", "mark": 1, "correctAnswer": "the correct answer", "note": "one short reason — especially for a 0.5 or 0"}],',
         '  "summary": "A warm 2-3 sentence overall comment to the student (you/your): how they went and their main next step.",',
         '  "improve": [{"suggestion": "One short, specific next-step tip written to the student (you/your). One sentence."}]',
         '}',
@@ -1593,7 +1599,9 @@ async function runTestMarking(){
 // Teacher override: flip a question right/wrong on the card.
 function toggleQ(idx,qi){
   var r=results[idx];if(!r||!r.questions||!r.questions[qi])return;
-  r.questions[qi].correct=!r.questions[qi].correct;
+  var q=r.questions[qi],m=qMark(q);
+  q.mark=m>=1?0.5:m>0?0:1; // cycle full → half → zero → full
+  q.correct=q.mark>=1;
   finaliseTest(r);persistResults();saveOneResult(idx);renderResults(results);
 }
 // Browser notification when a long task finishes (only if the tab is in the background).
@@ -1742,7 +1750,7 @@ function assignRowHTML(r,idx){
 function renderTestCard(r,idx,editable){
   if(r._error){var btn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkTest('+idx+')">'+ic('refresh')+'Retry</button>':'';return'<div class="rcard"><div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span>'+btn+'</div><div class="err">'+ic('alert')+' '+esc(r._error)+'</div></div>'}
   var qs=r.questions||[];
-  var score=r.score!=null?r.score:qs.filter(function(q){return q&&q.correct}).length;
+  var score=r.score!=null?r.score:qs.reduce(function(a,q){return a+qMark(q)},0);
   var total=r.total!=null?r.total:qs.length;
   var pct=total?Math.round(score/total*100):0;
   var overall=r.overallScore||r.overall_score||testBand(pct);
@@ -1750,24 +1758,24 @@ function renderTestCard(r,idx,editable){
   var stuName=editable?(assignedStudentFor(r)||(r.studentName||'').trim()):'';
   var nameHtml=stuName?'<span class="rname">'+esc(stuName)+'</span><span class="rfile">'+esc(fileLabel)+'</span>':'<span class="rname">'+esc(fileLabel)+'</span>';
   var html='<div class="rcard">';
-  html+='<div class="rhead"><div style="min-width:0;display:flex;flex-direction:column;gap:2px">'+nameHtml+'</div><div style="display:flex;align-items:center;gap:6px"><span class="pill '+pillCls(pct)+'">'+esc(overall)+' · '+score+'/'+total+'</span></div></div>';
+  html+='<div class="rhead"><div style="min-width:0;display:flex;flex-direction:column;gap:2px">'+nameHtml+'</div><div style="display:flex;align-items:center;gap:6px"><span class="pill '+pillCls(pct)+'">'+esc(overall)+' · '+fmtMark(score)+'/'+total+'</span></div></div>';
   var fbSummary=fbGet(r).summary;
   if(fbSummary||editable)html+='<div class="summary-box">'+ed(editable,idx,'summary',fbSummary)+'</div>';
   html+=revHTML(r,score,true);
   html+='<table class="ctable qtable"><tbody>';
   qs.forEach(function(q,qi){
-    var ok=!!q.correct;
+    var m=qMark(q),cls=m>=1?'qok':m>0?'qpart':'qno',sym=m>=1?ic('check'):m>0?'½':ic('x');
     var mk=editable
-      ?'<span class="qmark '+(ok?'qok':'qno')+'" role="button" tabindex="0" title="Click to flip" onclick="toggleQ('+idx+','+qi+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleQ('+idx+','+qi+')}">'+(ok?ic('check'):ic('x'))+'</span>'
-      :'<span class="qmark '+(ok?'qok':'qno')+'">'+(ok?ic('check'):ic('x'))+'</span>';
+      ?'<span class="qmark '+cls+'" role="button" tabindex="0" title="Click to change: full → half → wrong" onclick="toggleQ('+idx+','+qi+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleQ('+idx+','+qi+')}">'+sym+'</span>'
+      :'<span class="qmark '+cls+'">'+sym+'</span>';
     html+='<tr><td class="qn">'+esc(String(q.n||qi+1))+'</td><td class="qcell"><div class="qtext">'+esc(q.question||'')+'</div>'+
       '<div class="qans"><span class="qa-lbl">Answer:</span> '+esc(q.studentAnswer||'—')+'</div>'+
-      (!ok&&q.correctAnswer?'<div class="qans qcorrect"><span class="qa-lbl">Correct:</span> '+esc(q.correctAnswer)+'</div>':'')+
+      (m<1&&q.correctAnswer?'<div class="qans qcorrect"><span class="qa-lbl">Correct:</span> '+esc(q.correctAnswer)+'</div>':'')+
       (q.note?'<div class="qnote">'+esc(q.note)+'</div>':'')+
       '</td><td class="qmcell">'+mk+'</td></tr>';
   });
   html+='</tbody></table>';
-  html+='<div class="total-row">Score: <strong>'+score+' / '+total+' &nbsp;·&nbsp; '+pct+'%</strong></div>';
+  html+='<div class="total-row">Score: <strong>'+fmtMark(score)+' / '+total+' &nbsp;·&nbsp; '+pct+'%</strong></div>';
   var tips=fbGet(r).tips;
   if(tips.length){
     html+='<div class="slbl" style="margin-top:12px">How to improve</div>';
@@ -2218,13 +2226,13 @@ document.getElementById('cmpbtn').onclick=async function(){
 
 function printTestSheet(r,i,arr,task){
   var qs=r.questions||[];
-  var score=r.score!=null?r.score:qs.filter(function(q){return q&&q.correct}).length;
+  var score=r.score!=null?r.score:qs.reduce(function(a,q){return a+qMark(q)},0);
   var total=r.total!=null?r.total:qs.length,pct=total?Math.round(score/total*100):0;
   var fb=fbGet(r);
-  var rows=qs.map(function(q,qi){var ok=!!q.correct;return'<tr><td style="padding:8px 6px 8px 0;border-bottom:1px solid #eee;width:24px;font-weight:700;color:#888;vertical-align:top">'+esc(String(q.n||qi+1))+'</td><td style="padding:8px 0;border-bottom:1px solid #eee;font-size:12.5px;color:#333;vertical-align:top"><div style="font-weight:500">'+esc(q.question||'')+'</div><div style="color:#666;margin-top:2px">Answer: '+esc(q.studentAnswer||'—')+'</div>'+(!ok&&q.correctAnswer?'<div style="color:#2d5a27;margin-top:2px">Correct: '+esc(q.correctAnswer)+'</div>':'')+'</td><td style="padding:8px 0 8px 8px;border-bottom:1px solid #eee;text-align:right;vertical-align:top;font-weight:700;color:'+(ok?'#2d5a27':'#a32d2d')+'">'+(ok?'✓':'✗')+'</td></tr>'}).join('');
+  var rows=qs.map(function(q,qi){var m=qMark(q),sym=m>=1?'✓':m>0?'½':'✗',col=m>=1?'#2d5a27':m>0?'#8a5a06':'#a32d2d';return'<tr><td style="padding:8px 6px 8px 0;border-bottom:1px solid #eee;width:24px;font-weight:700;color:#888;vertical-align:top">'+esc(String(q.n||qi+1))+'</td><td style="padding:8px 0;border-bottom:1px solid #eee;font-size:12.5px;color:#333;vertical-align:top"><div style="font-weight:500">'+esc(q.question||'')+'</div><div style="color:#666;margin-top:2px">Answer: '+esc(q.studentAnswer||'—')+'</div>'+(m<1&&q.correctAnswer?'<div style="color:#2d5a27;margin-top:2px">Correct: '+esc(q.correctAnswer)+'</div>':'')+'</td><td style="padding:8px 0 8px 8px;border-bottom:1px solid #eee;text-align:right;vertical-align:top;font-weight:700;color:'+col+'">'+sym+'</td></tr>'}).join('');
   var summaryHtml=fb.summary?'<div style="font-size:13.5px;line-height:1.6;color:#333;background:#f6f5f2;border-radius:8px;padding:12px 14px;margin-bottom:16px">'+esc(fb.summary)+'</div>':'';
   var tipsHtml=fb.tips.length?'<div style="background:#faf6ee;border-radius:8px;padding:12px 14px;margin-top:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8a5a06;margin-bottom:6px">How to improve</div>'+fb.tips.map(function(t){return'<div style="font-size:13px;line-height:1.6;color:#333;margin-bottom:6px">– '+esc(t.suggestion||t.text||'')+'</div>'}).join('')+'</div>':'';
-  return'<div class="psheet" style="font-family:-apple-system,sans-serif"><div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;margin-bottom:20px;border-bottom:2px solid #1a1a1a"><div><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:6px">Māka · Comprehension test</div><div style="font-size:24px;font-weight:700;margin-bottom:3px">'+esc(stripExt(r.fileName||r.file_name||''))+'</div><div style="font-size:13px;color:#666">'+esc(task||'')+'</div></div><div style="text-align:right"><div style="font-size:32px;font-weight:800;color:#2d5a27;line-height:1">'+score+'/'+total+'</div><div style="font-size:12px;font-weight:600;color:#2d5a27;margin-top:4px">'+pct+'% · '+esc(r.overallScore||testBand(pct))+'</div></div></div>'+summaryHtml+'<table style="width:100%;border-collapse:collapse">'+rows+'</table>'+tipsHtml+'</div>'+(i<arr.length-1?'<div style="page-break-after:always"></div>':'');
+  return'<div class="psheet" style="font-family:-apple-system,sans-serif"><div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;margin-bottom:20px;border-bottom:2px solid #1a1a1a"><div><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:6px">Māka · Comprehension test</div><div style="font-size:24px;font-weight:700;margin-bottom:3px">'+esc(stripExt(r.fileName||r.file_name||''))+'</div><div style="font-size:13px;color:#666">'+esc(task||'')+'</div></div><div style="text-align:right"><div style="font-size:32px;font-weight:800;color:#2d5a27;line-height:1">'+fmtMark(score)+'/'+total+'</div><div style="font-size:12px;font-weight:600;color:#2d5a27;margin-top:4px">'+pct+'% · '+esc(r.overallScore||testBand(pct))+'</div></div></div>'+summaryHtml+'<table style="width:100%;border-collapse:collapse">'+rows+'</table>'+tipsHtml+'</div>'+(i<arr.length-1?'<div style="page-break-after:always"></div>':'');
 }
 function printSheets(){
   if(!results.length){alert('No results to print.');return}
@@ -2250,7 +2258,7 @@ function exportCSV(){
   var rows;
   if(isTest){
     rows=[['File','Score','Total','Percent','Grade','Summary']];
-    results.forEach(function(r){if(r._error)return;var qs=r.questions||[],score=r.score!=null?r.score:qs.filter(function(q){return q&&q.correct}).length,total=r.total!=null?r.total:qs.length;rows.push([r.fileName||'',score,total,(total?Math.round(score/total*100):0)+'%',r.overallScore||'',fbGet(r).summary||''])});
+    results.forEach(function(r){if(r._error)return;var qs=r.questions||[],score=r.score!=null?r.score:qs.reduce(function(a,q){return a+qMark(q)},0),total=r.total!=null?r.total:qs.length;rows.push([r.fileName||'',fmtMark(score),total,(total?Math.round(score/total*100):0)+'%',r.overallScore||'',fbGet(r).summary||''])});
   }else{
   rows=[['File','Overall','Total','Strengths','Next step 1','Next step 2','Next step 3','NZC']];
   results.forEach(function(r){var ns=fbStepsSave(r);rows.push([r.fileName||'',r.overallScore||'',r.criteriaTotal||'',fbStrengthsSave(r),ns[0]||'',ns[1]||'',ns[2]||'',r.nzcReference||''])});
