@@ -1367,12 +1367,11 @@ function makeLimiter(n){
 async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLimit,revCtx){
   var ml=markLimit||function(fn){return Promise.resolve().then(fn)};
   var md=modLimit||function(fn){return Promise.resolve().then(fn)};
-  var cparts,r,onBusy=function(a,max){progressItems[idx].phase='Gemini busy — retrying ('+a+'/'+(max-1)+')…';renderProg()};
+  var cparts,r,lv=levelInfo(level),onBusy=function(a,max){progressItems[idx].phase='Gemini busy — retrying ('+a+'/'+(max-1)+')…';renderProg()};
   try{
     r=await ml(async function(){
     progressItems[idx].status='working';progressItems[idx].phase=revCtx?'Comparing…':'Marking…';renderProg();
     cparts=await getContentParts(file);
-    var lv=levelInfo(level);
     var p1=[
       'You are a warm, encouraging NZ '+lv.years+' teacher marking student work against the refreshed New Zealand Curriculum.',
       'Learning area: '+area+'. NZC Level: '+level+' ('+lv.years+'). Task: '+(task||'General assessment')+'.',
