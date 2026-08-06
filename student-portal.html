@@ -129,6 +129,17 @@ canvas{width:100%!important}
 .qmark{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:14px}
 .qmark.qok{background:var(--green-bg);color:var(--green)}
 .qmark.qno{background:var(--danger-bg);color:var(--danger-text)}
+.rev-block{background:var(--bg2);border-radius:var(--rs);padding:11px 14px;margin-bottom:14px}
+.rev-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 9px;border-radius:100px;background:var(--info-bg);color:var(--info-text)}
+.delta-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
+.addr-list{margin-top:6px}
+.addr-item{display:flex;gap:9px;align-items:flex-start;font-size:13px;padding:7px 0;border-bottom:1px solid var(--border);line-height:1.5}
+.addr-item:last-child{border-bottom:none}
+.addr-ic{flex-shrink:0;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;margin-top:1px}
+.addr-yes{background:var(--green-bg);color:var(--green)}
+.addr-part{background:var(--warn-bg);color:var(--warn-text)}
+.addr-no{background:var(--danger-bg);color:var(--danger-text)}
+.addr-fb{font-weight:600}.addr-note{color:var(--text2);font-weight:400}
 .sbox .quote{font-style:italic;color:var(--text2);border-left:2px solid var(--border2);padding:2px 0 2px 9px;margin-bottom:6px;font-size:12.5px;line-height:1.5}
 .sbox .quote::before{content:'\201C'}.sbox .quote::after{content:'\201D'}
 .sbox .tryex{margin-top:6px;font-size:12.5px;line-height:1.5;color:var(--text);background:rgba(0,0,0,0.03);border-radius:6px;padding:6px 9px}
@@ -191,6 +202,7 @@ var ICONS={
   chevron:'<path d="M9 18l6-6-6-6"/>',
   check:'<path d="M20 6 9 17l-5-5"/>',
   x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  refresh:'<path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/>'
 };
@@ -199,7 +211,24 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 // Feedback is stored as folded text; parse it back so the student's own words show as a quote.
 function parsePraise(s){s=String(s||'');var m=s.match(/^“([^”]*)”\s*—\s*([\s\S]*)$/);return m?{quote:m[1],text:m[2].trim()}:{quote:'',text:s}}
 function parseTip(s){s=String(s||'');var quote='',body=s;var m=s.match(/^You wrote “([^”]*)”\.\s*([\s\S]*)$/);if(m){quote=m[1];body=m[2]}var ex='',em=body.match(/\s*Try:\s*“([^”]*)”\s*$/);if(em){ex=em[1];body=body.slice(0,em.index)}return{quote:quote,text:body.trim(),example:ex}}
-function parseMeta(s){if(!s)return{goal:'',accuracy:[],summary:'',type:'',questions:[]};try{var o=JSON.parse(s);if(o&&typeof o==='object')return{goal:o.goal||'',accuracy:Array.isArray(o.accuracy)?o.accuracy:[],summary:o.summary||'',type:o.type||'',questions:Array.isArray(o.questions)?o.questions:[],total:o.total,score:o.score,percent:o.percent}}catch(e){}return{goal:'',accuracy:[],summary:'',type:'',questions:[]}}
+function parseMeta(s){if(!s)return{goal:'',accuracy:[],summary:'',type:'',questions:[]};try{var o=JSON.parse(s);if(o&&typeof o==='object')return{goal:o.goal||'',accuracy:Array.isArray(o.accuracy)?o.accuracy:[],summary:o.summary||'',type:o.type||'',questions:Array.isArray(o.questions)?o.questions:[],total:o.total,score:o.score,percent:o.percent,rev:o.rev||null}}catch(e){}return{goal:'',accuracy:[],summary:'',type:'',questions:[]}}
+function revBlockHTML(r,meta,isTest){
+  var rev=meta.rev;if(!rev)return'';
+  var newTotal=isTest?(meta.score!=null?meta.score:parseInt((r.criteria_total||'').split('/')[0])||0):(parseInt((r.criteria_total||'0').split('/')[0])||0);
+  var prev=(isTest?rev.priorScore:rev.priorTotal)||0,d=newTotal-prev,dcls=d>0?'d-up':d<0?'d-dn':'d-eq',arrow=d>0?'↑':d<0?'↓':'→',unit=isTest?'':'/25';
+  var h='<div class="rev-block"><div class="delta-line"><span class="rev-badge">'+ic('refresh')+'Revised</span><span>Before → after: <strong>'+prev+unit+' → '+newTotal+unit+'</strong> <span class="'+dcls+'">'+arrow+' '+(d>0?'+':'')+d+'</span></span></div>';
+  if(!isTest&&rev.priorCrit){
+    var rows=(r.criteria||[]).map(function(c){var nm=(c.name||'').split('—')[0].trim();var pv=rev.priorCrit[nm];if(pv==null)return'';var nv=parseInt(c.score)||0,dd=nv-pv,a=dd>0?'↑':dd<0?'↓':'→',cc=dd>0?'d-up':dd<0?'d-dn':'d-eq';return'<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:2px 0"><span>'+esc(nm)+'</span><span class="'+cc+'">'+pv+' → '+nv+' '+a+'</span></div>'}).filter(Boolean).join('');
+    if(rows)h+='<div style="margin:6px 0 2px">'+rows+'</div>';
+  }
+  var addr=rev.addressed||[];
+  if(addr.length){
+    h+='<div class="slbl">You acted on your feedback</div><div class="addr-list">';
+    addr.forEach(function(a){var st=(a.status||'').toLowerCase(),cls=st.indexOf('address')===0?'addr-yes':st.indexOf('part')===0?'addr-part':'addr-no',mk=cls==='addr-yes'?ic('check'):cls==='addr-part'?'~':ic('x');h+='<div class="addr-item"><span class="addr-ic '+cls+'">'+mk+'</span><div><span class="addr-fb">'+esc(a.feedback||'')+'</span>'+(a.note?' <span class="addr-note">— '+esc(a.note)+'</span>':'')+'</div></div>'});
+    h+='</div>';
+  }
+  return h+'</div>';
+}
 function isTest(r){return parseMeta(r.nzc_reference).type==='test'}
 function fmtDate(d){return new Date(d).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'})}
 function pillCls(pct){return pct>=75?'ph':pct>=50?'pm':'pl'}
@@ -362,6 +391,7 @@ function renderTestSession(r,i,meta,area,date){
     +'</div>'
     +'<div class="sess-body" id="s'+i+'">'
       +(meta.summary?'<div class="summary-box">'+esc(meta.summary)+'</div>':'')
+      +revBlockHTML(r,meta,true)
       +(qrows?'<table class="ctable qtable"><tbody>'+qrows+'</tbody></table>':'')
       +'<div class="total-row">Score: <strong>'+score+' / '+total+'</strong></div>'
       +(tips.length?'<div class="slbl">How to improve</div>'+tips.map(function(t){return'<div class="sbox improve">'+ic('bulb')+'<div><span>'+esc(t)+'</span></div></div>'}).join(''):'')
@@ -388,6 +418,7 @@ function renderSessions(){
       +'</div>'
       +'<div class="sess-body" id="s'+i+'">'
         +(meta.summary?'<div class="summary-box">'+esc(meta.summary)+'</div>':'')
+        +revBlockHTML(r,meta,false)
         +(critRows?'<table class="ctable"><thead><tr><th>Criterion</th><th>Score</th></tr></thead><tbody>'+critRows+'</tbody></table>':'')
         +'<div class="total-row">Total: <strong>'+esc(r.criteria_total||'')+'</strong></div>'
         +(praise?(function(){var p=parsePraise(praise);return'<div class="slbl">What you did well</div><div class="sbox praise">'+ic('award')+'<div>'+(p.quote?'<div class="quote">'+esc(p.quote)+'</div>':'')+'<span>'+esc(p.text)+'</span></div></div>'})():'')
