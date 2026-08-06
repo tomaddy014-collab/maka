@@ -671,6 +671,11 @@ var DEFAULT_STYLE="Ashton has demonstrated positive growth in his writing this t
 var DEFAULT_RUBRIC="Ideas and Content — selects and develops relevant ideas that clearly support the main point\nStructure and Organisation — uses TIDE paragraph structure with a clear topic and concluding sentence\nVocabulary and Language Features — uses appropriate vocabulary and varied sentence structures\nConventions — spelling, punctuation, and grammar are accurate and support meaning\nClarity and Cohesion — writing flows logically and is easy for the reader to follow";
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+// Safe for names embedded inside an inline onclick="fn('...')" JS string literal — a plain
+// apostrophe (O'Brien, Ngāti ...) would otherwise terminate the JS string early and break
+// the handler. Escapes the backslash/quote for the JS layer, then " < > for the HTML-attribute
+// layer around it (HTML entities decode before the JS is parsed, so \' must NOT be HTML-escaped).
+function escJs(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n').replace(/\r/g,'').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function fmt(b){return b>1048576?(b/1048576).toFixed(1)+' MB':Math.round(b/1024)+' KB'}
 // Shimmer placeholders while async lists load (uses .skel styles)
 function skeletonRows(n){var h='';for(var i=0;i<(n||4);i++)h+='<div class="skel skel-card"></div>';return h}
@@ -1203,8 +1208,6 @@ document.getElementById('markbtn').onclick=runMarking;
 updMark();updateStepState();
 
 function toB64(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1])};r.onerror=function(){rej(new Error('Could not read this file — it may be corrupted or still downloading.'))};r.readAsDataURL(file)})}
-// Turn any supported file into Gemini content parts: PDFs/images go as inline data;
-// typed Word (.docx) and text (.txt) files are extracted to text on the device.
 function getJSPDF(){var ns=window.jspdf||window.jsPDF;return ns&&(ns.jsPDF||ns)}
 // Render plain text into a simple multi-page PDF (real embedded text, not an image) and
 // return its base64 data. Used so typed Word/text files reach Gemini as a PDF like everything
@@ -1231,15 +1234,22 @@ async function imageToPDFBase64(file){
   doc.addImage(dataURL,file.type==='image/png'?'PNG':'JPEG',x,y,w,h);
   return doc.output('datauristring').split(',')[1];
 }
-// Every supported file is converted to an actual PDF before being sent to Gemini — one
-// reliable, consistent format regardless of what the teacher uploads (PDF, Word, text, or a
-// photo/scan). PDFs already pass through unchanged.
-async function getContentParts(file){
+// Convert base64 PDF data into a real File — used so the SAME converted PDF can both be sent
+// to Gemini and stored in Supabase (so "View your work" always opens a real, renderable PDF,
+// not the raw original .docx/.txt/image).
+function pdfBase64ToFile(b64,name){
+  var chars=atob(b64),bytes=new Uint8Array(chars.length);
+  for(var i=0;i<chars.length;i++)bytes[i]=chars.charCodeAt(i);
+  return new File([bytes],name,{type:'application/pdf'});
+}
+// Every supported file is converted to an actual PDF — one reliable, consistent format
+// regardless of what the teacher uploads (PDF, Word, text, or a photo/scan). Returns the
+// original file unchanged if it's already a PDF (or an unrecognised type we can't convert).
+async function ensurePDFFile(file){
   var t=file.type||'',name=(file.name||'').toLowerCase();
+  if(t==='application/pdf'||name.slice(-4)==='.pdf')return file;
   var pdfB64;
-  if(t==='application/pdf'||name.slice(-4)==='.pdf'){
-    pdfB64=await toB64(file);
-  }else if(name.slice(-5)==='.docx'||t.indexOf('officedocument.wordprocessingml')!==-1){
+  if(name.slice(-5)==='.docx'||t.indexOf('officedocument.wordprocessingml')!==-1){
     if(!window.mammoth)throw new Error('Word reader still loading — try again in a moment, or save the file as PDF.');
     var buf=await file.arrayBuffer();
     var out=await window.mammoth.extractRawText({arrayBuffer:buf});
@@ -1253,11 +1263,14 @@ async function getContentParts(file){
   }else if(t.indexOf('image/')===0){
     pdfB64=await imageToPDFBase64(file);
   }else{
-    // Unknown type — send as-is rather than fail outright.
-    var b64=await toB64(file);
-    return[{inline_data:{mime_type:t||'application/octet-stream',data:b64}}];
+    return file; // unrecognised type — leave as-is rather than fail outright
   }
-  return[{inline_data:{mime_type:'application/pdf',data:pdfB64}}];
+  return pdfBase64ToFile(pdfB64,stripExt(file.name)+'.pdf');
+}
+async function getContentParts(file){
+  var pdf=await ensurePDFFile(file);
+  var b64=await toB64(pdf);
+  return[{inline_data:{mime_type:pdf.type||'application/octet-stream',data:b64}}];
 }
 // Turn raw Gemini API errors into clear, actionable guidance for teachers.
 function friendlyGeminiError(status,msg){
@@ -1710,7 +1723,18 @@ async function runTestMarking(){
     ensureNotifyPermission();
     if(sb&&USER&&key!==(PROFILE.gemini_key||''))sb.from('profiles').update({gemini_key:key}).eq('id',USER.id).then(function(){PROFILE.gemini_key=key}).catch(function(){});
     // No key given → derive one from the passage ONCE so every student is marked consistently.
-    if(!answerKey){try{answerKey=await deriveAnswerKey(key,paper,area,level);document.getElementById('test-key').value=answerKey;showToast('Generated an answer key from the passage — review it in the Answer key box','ok',5000)}catch(e){}}
+    if(!answerKey){
+      try{
+        answerKey=await deriveAnswerKey(key,paper,area,level);
+        document.getElementById('test-key').value=answerKey;
+        showToast('Generated an answer key from the passage — review it in the Answer key box','ok',5000);
+      }catch(e){
+        // Don't silently mark without a shared key — stop and tell the teacher why (the
+        // outer finally still resets the button/MARKING flag on this early return).
+        showToast("Could not generate an answer key: "+(e.message||e)+" — fix your API key or paste a key manually, then try again.",'err',9000);
+        return;
+      }
+    }
     // The true question count (from the key, or the passage) — authoritative so a student who
     // skips questions is marked out of the FULL test, not just the ones they attempted.
     var expectedTotal=countQuestions(paper,answerKey);
@@ -1758,8 +1782,11 @@ function ensureNotifyPermission(){
 async function uploadPDF(file,teacherId){
   if(!sb||!file)return null;
   try{
-    var path=teacherId+'/'+Date.now()+'_'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-    var res=await sb.storage.from('student-pdfs').upload(path,file,{contentType:file.type||'application/octet-stream',upsert:true});
+    // Store the CONVERTED PDF, not the raw original — so "View your work" always opens a
+    // real, renderable PDF regardless of whether the teacher uploaded a .docx/.txt/image.
+    var pdfFile=await ensurePDFFile(file);
+    var path=teacherId+'/'+Date.now()+'_'+pdfFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+    var res=await sb.storage.from('student-pdfs').upload(path,pdfFile,{contentType:pdfFile.type||'application/octet-stream',upsert:true});
     if(res.error){console.error('PDF upload error:',res.error.message);return null;}
     return path;
   }catch(e){console.error('PDF upload failed:',e.message);return null;}
@@ -1887,7 +1914,7 @@ function assignRowHTML(r,idx){
 }
 // A marked comprehension test: per-question ✓/✗, score, summary and tips.
 function renderTestCard(r,idx,editable){
-  if(r._error){var btn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkTest('+idx+')">'+ic('refresh')+'Retry</button>':'';return'<div class="rcard"><div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span>'+btn+'</div><div class="err">'+ic('alert')+' '+esc(r._error)+'</div></div>'}
+  if(r._error){var btn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkTest('+idx+')">'+ic('refresh')+'Retry</button>':'';var delBtn0=editable?'<button class="remark-btn" onclick="delResult('+idx+')" aria-label="Remove this result" title="Remove">'+ic('trash')+'</button>':'';return'<div class="rcard"><div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span>'+btn+delBtn0+'</div><div class="err">'+ic('alert')+' '+esc(r._error)+'</div></div>'}
   var qs=r.questions||[];
   var score=r.score!=null?r.score:qs.reduce(function(a,q){return a+qMark(q)},0);
   var total=r.total!=null?r.total:qs.length;
@@ -1896,8 +1923,9 @@ function renderTestCard(r,idx,editable){
   var fileLabel=r.fileName||r.file_name||'';
   var stuName=editable?(assignedStudentFor(r)||(r.studentName||'').trim()):'';
   var nameHtml=stuName?'<span class="rname">'+esc(stuName)+'</span><span class="rfile">'+esc(fileLabel)+'</span>':'<span class="rname">'+esc(fileLabel)+'</span>';
+  var delBtn=editable?'<button class="remark-btn" onclick="delResult('+idx+')" aria-label="Remove this result" title="Remove">'+ic('trash')+'</button>':'';
   var html='<div class="rcard">';
-  html+='<div class="rhead"><div style="min-width:0;display:flex;flex-direction:column;gap:2px">'+nameHtml+'</div><div style="display:flex;align-items:center;gap:6px"><span class="pill '+pillCls(pct)+'">'+esc(overall)+' · '+fmtMark(score)+'/'+total+'</span></div></div>';
+  html+='<div class="rhead"><div style="min-width:0;display:flex;flex-direction:column;gap:2px">'+nameHtml+'</div><div style="display:flex;align-items:center;gap:6px"><span class="pill '+pillCls(pct)+'">'+esc(overall)+' · '+fmtMark(score)+'/'+total+'</span>'+delBtn+'</div></div>';
   var fbSummary=fbGet(r).summary;
   if(fbSummary||editable)html+='<div class="summary-box">'+ed(editable,idx,'summary',fbSummary)+'</div>';
   html+=revHTML(r,score,true);
@@ -1940,13 +1968,14 @@ function renderResultCard(r,idx,editable){
   var pct=sc.length?Math.round(total/(sc.length*5)*100):0;
   var overall=r.overallScore||r.overall_score||'';
   var remarkBtn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkStu('+idx+')">'+ic('refresh')+'Re-mark</button>':'';
+  var delBtn=editable?'<button class="remark-btn" onclick="delResult('+idx+')" aria-label="Remove this result" title="Remove">'+ic('trash')+'</button>':'';
   var fileLabel=r.fileName||r.file_name||'';
   var stuName=editable?(assignedStudentFor(r)||(r.studentName||'').trim()):'';
   var nameHtml=stuName
     ?'<span class="rname">'+esc(stuName)+'</span><span class="rfile">'+esc(fileLabel)+'</span>'
     :'<span class="rname">'+esc(fileLabel)+'</span>';
   var html='<div class="rcard">';
-  html+='<div class="rhead"><div style="min-width:0;display:flex;flex-direction:column;gap:2px">'+nameHtml+'</div><div style="display:flex;align-items:center;gap:6px"><span class="pill '+pillCls(pct)+'">'+esc(overall)+' · '+esc(tot)+'</span>'+remarkBtn+'</div></div>';
+  html+='<div class="rhead"><div style="min-width:0;display:flex;flex-direction:column;gap:2px">'+nameHtml+'</div><div style="display:flex;align-items:center;gap:6px"><span class="pill '+pillCls(pct)+'">'+esc(overall)+' · '+esc(tot)+'</span>'+remarkBtn+delBtn+'</div></div>';
   var fbSummary=fbGet(r).summary;
   if(fbSummary||editable)html+='<div class="summary-box">'+ed(editable,idx,'summary',fbSummary)+'</div>';
   html+=revHTML(r,total,false);
@@ -2038,6 +2067,35 @@ function setByPath(obj,path,val){var p=path.split('.'),o=obj;for(var i=0;i<p.len
 function saveOneResult(idx){
   var r=results[idx];if(!r||r._error||!currentSessId||!sb||!USER)return;
   sb.from('student_results').upsert({session_id:currentSessId,teacher_id:USER.id,file_name:resultSaveName(r),overall_score:r.overallScore,criteria_total:r.criteriaTotal,criteria:r.criteria,strengths:fbStrengthsSave(r),next_steps:fbStepsSave(r),nzc_reference:fbMetaSave(r)},{onConflict:'session_id,file_name'}).then(function(){}).catch(function(){});
+}
+// Delete a saved result row (and its stored file, if any) by session + file name.
+function deleteSavedResultRow(sessionId,fileName){
+  if(!sb||!sessionId||!fileName)return Promise.resolve();
+  return sb.from('student_results').select('pdf_path').eq('session_id',sessionId).eq('file_name',fileName).maybeSingle().then(function(ex){
+    var pdfPath=ex&&ex.data&&ex.data.pdf_path;
+    return sb.from('student_results').delete().eq('session_id',sessionId).eq('file_name',fileName).then(function(){
+      if(pdfPath)sb.storage.from('student-pdfs').remove([pdfPath]).catch(function(){});
+    });
+  });
+}
+// Remove one student's result from the current Mark-tab batch — undoable for 4s. If it had
+// already been saved to a session, the saved row (and any stored file) is cleaned up too once
+// the undo window passes.
+function delResult(idx){
+  var r=results[idx];if(!r)return;
+  var label=(assignedStudentFor(r)||(r.studentName||'').trim()||firstNameOf(r.fileName||r.file_name||''))||'this file';
+  var savedName=resultSaveName(r),sessId=currentSessId;
+  var cards=document.querySelectorAll('#results .rcard');
+  var card=cards[idx];if(card)card.style.opacity='0.35';
+  var undone=false;
+  var timer=setTimeout(function(){
+    if(undone)return;
+    var i=results.indexOf(r);if(i===-1)return;
+    files.splice(i,1);results.splice(i,1);
+    persistResults();renderResults(results);
+    if(sessId)deleteSavedResultRow(sessId,savedName).catch(function(){});
+  },4000);
+  showToast(ic('trash')+'Removed '+esc(label),'',5000,'Undo',function(){undone=true;clearTimeout(timer);if(card)card.style.opacity=''});
 }
 function renderResults(res){
   document.getElementById('results').innerHTML=res.map(function(r,i){return renderResultCard(r,i,true)}).join('');
@@ -2151,16 +2209,36 @@ function renderHistList(){
     return((s.name||'')+' '+(s.learning_area||'')+' '+(s.task||'')).toLowerCase().indexOf(q)!==-1;
   });
   if(!list.length){rows.innerHTML='<div style="font-size:13px;color:var(--text2);padding:8px 0">No sessions match your search.</div>';return}
-  rows.innerHTML=list.map(function(s){var d=new Date(s.created_at).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});return'<div class="sess-item" id="sess-'+s.id+'"><div class="ico" style="font-size:26px;flex-shrink:0;display:flex;align-items:center">'+ic('clipboard')+'</div><div class="sess-info"><div class="sess-name">'+esc(s.name||'Untitled')+'</div><div class="sess-meta">'+esc(s.learning_area||'')+(s.level?' · Level '+s.level:'')+' · '+d+'</div></div><div class="btn-row"><button class="btn btn-sm" onclick="loadHistDetail(\''+s.id+'\',\''+esc(s.name||'Session')+'\')">View</button><button class="btn btn-sm" onclick="renameSession(\''+s.id+'\',\''+esc(s.name||'')+'\')">Rename</button><button class="btn btn-sm btn-danger" onclick="delSession(\''+s.id+'\',\''+esc(s.name||'Session')+'\')">Delete</button></div></div>'}).join('');
+  rows.innerHTML=list.map(function(s){var d=new Date(s.created_at).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});return'<div class="sess-item" id="sess-'+s.id+'"><div class="ico" style="font-size:26px;flex-shrink:0;display:flex;align-items:center">'+ic('clipboard')+'</div><div class="sess-info"><div class="sess-name">'+esc(s.name||'Untitled')+'</div><div class="sess-meta">'+esc(s.learning_area||'')+(s.level?' · Level '+s.level:'')+' · '+d+'</div></div><div class="btn-row"><button class="btn btn-sm" onclick="loadHistDetail(\''+s.id+'\',\''+escJs(s.name||'Session')+'\')">View</button><button class="btn btn-sm" onclick="renameSession(\''+s.id+'\',\''+escJs(s.name||'')+'\')">Rename</button><button class="btn btn-sm btn-danger" onclick="delSession(\''+s.id+'\',\''+escJs(s.name||'Session')+'\')">Delete</button></div></div>'}).join('');
 }
 function loadHistDetail(id,name){
   document.getElementById('hist-list-view').style.display='none';document.getElementById('hist-detail-view').style.display='block';
   document.getElementById('hist-detail-name').textContent=name;
   var el=document.getElementById('hist-detail-results');el.innerHTML=skeletonRows(3);
   sb.from('student_results').select('*').eq('session_id',id).order('file_name',{ascending:true}).then(function(res){
-    if(!res.data||!res.data.length){el.innerHTML=emptyState('layers','No results saved for this session.');return}
-    renderResultSet(res.data.map(normResult),el);
+    var rows=res.data||[];
+    if(!rows.length){el.innerHTML=emptyState('layers','No results saved for this session.');return}
+    el.innerHTML=rows.map(function(row,i){
+      var fn=row.file_name||'';
+      var delBtn='<button class="btn btn-sm btn-danger" style="position:absolute;top:14px;right:14px;z-index:2" onclick="delSavedResult(\''+id+'\',\''+escJs(fn)+'\',this)" aria-label="Remove '+esc(fn)+' from this session">'+ic('trash')+'</button>';
+      return'<div style="position:relative">'+delBtn+renderResultCard(normResult(row),i,false)+'</div>';
+    }).join('');
   }).catch(function(e){el.innerHTML='<div class="err">'+esc(e.message)+'</div>'});
+}
+// Delete one student's saved result directly from a past session (History detail). No undo —
+// asks for confirmation first since the data leaves the wrapping card immediately after.
+function delSavedResult(sessionId,fileName,btn){
+  if(!confirm('Remove this result from the session? This cannot be undone.'))return;
+  var wrap=btn.closest('div'),origHTML=btn.innerHTML;
+  btn.disabled=true;btn.innerHTML='<span class="spinner" style="width:12px;height:12px;border-top-color:currentColor"></span>';
+  deleteSavedResultRow(sessionId,fileName).then(function(){
+    if(wrap&&wrap.parentElement)wrap.remove();
+    showToast('Removed','ok',3000);
+    if(!document.getElementById('hist-detail-results').children.length)document.getElementById('hist-detail-results').innerHTML=emptyState('layers','No results saved for this session.');
+  }).catch(function(e){
+    btn.disabled=false;btn.innerHTML=origHTML;
+    showToast('Could not remove: '+(e.message||e),'err',5000);
+  });
 }
 function closeHistDetail(){document.getElementById('hist-detail-view').style.display='none';document.getElementById('hist-list-view').style.display='block'}
 function renameSession(id,name){renameTargetId=id;document.getElementById('rename-input').value=name;openModal('rename-modal');setTimeout(function(){document.getElementById('rename-input').focus();document.getElementById('rename-input').select()},100)}
@@ -2271,7 +2349,7 @@ function loadClassList(){
     if(!data.length){el.innerHTML=emptyState('users','No students yet. Add them above, or import a CSV — pronouns and year levels power your comments and student hubs.');return}
     var gC={boy:'background:#e6f1fb;color:#185fa5',girl:'background:#fce8f3;color:#8b1a5e',nonbinary:'background:#f0ede8;color:#5a564e'};
     var gL={boy:'He/him',girl:'She/her',nonbinary:'They/them'};
-    el.innerHTML='<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+data.length+' students — click to open hub</div>'+data.map(function(s){var gb=s.gender&&gL[s.gender]?'<span style="font-size:10px;padding:2px 7px;border-radius:100px;font-weight:600;'+gC[s.gender]+'">'+gL[s.gender]+'</span>':'';var code=s.access_code||'';return'<div class="stu-item" id="stu-'+s.id+'" style="cursor:pointer" onclick="openHub(\''+s.id+'\',\''+esc(s.name)+'\')"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0">'+esc(s.name[0].toUpperCase())+'</div><div style="flex:1;min-width:0"><div style="font-weight:500;font-size:14px">'+esc(s.name)+'</div><div style="font-size:12px;color:var(--text2);margin-top:1px">'+esc(s.year_level||'No year set')+'</div></div>'+gb+'<span class="code-chip" title="Student login code" onclick="event.stopPropagation();copyCode(\''+esc(code)+'\',this)">'+(code?esc(code):'—')+'</span><button class="btn btn-sm" onclick="event.stopPropagation();regenCode(\''+s.id+'\')" aria-label="Generate new code for '+esc(s.name)+'">'+ic('refresh')+'</button><button class="btn btn-sm" onclick="event.stopPropagation();openHub(\''+s.id+'\',\''+esc(s.name)+'\')" aria-label="Open hub for '+esc(s.name)+'">'+ic('external')+'Hub</button><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delStu(\''+s.id+'\',\''+esc(s.name)+'\')" style="margin-left:4px" aria-label="Remove '+esc(s.name)+'">×</button></div>'}).join('');
+    el.innerHTML='<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+data.length+' students — click to open hub</div>'+data.map(function(s){var gb=s.gender&&gL[s.gender]?'<span style="font-size:10px;padding:2px 7px;border-radius:100px;font-weight:600;'+gC[s.gender]+'">'+gL[s.gender]+'</span>':'';var code=s.access_code||'';return'<div class="stu-item" id="stu-'+s.id+'" style="cursor:pointer" onclick="openHub(\''+s.id+'\',\''+escJs(s.name)+'\')"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0">'+esc(s.name[0].toUpperCase())+'</div><div style="flex:1;min-width:0"><div style="font-weight:500;font-size:14px">'+esc(s.name)+'</div><div style="font-size:12px;color:var(--text2);margin-top:1px">'+esc(s.year_level||'No year set')+'</div></div>'+gb+'<span class="code-chip" title="Student login code" onclick="event.stopPropagation();copyCode(\''+escJs(code)+'\',this)">'+(code?esc(code):'—')+'</span><button class="btn btn-sm" onclick="event.stopPropagation();regenCode(\''+s.id+'\')" aria-label="Generate new code for '+esc(s.name)+'">'+ic('refresh')+'</button><button class="btn btn-sm" onclick="event.stopPropagation();openHub(\''+s.id+'\',\''+escJs(s.name)+'\')" aria-label="Open hub for '+esc(s.name)+'">'+ic('external')+'Hub</button><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delStu(\''+s.id+'\',\''+escJs(s.name)+'\')" style="margin-left:4px" aria-label="Remove '+esc(s.name)+'">×</button></div>'}).join('');
   }).catch(function(e){el.innerHTML='<div class="err">'+esc(e.message)+'</div>'});
 }
 function openHub(id,name){
