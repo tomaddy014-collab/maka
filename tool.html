@@ -453,7 +453,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
     <div class="card" id="step0-card">
       <div class="step-row collapse-head" id="step0-head" role="button" tabindex="0" aria-expanded="true" aria-controls="step0-body" onclick="toggleStep0()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleStep0()}"><span class="step-n" id="step-n-0" data-n="0">0</span><span class="step-title">Gemini API key</span><span class="step-summary" id="step0-summary"></span><span class="collapse-chev"><span data-ic="chevron"></span></span></div>
       <div class="field collapse-body" id="step0-body">
-        <div class="key-row"><input type="password" id="apikey" placeholder="AIza…" autocomplete="off" aria-label="Gemini API key"><button class="eye-btn" aria-label="Show or hide key" onclick="var f=document.getElementById('apikey');f.type=f.type=='password'?'text':'password'"><span data-ic="eye"></span></button></div>
+        <div class="key-row"><input type="password" id="apikey" name="maka-gemini-key-nofill" placeholder="AIza…" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" aria-label="Gemini API key"><button class="eye-btn" aria-label="Show or hide key" onclick="var f=document.getElementById('apikey');f.type=f.type=='password'?'text':'password'"><span data-ic="eye"></span></button></div>
         <div class="hint">Free at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com</a> — saved to your account when signed in.</div>
       </div>
     </div>
@@ -467,7 +467,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       </div>
       <div class="grid2">
         <div class="field"><label class="lbl" for="la">Learning area</label><select id="la"><option>English / Literacy</option><option>Mathematics / Pāngarau</option><option>Science</option><option>Social sciences</option><option>Technology</option><option>Arts</option><option>Health and PE</option><option>Te Reo Māori</option></select></div>
-        <div class="field"><label class="lbl" for="cl">Curriculum level</label><select id="cl"><option value="4">Level 4 — Years 7–8</option><option value="3">Level 3 — Years 5–6</option><option value="5">Level 5 — Years 9–10</option></select></div>
+        <div class="field"><label class="lbl" for="cl">Curriculum level</label><select id="cl"><option value="4">Level 4 — Years 7–8</option><option value="3">Level 3 — Years 5–6</option><option value="2">Level 2 — Years 3–4</option></select></div>
       </div>
       <div class="field"><label class="lbl" for="task">Task / focus</label><input type="text" id="task" placeholder="e.g. Persuasive writing — should school uniforms be compulsory?" oninput="autoSessName()"></div>
       <div id="rubric-bits2">
@@ -504,7 +504,8 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <div class="upload-box empty-pulse" id="dropzone">
         <div class="upload-ico" style="margin-bottom:10px"><span data-ic="file"></span></div>
         <div style="font-size:14px;font-weight:500;margin-bottom:4px">Drag and drop files here</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:14px">PDF, Word (.docx), text (.txt), JPG or PNG — typed or handwritten, or snap a photo</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:2px">PDF, Word (.docx), text (.txt), JPG or PNG — typed or handwritten, or snap a photo</div>
+        <div style="font-size:12px;color:var(--gold);margin-bottom:14px;font-weight:500">Save each file with the student's name (e.g. "Aria Smith.pdf") so it matches your class list</div>
         <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
           <button class="btn" id="pickbtn">Browse files</button>
           <button class="btn" id="camerabtn"><span data-ic="camera"></span>Take photo</button>
@@ -633,7 +634,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         </div>
         <div style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:.5px solid var(--border)">
           <div class="lbl">Gemini API key</div>
-          <div class="key-row"><input type="password" id="set-key" placeholder="AIza…" autocomplete="off"><button class="eye-btn" onclick="var f=document.getElementById('set-key');f.type=f.type=='password'?'text':'password'"><span data-ic="eye"></span></button><button class="btn" onclick="saveKey()">Save</button></div>
+          <div class="key-row"><input type="password" id="set-key" name="maka-gemini-key-nofill2" placeholder="AIza…" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other"><button class="eye-btn" onclick="var f=document.getElementById('set-key');f.type=f.type=='password'?'text':'password'"><span data-ic="eye"></span></button><button class="btn" onclick="saveKey()">Save</button></div>
           <div id="key-status"></div>
         </div>
         <div style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:.5px solid var(--border)">
@@ -652,7 +653,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 </div>
 
 <div class="modal-bg" id="rename-modal"><div class="modal"><div class="modal-title">Rename session</div><input type="text" id="rename-input" placeholder="Session name"><div class="modal-footer"><button class="btn" onclick="closeModal('rename-modal')">Cancel</button><button class="btn btn-p" onclick="confirmRename()">Rename</button></div></div></div>
-<div class="modal-bg" id="add-stu-modal"><div class="modal"><div class="modal-title">Add student</div><div class="field"><label class="lbl">Name</label><input type="text" id="new-stu-name" placeholder="Student name"></div><div class="grid2" style="margin-bottom:0"><div class="field"><label class="lbl">Year level</label><select id="new-stu-year"><option value="">Select</option><option>Year 1</option><option>Year 2</option><option>Year 3</option><option>Year 4</option><option>Year 5</option><option>Year 6</option><option>Year 7</option><option>Year 8</option><option>Year 9</option><option>Year 10</option></select></div><div class="field"><label class="lbl">Gender</label><select id="new-stu-gender"><option value="">Select</option><option value="boy">Boy (he/him)</option><option value="girl">Girl (she/her)</option><option value="nonbinary">Non-binary (they/them)</option></select></div></div><div class="modal-footer"><button class="btn" onclick="closeModal('add-stu-modal')">Cancel</button><button class="btn btn-p" onclick="addStu()">Add</button></div></div></div>
+<div class="modal-bg" id="add-stu-modal"><div class="modal"><div class="modal-title">Add student</div><div class="field"><label class="lbl">Name</label><input type="text" id="new-stu-name" placeholder="Student name"></div><div class="grid2" style="margin-bottom:0"><div class="field"><label class="lbl">Year level</label><select id="new-stu-year"><option value="">Select</option><option>Year 3</option><option>Year 4</option><option>Year 5</option><option>Year 6</option><option>Year 7</option><option>Year 8</option></select></div><div class="field"><label class="lbl">Gender</label><select id="new-stu-gender"><option value="">Select</option><option value="boy">Boy (he/him)</option><option value="girl">Girl (she/her)</option><option value="nonbinary">Non-binary (they/them)</option></select></div></div><div class="modal-footer"><button class="btn" onclick="closeModal('add-stu-modal')">Cancel</button><button class="btn btn-p" onclick="addStu()">Add</button></div></div></div>
 <div class="modal-bg" id="shortcuts-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div class="modal-title">Keyboard shortcuts</div><div id="shortcuts-body" style="font-size:13px"></div><div class="modal-footer"><button class="btn btn-p" onclick="closeModal('shortcuts-modal')">Got it</button></div></div></div>
 <div class="print-out" id="print-out"></div>
 <div id="toast-wrap" aria-live="polite" aria-atomic="false"></div>
@@ -677,6 +678,14 @@ function skeletonRows(n){var h='';for(var i=0;i<(n||4);i++)h+='<div class="skel 
 function emptyState(icon,msg){return'<div class="empty-state">'+ic(icon)+'<div>'+msg+'</div></div>'}
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function stripExt(n){return String(n).replace(/\.[^.]+$/,'')}
+// First name only — used anywhere a name leaves the tool (report comments, weekly posts,
+// printed sheets/PDFs), so surnames aren't included in anything shared with students/parents.
+// Handles both a plain "Aria Smith" class-list name and a saved "Aria Smith — file.pdf" label.
+function firstNameOf(s){
+  s=String(s||'').trim();if(!s)return s;
+  var base=stripExt(s.split(' — ')[0]).trim();
+  return base.split(/\s+/)[0]||base;
+}
 // Fold a verbatim student quote into feedback text so it persists to the hub/portal.
 function withQuote(q,t){q=(q||'').trim();t=t||'';return q?('“'+q+'” — '+t):t}
 // ── Feedback model ──────────────────────────────────────────────────────────
@@ -939,6 +948,11 @@ function loadRubrics(){
 }
 function loadRubric(){var sel=document.getElementById('rubric-select');var opt=sel.options[sel.selectedIndex];if(!opt||!opt.value)return;document.getElementById('rubric').value=opt.dataset.criteria||'';var la=document.getElementById('la');for(var i=0;i<la.options.length;i++)if(la.options[i].text===opt.dataset.la){la.selectedIndex=i;break};var cl=document.getElementById('cl');for(var i=0;i<cl.options.length;i++)if(cl.options[i].value===opt.dataset.level){cl.selectedIndex=i;break}}
 
+// NZC level -> year group / typical age, used to keep prompts accurate across Years 3-8.
+function levelInfo(level){
+  var m={'2':{years:'Years 3–4',ages:'7-8'},'3':{years:'Years 5–6',ages:'9-10'},'4':{years:'Years 7–8',ages:'11-12'}};
+  return m[String(level)]||m['4'];
+}
 async function buildRubric(){
   var key=getKey();
   if(!key){alert('Please enter your Gemini API key first.');return}
@@ -951,7 +965,7 @@ async function buildRubric(){
   btn.disabled=true;btn.innerHTML=ic('sparkle')+'Building…';
   status.style.display='block';status.textContent='Generating rubric for '+area+' Level '+level+'…';
   var prompt=[
-    'You are an experienced New Zealand Years 7-8 teacher.',
+    'You are an experienced New Zealand '+levelInfo(level).years+' teacher.',
     'Create a detailed marking rubric for the following:',
     'Learning area: '+area,
     'NZC Level: '+level,
@@ -1191,23 +1205,59 @@ updMark();updateStepState();
 function toB64(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1])};r.onerror=function(){rej(new Error('Could not read this file — it may be corrupted or still downloading.'))};r.readAsDataURL(file)})}
 // Turn any supported file into Gemini content parts: PDFs/images go as inline data;
 // typed Word (.docx) and text (.txt) files are extracted to text on the device.
+function getJSPDF(){var ns=window.jspdf||window.jsPDF;return ns&&(ns.jsPDF||ns)}
+// Render plain text into a simple multi-page PDF (real embedded text, not an image) and
+// return its base64 data. Used so typed Word/text files reach Gemini as a PDF like everything
+// else, while staying just as readable as sending the raw text (the text layer is real).
+function textToPDFBase64(text){
+  var JSP=getJSPDF();if(!JSP)throw new Error('PDF library still loading — try again in a moment.');
+  var doc=new JSP({unit:'pt',format:'a4'});
+  var pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight(),m=48,y=56;
+  doc.setFont('helvetica','normal');doc.setFontSize(11);
+  var lines=doc.splitTextToSize(text,pw-m*2);
+  lines.forEach(function(line){if(y>ph-48){doc.addPage();y=56}doc.text(line,m,y);y+=15});
+  return doc.output('datauristring').split(',')[1];
+}
+// Render an image file onto a single PDF page (scaled to fit) and return its base64 data.
+async function imageToPDFBase64(file){
+  var JSP=getJSPDF();if(!JSP)throw new Error('PDF library still loading — try again in a moment.');
+  var dataURL=await new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result)};r.onerror=function(){rej(new Error('Could not read this image.'))};r.readAsDataURL(file)});
+  var img=await new Promise(function(res,rej){var im=new Image();im.onload=function(){res(im)};im.onerror=function(){rej(new Error('Could not decode this image — it may be corrupted.'))};im.src=dataURL});
+  var doc=new JSP({unit:'pt',format:'a4'});
+  var pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight(),m=24;
+  var maxW=pw-m*2,maxH=ph-m*2;
+  var scale=Math.min(maxW/img.naturalWidth,maxH/img.naturalHeight,1);
+  var w=img.naturalWidth*scale,h=img.naturalHeight*scale,x=(pw-w)/2,y=(ph-h)/2;
+  doc.addImage(dataURL,file.type==='image/png'?'PNG':'JPEG',x,y,w,h);
+  return doc.output('datauristring').split(',')[1];
+}
+// Every supported file is converted to an actual PDF before being sent to Gemini — one
+// reliable, consistent format regardless of what the teacher uploads (PDF, Word, text, or a
+// photo/scan). PDFs already pass through unchanged.
 async function getContentParts(file){
   var t=file.type||'',name=(file.name||'').toLowerCase();
-  if(name.slice(-5)==='.docx'||t.indexOf('officedocument.wordprocessingml')!==-1){
+  var pdfB64;
+  if(t==='application/pdf'||name.slice(-4)==='.pdf'){
+    pdfB64=await toB64(file);
+  }else if(name.slice(-5)==='.docx'||t.indexOf('officedocument.wordprocessingml')!==-1){
     if(!window.mammoth)throw new Error('Word reader still loading — try again in a moment, or save the file as PDF.');
     var buf=await file.arrayBuffer();
     var out=await window.mammoth.extractRawText({arrayBuffer:buf});
     var txt=(out&&out.value||'').trim();
     if(!txt)throw new Error('No text found in this Word file — try saving it as a PDF.');
-    return[{text:"STUDENT'S TYPED WORK (from '"+file.name+"'):\n"+txt}];
-  }
-  if(t==='text/plain'||name.slice(-4)==='.txt'){
+    pdfB64=textToPDFBase64(txt);
+  }else if(t==='text/plain'||name.slice(-4)==='.txt'){
     var content=(await file.text()).trim();
     if(!content)throw new Error('This text file is empty.');
-    return[{text:"STUDENT'S TYPED WORK (from '"+file.name+"'):\n"+content}];
+    pdfB64=textToPDFBase64(content);
+  }else if(t.indexOf('image/')===0){
+    pdfB64=await imageToPDFBase64(file);
+  }else{
+    // Unknown type — send as-is rather than fail outright.
+    var b64=await toB64(file);
+    return[{inline_data:{mime_type:t||'application/octet-stream',data:b64}}];
   }
-  var b64=await toB64(file);
-  return[{inline_data:{mime_type:t==='application/pdf'?'application/pdf':(t||'application/octet-stream'),data:b64}}];
+  return[{inline_data:{mime_type:'application/pdf',data:pdfB64}}];
 }
 // Turn raw Gemini API errors into clear, actionable guidance for teachers.
 function friendlyGeminiError(status,msg){
@@ -1220,7 +1270,10 @@ function friendlyGeminiError(status,msg){
 }
 async function gemini(key,parts,onRetry){
   var url='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key;
-  var body=JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0.3,maxOutputTokens:8192}});
+  // thinkingBudget:0 disables Gemini 2.5's hidden "thinking" tokens, which otherwise eat into
+  // maxOutputTokens and can cut off the visible answer (most noticeable on short outputs like
+  // report comments). Also faster and cheaper since no reasoning tokens are spent.
+  var body=JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0.3,maxOutputTokens:8192,thinkingConfig:{thinkingBudget:0}}});
   var maxTries=10,delay=2000,lastErr='Gemini unavailable';
   for(var attempt=1;attempt<=maxTries;attempt++){
     try{
@@ -1306,16 +1359,17 @@ async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLi
     r=await ml(async function(){
     progressItems[idx].status='working';progressItems[idx].phase=revCtx?'Comparing…':'Marking…';renderProg();
     cparts=await getContentParts(file);
+    var lv=levelInfo(level);
     var p1=[
-      'You are a warm, encouraging NZ Years 7-8 teacher marking student work against the refreshed New Zealand Curriculum.',
-      'Learning area: '+area+'. NZC Level: '+level+'. Task: '+(task||'General assessment')+'.',
+      'You are a warm, encouraging NZ '+lv.years+' teacher marking student work against the refreshed New Zealand Curriculum.',
+      'Learning area: '+area+'. NZC Level: '+level+' ('+lv.years+'). Task: '+(task||'General assessment')+'.',
       '',
       'IMPORTANT RULES:',
       '1. Mark ONLY against the exact criteria listed below. Do NOT invent new criteria or rename them.',
-      '2. Calibrate to NZC Level '+level+', and mark ENCOURAGINGLY. A student who meets the Level '+level+' expectation scores 4/5; award 5/5 whenever the work meets the expectation well or goes beyond (do not hold 5 back for perfection). Give 3/5 when a criterion is partly there, and 1-2/5 ONLY when it is largely missing. Most reasonable Year 7-8 attempts should land in the 3-5 range per criterion.',
-      '3. Mark generously and give the benefit of the doubt — these are 11-13 year olds. Never dock marks for minor slips (spelling, neatness, length) if the underlying skill is shown. When you are genuinely unsure between two scores, ALWAYS choose the higher one.',
-      '4. Use warm, clear, age-appropriate language (Years 7-8 students, aged 11-13).',
-      '5. AUTO-DIFFERENTIATE the feedback to the level of THIS piece of writing. Judge the student\'s demonstrated writing level from the work itself, then pitch every comment, tip and example to match: for a student who is clearly struggling, use short simple sentences, very plain words, extra warmth and one small concrete step at a time; for a strong, fluent writer, use richer vocabulary and more challenging next steps. The feedback should feel written for THIS child, not a generic Year 7-8.',
+      '2. Calibrate to NZC Level '+level+', and mark ENCOURAGINGLY. A student who meets the Level '+level+' expectation scores 4/5; award 5/5 whenever the work meets the expectation well or goes beyond (do not hold 5 back for perfection). Give 3/5 when a criterion is partly there, and 1-2/5 ONLY when it is largely missing. Most reasonable '+lv.years+' attempts should land in the 3-5 range per criterion.',
+      '3. Mark generously and give the benefit of the doubt — these are '+lv.ages+' year olds. Never dock marks for minor slips (spelling, neatness, length) if the underlying skill is shown. When you are genuinely unsure between two scores, ALWAYS choose the higher one.',
+      '4. Use warm, clear, age-appropriate language ('+lv.years+' students, aged '+lv.ages+').',
+      '5. AUTO-DIFFERENTIATE the feedback to the level of THIS piece of writing. Judge the student\'s demonstrated writing level from the work itself, then pitch every comment, tip and example to match: for a student who is clearly struggling, use short simple sentences, very plain words, extra warmth and one small concrete step at a time; for a strong, fluent writer, use richer vocabulary and more challenging next steps. The feedback should feel written for THIS child, not a generic '+lv.years+' student.',
       '6. DIFFERENTIATION SAFEGUARDS — protect the student\'s dignity:',
       '   a. Differentiate only the READING LEVEL and TONE of the wording. NEVER lower the standard or expectations, and NEVER change the scores because a student seems weaker or stronger — scores always reflect the rubric and NZC Level '+level+' only.',
       '   b. NEVER label, name, rank or hint at the student\'s ability or level anywhere in the output (no "beginner", "low", "basic", "for your level", "advanced", etc.). The student must never be able to tell their feedback was simplified or stretched.',
@@ -1344,7 +1398,7 @@ async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLi
       '}',
       '',
       'Give a "comment" for EVERY criterion. Give 2 to 3 items in "improve", each targeting a different criterion where the student can most easily gain marks, and each with a genuine worked "example". Every quote MUST be real text taken directly from this student\'s work — never invented.',
-      'TONE: write every comment, praise, suggestion, example and goal directly TO the student (you/your), warm and encouraging, in short plain words a 11-13 year old reads easily. Never talk about the student in third person and never sound harsh.'
+      'TONE: write every comment, praise, suggestion, example and goal directly TO the student (you/your), warm and encouraging, in short plain words a '+lv.ages+' year old reads easily. Never talk about the student in third person and never sound harsh.'
     ].join('\n');
     var sendParts=cparts,revBlock='';
     if(revCtx&&revCtx.prior){
@@ -1367,13 +1421,13 @@ async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLi
     // Second AI pass: an independent moderation review of the scores and feedback.
     progressItems[idx].phase='Moderating…';renderProg();
     var p2=[
-      'You are moderating NZC Level '+level+' student marking. Be fair and encouraging for Years 7-8 students.',
+      'You are moderating NZC Level '+level+' student marking. Be fair and encouraging for '+lv.years+' students.',
       '',
       'Review this marking against the student work and:',
       '1. Check each score is fair and NOT harsh for NZC Level '+level+'. A student meeting the expectation should be 4/5, and work that meets it well deserves 5/5. Raise any score that looks harsh for work that reasonably meets a criterion. Do not lower scores unless a criterion is clearly largely missing. When unsure between two scores, choose the higher.',
       '2. Keep every quote (praiseQuote and each improve[].quote) EXACTLY as it is — they are verbatim quotes from the student\'s work and must never be changed or invented.',
       '3. Make sure every criterion has a helpful "comment", the "praise" is genuine and specific, each improve item has a clear "suggestion" and realistic worked "example", and the "goal" is one encouraging next-time target.',
-      '   - Write everything directly to the student using "you/your". Warm, plain, age-appropriate for 11-13 year olds. Never harsh or discouraging.',
+      '   - Write everything directly to the student using "you/your". Warm, plain, age-appropriate for '+lv.ages+' year olds. Never harsh or discouraging.',
       '   - Keep the feedback differentiated to this student\'s demonstrated writing level: simpler and more supportive for a struggling writer, richer and more challenging for a strong one — but ONLY the reading level and tone, never the standard.',
       '   - Differentiation safeguards: never label or hint at the student\'s ability/level, never compare them to others, never lower expectations or change scores because of perceived level, and keep the wording respectful, strengths-based and never condescending.',
       '   - Remove any wording that names or implies the student\'s level (e.g. "beginner", "for your level", "basic", "advanced") — reword it to be neutral and encouraging.',
@@ -1590,8 +1644,9 @@ async function markTest(key,file,paper,answerKey,area,level,idx,limit,revCtx,exp
     return await ml(async function(){
       progressItems[idx].status='working';progressItems[idx].phase=revCtx?'Comparing…':'Marking…';renderProg();
       var cparts=await getContentParts(file);
+      var lv=levelInfo(level);
       var p=[
-        'You are a fair, encouraging NZ Years 7-8 teacher marking a reading comprehension test using logic. NZC Level '+level+', learning area '+area+'.',
+        'You are a fair, encouraging NZ '+lv.years+' teacher marking a reading comprehension test using logic. NZC Level '+level+', learning area '+area+'.',
         '',
         'THE TEST (reading passage and questions):',
         paper,
@@ -2130,6 +2185,7 @@ function setCType(type){
 }
 
 var GENERATING=false;
+function isKeyError(msg){return/api key|invalid|permission|refused|not valid/i.test(msg||'')}
 async function genComments(){
   var key=getKey();if(!key)return;
   if(GENERATING)return; // guard against double-submit
@@ -2148,8 +2204,8 @@ async function genComments(){
       if(sids.length){var wr;try{wr=await sb.from('student_results').select('*, sessions(id,name,learning_area,task)').eq('teacher_id',USER.id).in('session_id',sids)}catch(e){wr={data:[]}};allWeek=wr.data||[]}
     }
     var byStudent={};
-    allWeek.forEach(function(r){var fn=r.file_name?r.file_name.split(/[\s\-_.]/)[0]:'Unknown';if(!byStudent[fn])byStudent[fn]={name:fn,sessions:[]};byStudent[fn].sessions.push({subject:(r.sessions&&r.sessions.learning_area)||'Subject',task:(r.sessions&&r.sessions.task)||'',overallScore:r.overall_score||'',total:r.criteria_total||'',strengths:r.strengths||''})});
-    results.filter(function(r){return!r._error}).forEach(function(r){var fn=r.fileName?r.fileName.split(/[\s\-_.]/)[0]:'Unknown';if(!byStudent[fn])byStudent[fn]={name:fn,sessions:[]};byStudent[fn].sessions.push({subject:document.getElementById('la').value,task:document.getElementById('task').value||'',overallScore:r.overallScore||'',total:r.criteriaTotal||'',strengths:fbStrengthsSave(r)})});
+    allWeek.forEach(function(r){var fn=r.file_name?firstNameOf(r.file_name):'Unknown';if(!byStudent[fn])byStudent[fn]={name:fn,sessions:[]};byStudent[fn].sessions.push({subject:(r.sessions&&r.sessions.learning_area)||'Subject',task:(r.sessions&&r.sessions.task)||'',overallScore:r.overall_score||'',total:r.criteria_total||'',strengths:r.strengths||''})});
+    results.filter(function(r){return!r._error}).forEach(function(r){var fn=r.fileName?firstNameOf(r.fileName):'Unknown';if(!byStudent[fn])byStudent[fn]={name:fn,sessions:[]};byStudent[fn].sessions.push({subject:document.getElementById('la').value,task:document.getElementById('task').value||'',overallScore:r.overallScore||'',total:r.criteriaTotal||'',strengths:fbStrengthsSave(r)})});
     var stuList=Object.values(byStudent);
     if(!stuList.length){cprog.style.display='none';alert('No students found for this week.');return}
     cprog.innerHTML='<div style="font-size:13px;color:var(--text2);display:flex;align-items:center;gap:8px"><div class="spinner"></div>Generating weekly posts for '+stuList.length+' students…</div>';
@@ -2160,17 +2216,21 @@ async function genComments(){
           var pro={subject:'they',object:'them',possessive:'their'};
           if(sb&&USER){var gr;try{gr=await sb.from('students').select('gender').eq('teacher_id',USER.id).ilike('name',stu.name+'%').maybeSingle()}catch(e){gr={data:null}};if(gr.data){if(gr.data.gender==='boy')pro={subject:'he',object:'him',possessive:'his'};else if(gr.data.gender==='girl')pro={subject:'she',object:'her',possessive:'her'}}}
           var subSum=stu.sessions.map(function(s){return s.subject+(s.task?' ('+s.task+')':'')+': '+s.overallScore+' '+s.total+(s.strengths?' — '+s.strengths:'')}).join('\n');
-          var txt=await gemini(key,[{text:['Write a short weekly learning post for a NZ Years 7–8 student named '+stu.name+' for sharing with parents/whānau.',ctx?'Week context: '+ctx:'','Use pronouns: '+pro.subject+'/'+pro.object+'/'+pro.possessive+'.','Match this teacher style:',style,'','This week '+stu.name+' was marked in '+stu.sessions.length+' subject'+(stu.sessions.length!==1?'s':'')+':\n'+subSum,'','3–4 sentences, third person, cover ALL subjects, specific and encouraging. Return ONLY the comment text.'].join('\n')}]);
+          var txt=await gemini(key,[{text:['Write a short weekly learning post for a NZ primary/intermediate student (Years 3-8) named '+stu.name+' for sharing with parents/whānau.',ctx?'Week context: '+ctx:'','Use pronouns: '+pro.subject+'/'+pro.object+'/'+pro.possessive+'.','Match this teacher style:',style,'','This week '+stu.name+' was marked in '+stu.sessions.length+' subject'+(stu.sessions.length!==1?'s':'')+':\n'+subSum,'','3–4 sentences, third person, cover ALL subjects, specific and encouraging. Return ONLY the comment text.'].join('\n')}]);
           return{fileName:stu.name,comment:txt.trim()};
         }catch(e){return{fileName:stu.name,comment:'Error: '+e.message}}
       }));
-      out=out.concat(br);if(b+4<stuList.length)await sleep(2000);
+      out=out.concat(br);
+      // If this whole batch failed on the same bad key, stop burning through the rest of
+      // the class with a doomed key — surface one clear message instead.
+      if(br.length&&br.every(function(r){return isKeyError(r.comment)})){showToast(br[0].comment.replace(/^Error:\s*/,''),'err',8000);break}
+      if(b+4<stuList.length)await sleep(2000);
     }
     cprog.style.display='none';renderCommentResults(out,'Weekly post');
   }else{
     var term=document.getElementById('rep-term').value.trim(),studSel=document.getElementById('rep-stu-sel').value,stuNames=[];
-    if(studSel==='all'&&sb&&USER){var cr;try{cr=await sb.from('students').select('name').eq('teacher_id',USER.id).order('name')}catch(e){cr={data:[]}};stuNames=(cr.data||[]).map(function(s){return s.name})}
-    if(!stuNames.length)stuNames=results.filter(function(r){return!r._error}).map(function(r){return stripExt(r.fileName)});
+    if(studSel==='all'&&sb&&USER){var cr;try{cr=await sb.from('students').select('name').eq('teacher_id',USER.id).order('name')}catch(e){cr={data:[]}};stuNames=(cr.data||[]).map(function(s){return firstNameOf(s.name)})}
+    if(!stuNames.length)stuNames=results.filter(function(r){return!r._error}).map(function(r){return firstNameOf(r.fileName)});
     if(!stuNames.length){cprog.style.display='none';alert('No students found.');return}
     cprog.innerHTML='<div style="font-size:13px;color:var(--text2);display:flex;align-items:center;gap:8px"><div class="spinner"></div>Generating report comments for '+stuNames.length+' students…</div>';
     var out=[];
@@ -2182,7 +2242,7 @@ async function genComments(){
           if(sb&&USER){var ar;try{ar=await sb.from('student_results').select('overall_score,criteria_total,strengths,next_steps,sessions(name,learning_area)').eq('teacher_id',USER.id).ilike('file_name','%'+name+'%').order('created_at',{ascending:true})}catch(e){ar={data:[]}};if(ar.data&&ar.data.length){hist=ar.data.map(function(r){return((r.sessions&&r.sessions.name)||'Session')+': '+r.overall_score+' ('+r.criteria_total+')'}).join(' | ');latest=ar.data[ar.data.length-1]}}
           var pro={subject:'they',object:'them',possessive:'their'};
           if(sb&&USER){var gr2;try{gr2=await sb.from('students').select('gender').eq('teacher_id',USER.id).ilike('name',name+'%').maybeSingle()}catch(e){gr2={data:null}};if(gr2.data){if(gr2.data.gender==='boy')pro={subject:'he',object:'him',possessive:'his'};else if(gr2.data.gender==='girl')pro={subject:'she',object:'her',possessive:'her'}}}
-          var txt=await gemini(key,[{text:['Write a full school report comment for a NZ Years 7–8 student named '+name+'. Single paragraph, 4–6 sentences, third person.','Use pronouns: '+pro.subject+'/'+pro.object+'/'+pro.possessive+'.',term?'Report context: '+term:'','Match this teacher style:',style,'','Assessment history:',hist,'','Most recent:'+(latest?JSON.stringify(latest):'Not available'),'','Use name, third person, reference growth, one next step, match teacher voice, 4–6 sentences. Return ONLY the paragraph.'].join('\n')}]);
+          var txt=await gemini(key,[{text:['Write a full school report comment for a NZ primary/intermediate student (Years 3-8) named '+name+'. Single paragraph, 4–6 sentences, third person.','Use pronouns: '+pro.subject+'/'+pro.object+'/'+pro.possessive+'.',term?'Report context: '+term:'','Match this teacher style:',style,'','Assessment history:',hist,'','Most recent:'+(latest?JSON.stringify(latest):'Not available'),'','Use name, third person, reference growth, one next step, match teacher voice, 4–6 sentences. Return ONLY the paragraph.'].join('\n')}]);
           return{fileName:name,comment:txt.trim()};
         }catch(e){return{fileName:name,comment:'Error: '+e.message}}
       }));
@@ -2317,7 +2377,7 @@ function printTestSheet(r,i,arr,task){
   var rows=qs.map(function(q,qi){var m=qMark(q),sym=m>=1?'✓':m>0?'½':'✗',col=m>=1?'#2d5a27':m>0?'#8a5a06':'#a32d2d';return'<tr><td style="padding:8px 6px 8px 0;border-bottom:1px solid #eee;width:24px;font-weight:700;color:#888;vertical-align:top">'+esc(String(q.n||qi+1))+'</td><td style="padding:8px 0;border-bottom:1px solid #eee;font-size:12.5px;color:#333;vertical-align:top"><div style="font-weight:500">'+esc(q.question||'')+'</div><div style="color:#666;margin-top:2px">Answer: '+esc(q.studentAnswer||'—')+'</div>'+(m<1&&q.correctAnswer?'<div style="color:#2d5a27;margin-top:2px">Correct: '+esc(q.correctAnswer)+'</div>':'')+'</td><td style="padding:8px 0 8px 8px;border-bottom:1px solid #eee;text-align:right;vertical-align:top;font-weight:700;color:'+col+'">'+sym+'</td></tr>'}).join('');
   var summaryHtml=fb.summary?'<div style="font-size:13.5px;line-height:1.6;color:#333;background:#f6f5f2;border-radius:8px;padding:12px 14px;margin-bottom:16px">'+esc(fb.summary)+'</div>':'';
   var tipsHtml=fb.tips.length?'<div style="background:#faf6ee;border-radius:8px;padding:12px 14px;margin-top:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8a5a06;margin-bottom:6px">How to improve</div>'+fb.tips.map(function(t){return'<div style="font-size:13px;line-height:1.6;color:#333;margin-bottom:6px">– '+esc(t.suggestion||t.text||'')+'</div>'}).join('')+'</div>':'';
-  return'<div class="psheet" style="font-family:-apple-system,sans-serif"><div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;margin-bottom:20px;border-bottom:2px solid #1a1a1a"><div><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:6px">Māka · Comprehension test</div><div style="font-size:24px;font-weight:700;margin-bottom:3px">'+esc(stripExt(r.fileName||r.file_name||''))+'</div><div style="font-size:13px;color:#666">'+esc(task||'')+'</div></div><div style="text-align:right"><div style="font-size:32px;font-weight:800;color:#2d5a27;line-height:1">'+fmtMark(score)+'/'+total+'</div><div style="font-size:12px;font-weight:600;color:#2d5a27;margin-top:4px">'+pct+'% · '+esc(r.overallScore||testBand(pct))+'</div></div></div>'+summaryHtml+'<table style="width:100%;border-collapse:collapse">'+rows+'</table>'+tipsHtml+'</div>'+(i<arr.length-1?'<div style="page-break-after:always"></div>':'');
+  return'<div class="psheet" style="font-family:-apple-system,sans-serif"><div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;margin-bottom:20px;border-bottom:2px solid #1a1a1a"><div><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:6px">Māka · Comprehension test</div><div style="font-size:24px;font-weight:700;margin-bottom:3px">'+esc(firstNameOf(r.fileName||r.file_name||''))+'</div><div style="font-size:13px;color:#666">'+esc(task||'')+'</div></div><div style="text-align:right"><div style="font-size:32px;font-weight:800;color:#2d5a27;line-height:1">'+fmtMark(score)+'/'+total+'</div><div style="font-size:12px;font-weight:600;color:#2d5a27;margin-top:4px">'+pct+'% · '+esc(r.overallScore||testBand(pct))+'</div></div></div>'+summaryHtml+'<table style="width:100%;border-collapse:collapse">'+rows+'</table>'+tipsHtml+'</div>'+(i<arr.length-1?'<div style="page-break-after:always"></div>':'');
 }
 function printSheets(){
   if(!results.length){alert('No results to print.');return}
@@ -2334,7 +2394,7 @@ function printSheets(){
     var praiseHtml=(fb.praise&&fb.praise.text)?'<div style="background:#f0f7ee;border-radius:8px;padding:12px 14px;margin-bottom:8px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#2d5a27;margin-bottom:4px">What you did well</div>'+(fb.praise.quote?'<div style="font-style:italic;color:#555;font-size:12.5px;margin-bottom:4px">“'+esc(fb.praise.quote)+'”</div>':'')+'<div style="font-size:13px;line-height:1.6;color:#333">'+esc(fb.praise.text)+'</div></div>':'';
     var tipsHtml=fb.tips.length?'<div style="background:#faf6ee;border-radius:8px;padding:12px 14px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8a5a06;margin-bottom:6px">How to improve</div>'+fb.tips.map(function(t){var b='<div style="font-size:13px;line-height:1.6;color:#333;margin-bottom:8px">';if(t.quote)b+='<div style="font-style:italic;color:#666;font-size:12.5px;margin-bottom:2px">“'+esc(t.quote)+'”</div>';if(t.text)b+=esc(t.text);else{if(t.suggestion)b+=esc(t.suggestion);if(t.example)b+='<div style="margin-top:3px"><strong>Try:</strong> '+esc(t.example)+'</div>'}return b+'</div>'}).join('')+'</div>':'';
     var goalHtml=fb.goal?'<div style="margin-top:10px;background:#eef4fb;border-left:3px solid #185fa5;border-radius:8px;padding:10px 14px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#185fa5;margin-bottom:3px">Your goal for next time</div><div style="font-size:13px;line-height:1.55;color:#333">'+esc(fb.goal)+'</div></div>':'';
-    return'<div class="psheet" style="font-family:-apple-system,sans-serif"><div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;margin-bottom:24px;border-bottom:2px solid #1a1a1a"><div><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:6px">Māka · NZC Feedback</div><div style="font-size:24px;font-weight:700;margin-bottom:3px">'+esc(stripExt(r.fileName))+'</div><div style="font-size:13px;color:#666">'+esc(task)+'</div></div><div style="text-align:right"><div style="font-size:32px;font-weight:800;color:#2d5a27;line-height:1">'+tot+'/25</div><div style="font-size:12px;font-weight:600;color:#2d5a27;margin-top:4px">'+esc(r.overallScore||'')+'</div></div></div>'+summaryHtml+'<table style="width:100%;border-collapse:collapse;margin-bottom:18px"><thead><tr><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 4px 8px 0;border-bottom:1px solid #ddd">Criterion</th><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 4px 8px;border-bottom:1px solid #ddd">Score</th><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 0 8px;border-bottom:1px solid #ddd">Comment</th></tr></thead><tbody>'+trows+'</tbody></table>'+praiseHtml+tipsHtml+goalHtml+'</div>';
+    return'<div class="psheet" style="font-family:-apple-system,sans-serif"><div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;margin-bottom:24px;border-bottom:2px solid #1a1a1a"><div><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:6px">Māka · NZC Feedback</div><div style="font-size:24px;font-weight:700;margin-bottom:3px">'+esc(firstNameOf(r.fileName))+'</div><div style="font-size:13px;color:#666">'+esc(task)+'</div></div><div style="text-align:right"><div style="font-size:32px;font-weight:800;color:#2d5a27;line-height:1">'+tot+'/25</div><div style="font-size:12px;font-weight:600;color:#2d5a27;margin-top:4px">'+esc(r.overallScore||'')+'</div></div></div>'+summaryHtml+'<table style="width:100%;border-collapse:collapse;margin-bottom:18px"><thead><tr><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 4px 8px 0;border-bottom:1px solid #ddd">Criterion</th><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 4px 8px;border-bottom:1px solid #ddd">Score</th><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding:0 0 8px;border-bottom:1px solid #ddd">Comment</th></tr></thead><tbody>'+trows+'</tbody></table>'+praiseHtml+tipsHtml+goalHtml+'</div>';
   }).join('');window.print();
 }
 function exportCSV(){
@@ -2376,7 +2436,7 @@ function exportAllReportCards(){
       doc.text('NZC Feedback',pw-m,y,{align:'right'});
       y+=10;doc.setDrawColor(220,216,210);doc.line(m,y,pw-m,y);y+=22;
       doc.setFont('helvetica','bold');doc.setFontSize(18);doc.setTextColor(ink[0],ink[1],ink[2]);
-      doc.text(stripExt(r.fileName||r.file_name||'Student'),m,y);
+      doc.text(firstNameOf(r.fileName||r.file_name||'Student'),m,y);
       doc.setTextColor(green[0],green[1],green[2]);
       doc.text(tot+'/25',pw-m,y,{align:'right'});y+=18;
       doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(grey[0],grey[1],grey[2]);

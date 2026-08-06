@@ -334,7 +334,7 @@ var _TEACHER_ID=_params.get('tid')||'';
     <div class="field"><label class="lbl">Name</label><input type="text" id="edit-name"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="field"><label class="lbl">Year level</label>
-        <select id="edit-year"><option value="">Select</option><option>Year 1</option><option>Year 2</option><option>Year 3</option><option>Year 4</option><option>Year 5</option><option>Year 6</option><option>Year 7</option><option>Year 8</option><option>Year 9</option><option>Year 10</option></select>
+        <select id="edit-year"><option value="">Select</option><option>Year 3</option><option>Year 4</option><option>Year 5</option><option>Year 6</option><option>Year 7</option><option>Year 8</option></select>
       </div>
       <div class="field"><label class="lbl">Gender</label>
         <select id="edit-gender"><option value="">Select</option><option value="boy">Boy (he/him)</option><option value="girl">Girl (she/her)</option><option value="nonbinary">Non-binary (they/them)</option></select>
@@ -547,7 +547,7 @@ function renderPage(){
     <div class="card">
       <div class="sect-title"><span class="ico-chip">${ic('sparkle')}</span>Generate report comment</div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.55">Generates a full paragraph from all ${ALL_RESULTS.length} marking session${ALL_RESULTS.length!==1?'s':''} — in your saved writing style.</p>
-      <div class="field"><label class="lbl">Gemini API key</label><div class="key-row"><input type="password" id="rep-key" placeholder="AIza…" autocomplete="off"><button class="eye-btn" aria-label="Show or hide key" onclick="var f=document.getElementById('rep-key');f.type=f.type=='password'?'text':'password'">${ic('eye')}</button></div></div>
+      <div class="field"><label class="lbl">Gemini API key</label><div class="key-row"><input type="password" id="rep-key" name="maka-gemini-key-nofill3" placeholder="AIza…" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other"><button class="eye-btn" aria-label="Show or hide key" onclick="var f=document.getElementById('rep-key');f.type=f.type=='password'?'text':'password'">${ic('eye')}</button></div></div>
       <div class="field"><label class="lbl">Term / context <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label><input type="text" id="rep-term" placeholder="e.g. End of Term 2, 2026"></div>
       <button class="btn btn-p" id="rep-btn" onclick="genReport()">${ic('sparkle')} Generate report comment</button>
       <div id="rep-output" class="rep-output"></div>
