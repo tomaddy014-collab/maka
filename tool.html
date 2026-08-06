@@ -2387,7 +2387,20 @@ document.addEventListener('keydown',function(e){
 });
 
 (function(){var nv=document.querySelector('nav');if(!nv)return;window.addEventListener('scroll',function(){nv.classList.toggle('scrolled',window.scrollY>4)},{passive:true})})();
-if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){})}
+// Register the service worker, and reload once when a NEW one takes over so a fresh
+// deploy is picked up automatically (no hard-refresh). Guarded so it can't loop.
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').then(function(reg){
+    if(reg){try{reg.update()}catch(e){}}
+  }).catch(function(){});
+  var _swReloaded=false;
+  navigator.serviceWorker.addEventListener('controllerchange',function(){
+    // Only reload if a worker was already in control (i.e. this is an update, not first install).
+    if(_swReloaded||!sessionStorage.getItem('maka-sw-seen'))return;
+    _swReloaded=true;location.reload();
+  });
+  try{if(navigator.serviceWorker.controller)sessionStorage.setItem('maka-sw-seen','1')}catch(e){}
+}
 </script>
 </body>
 </html>
