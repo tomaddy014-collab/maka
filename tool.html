@@ -485,8 +485,14 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
           <div style="font-size:12px;color:var(--text2);margin-bottom:6px">Paste the whole test — the reading passage and every question, numbered.</div>
           <textarea id="test-paper" placeholder="READING: The kākāpō is a large, flightless parrot...&#10;&#10;1. What kind of bird is the kākāpō?&#10;2. Why can't it fly?&#10;3. Find a word that means 'active at night'."></textarea>
         </div>
-        <div class="field"><label class="lbl" for="test-key">Answer key <span style="font-weight:500;text-transform:none;letter-spacing:0">(optional — leave blank to let Māka work answers out from the passage)</span></label>
+        <div class="field">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:5px">
+            <label class="lbl" for="test-key" style="margin-bottom:0">Answer key <span style="font-weight:500;text-transform:none;letter-spacing:0">(strongly recommended for accuracy)</span></label>
+            <button class="btn btn-sm" id="gen-key-btn" onclick="genAnswerKey()" style="font-size:12px;padding:5px 10px"><span data-ic="sparkle"></span>Generate from passage</button>
+          </div>
+          <div id="gen-key-status" style="font-size:12px;color:var(--text2);margin-bottom:6px;display:none"></div>
           <textarea id="test-key" placeholder="1. A parrot&#10;2. Its wings are too small / it is too heavy&#10;3. nocturnal"></textarea>
+          <div style="font-size:11.5px;color:var(--text2);margin-top:5px">Tip: generate a key, check it, then mark — marking is far more reliable with a key it can trust.</div>
         </div>
       </div>
       <div class="field"><label class="lbl" for="session-name">Session name</label><input type="text" id="session-name" placeholder="e.g. 7B Writing — Kaitiakitanga — Term 2"></div>
@@ -1505,6 +1511,37 @@ function finaliseTest(r){
   r.criteriaTotal=fmtMark(score)+'/'+total;r.overallScore=testBand(r.percent);r.criteria=[];r.type='test';
   return r;
 }
+// Derive a single answer key from the passage+questions — used so every student is marked
+// against the SAME answers (consistent + more reliable than inferring per student).
+async function deriveAnswerKey(key,paper,area,level){
+  var p=[
+    'You are making an ANSWER KEY for a reading comprehension test. NZC Level '+level+', learning area '+area+'.',
+    '',
+    'Reading passage and questions:',
+    paper,
+    '',
+    'For EVERY question, give the correct answer based ONLY on the passage. Return a PLAIN numbered list, one answer per line, exactly like:',
+    '1. answer',
+    '2. answer',
+    'Keep each answer short and factual. Where more than one wording is acceptable, separate them with " / ". No commentary, no extra text.'
+  ].join('\n');
+  var raw=await gemini(key,[{text:p}],null);
+  return String(raw).replace(/```/g,'').trim();
+}
+async function genAnswerKey(){
+  var key=getKey();if(!key)return;
+  var paper=document.getElementById('test-paper').value.trim();
+  if(!paper){alert('Paste the reading passage and questions first.');return}
+  var btn=document.getElementById('gen-key-btn'),st=document.getElementById('gen-key-status');
+  var area=document.getElementById('la').value,level=document.getElementById('cl').value;
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner" style="width:12px;height:12px;border-top-color:currentColor"></span> Generating…'}
+  st.style.display='block';st.style.color='';st.textContent='Reading the passage…';
+  try{
+    document.getElementById('test-key').value=await deriveAnswerKey(key,paper,area,level);
+    st.textContent='Answer key generated — check it, edit anything, then mark.';
+  }catch(e){st.textContent='Could not generate: '+(e.message||e);st.style.color='var(--danger-text)'}
+  if(btn){btn.disabled=false;btn.innerHTML=ic('sparkle')+'Generate from passage'}
+}
 async function markTest(key,file,paper,answerKey,area,level,idx,limit,revCtx){
   var ml=limit||function(fn){return Promise.resolve().then(fn)};
   var onBusy=function(a,max){progressItems[idx].phase='Gemini busy — retrying ('+a+'/'+(max-1)+')…';renderProg()};
@@ -1575,6 +1612,8 @@ async function runTestMarking(){
   try{
     ensureNotifyPermission();
     if(sb&&USER&&key!==(PROFILE.gemini_key||''))sb.from('profiles').update({gemini_key:key}).eq('id',USER.id).then(function(){PROFILE.gemini_key=key}).catch(function(){});
+    // No key given → derive one from the passage ONCE so every student is marked consistently.
+    if(!answerKey){try{answerKey=await deriveAnswerKey(key,paper,area,level);document.getElementById('test-key').value=answerKey;showToast('Generated an answer key from the passage — review it in the Answer key box','ok',5000)}catch(e){}}
     document.getElementById('rsec').style.display='block';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='block';document.getElementById('save-status').innerHTML='';
     progressItems=files.map(function(f){return{name:f.name,status:'pending',phase:'',err:''}});renderProg();
     var out=new Array(files.length),limit=makeLimiter(3);
