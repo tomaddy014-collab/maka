@@ -1306,6 +1306,7 @@ async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLi
       'OUTPUT FORMAT — return ONLY raw JSON, no markdown, no explanation:',
       '{',
       '  "fileName": "filename here",',
+      '  "studentName": "The student\'s name if it is written anywhere on the work (e.g. a name at the top of the page or in a header), else empty \\"\\".",',
       '  "summary": "A warm 2-3 sentence overall comment written directly to the student (you/your) that ties their result together: open with what they did well, then their main next step, in plain encouraging language. This is the opening summary of their feedback.",',
       '  "criteria": [{"name": "exact criterion name from rubric", "score": 1-5, "comment": "One short sentence to the student about THIS criterion — what they did or what would lift it. Warm, plain, you/your."}],',
       '  "praiseQuote": "A SHORT exact quote copied word-for-word from the student\'s writing that shows something they did genuinely well. Verbatim — never invented. Use \\"\\" (empty) if the work has no readable text.",',
@@ -1371,6 +1372,7 @@ async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLi
     if(!mm.praiseQuote&&r.praiseQuote)mm.praiseQuote=r.praiseQuote;
     if(!mm.goal&&r.goal)mm.goal=r.goal;
     if(!mm.summary&&r.summary)mm.summary=r.summary;
+    if(!mm.studentName&&r.studentName)mm.studentName=r.studentName;
     if((!Array.isArray(mm.addressed)||!mm.addressed.length)&&Array.isArray(r.addressed))mm.addressed=r.addressed;
     // Integrity backstop: strip any ability/level-labelling language before it can be stored or shown.
     scrubResultLevelLanguage(mm);
@@ -1522,6 +1524,7 @@ async function markTest(key,file,paper,answerKey,area,level,idx,limit,revCtx){
         'OUTPUT FORMAT — return ONLY raw JSON, no markdown, no explanation:',
         '{',
         '  "fileName": "'+file.name+'",',
+        '  "studentName": "The student\'s name if it is written on the work (e.g. at the top of the page), else empty.",',
         '  "questions": [{"n": 1, "question": "the question text", "studentAnswer": "exactly what the student wrote, or empty if blank", "correct": true, "correctAnswer": "the correct answer", "note": "one short reason — especially when marked wrong"}],',
         '  "summary": "A warm 2-3 sentence overall comment to the student (you/your): how they went and their main next step.",',
         '  "improve": [{"suggestion": "One short, specific next-step tip written to the student (you/your). One sentence."}]',
@@ -1744,7 +1747,7 @@ function renderTestCard(r,idx,editable){
   var pct=total?Math.round(score/total*100):0;
   var overall=r.overallScore||r.overall_score||testBand(pct);
   var fileLabel=r.fileName||r.file_name||'';
-  var stuName=editable?assignedStudentFor(r):'';
+  var stuName=editable?(assignedStudentFor(r)||(r.studentName||'').trim()):'';
   var nameHtml=stuName?'<span class="rname">'+esc(stuName)+'</span><span class="rfile">'+esc(fileLabel)+'</span>':'<span class="rname">'+esc(fileLabel)+'</span>';
   var html='<div class="rcard">';
   html+='<div class="rhead"><div style="min-width:0;display:flex;flex-direction:column;gap:2px">'+nameHtml+'</div><div style="display:flex;align-items:center;gap:6px"><span class="pill '+pillCls(pct)+'">'+esc(overall)+' · '+score+'/'+total+'</span></div></div>';
@@ -1790,7 +1793,7 @@ function renderResultCard(r,idx,editable){
   var overall=r.overallScore||r.overall_score||'';
   var remarkBtn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkStu('+idx+')">'+ic('refresh')+'Re-mark</button>':'';
   var fileLabel=r.fileName||r.file_name||'';
-  var stuName=editable?assignedStudentFor(r):'';
+  var stuName=editable?(assignedStudentFor(r)||(r.studentName||'').trim()):'';
   var nameHtml=stuName
     ?'<span class="rname">'+esc(stuName)+'</span><span class="rfile">'+esc(fileLabel)+'</span>'
     :'<span class="rname">'+esc(fileLabel)+'</span>';
@@ -1817,7 +1820,8 @@ function renderResultCard(r,idx,editable){
 // Matching order (most → least confident): full name, first+last, unambiguous first name.
 function assignedStudentFor(r){
   if(r.assignTo)return r.assignTo;
-  var fn=(' '+(r.fileName||r.file_name||'').toLowerCase()+' ').replace(/[\s\-_.]+/g,' ');
+  // Match against BOTH the file name and any name the AI read off the work itself.
+  var fn=(' '+((r.fileName||r.file_name||'')+' '+(r.studentName||'')).toLowerCase()+' ').replace(/[\s\-_.]+/g,' ');
   var has=function(w){return w&&fn.indexOf(' '+w+' ')!==-1};
   // 1. Full name appears in the file name
   var full=CLASS_STUDENTS.find(function(s){return fn.indexOf((s.name||'').toLowerCase())!==-1});
@@ -1833,9 +1837,12 @@ function assignedStudentFor(r){
 // The file_name stored in the DB — embeds the chosen student's name so the student hub picks it up.
 function resultSaveName(r){
   var base=r.fileName||r.file_name||'work';
-  if(!r.assignTo)return base;
-  if(base.toLowerCase().indexOf(r.assignTo.toLowerCase())!==-1)return base;
-  return r.assignTo+' — '+base;
+  // Explicit assignment wins; otherwise use the auto-match (file name or AI-detected name)
+  // so a generically-named file still links to the right student in the hub.
+  var who=r.assignTo||assignedStudentFor(r);
+  if(!who)return base;
+  if(base.toLowerCase().indexOf(who.toLowerCase())!==-1)return base;
+  return who+' — '+base;
 }
 function assignResult(idx,name){if(results[idx]){results[idx].assignTo=name||'';persistResults()}}
 
