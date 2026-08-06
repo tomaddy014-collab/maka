@@ -481,18 +481,28 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 </div>
       </div>
       <div id="test-bits" style="display:none">
-        <div class="field"><label class="lbl" for="test-paper">Reading passage &amp; questions</label>
-          <div style="font-size:12px;color:var(--text2);margin-bottom:6px">Paste the whole test — the reading passage and every question, numbered.</div>
+        <div class="field">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:5px">
+            <label class="lbl" for="test-paper" style="margin-bottom:0">Reading passage &amp; questions</label>
+            <button class="btn btn-sm" id="paper-upload-btn" onclick="document.getElementById('paper-upload-input').click()" style="font-size:12px;padding:5px 10px"><span data-ic="upload"></span>Upload PDF</button>
+            <input type="file" id="paper-upload-input" accept=".pdf,.jpg,.jpeg,.png,.docx,.txt" style="display:none">
+          </div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:6px">Paste the whole test — the reading passage and every question, numbered — or upload it as a PDF.</div>
+          <div id="paper-upload-status" style="font-size:12px;color:var(--text2);margin-bottom:6px;display:none"></div>
           <textarea id="test-paper" placeholder="READING: The kākāpō is a large, flightless parrot...&#10;&#10;1. What kind of bird is the kākāpō?&#10;2. Why can't it fly?&#10;3. Find a word that means 'active at night'."></textarea>
         </div>
         <div class="field">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:5px">
             <label class="lbl" for="test-key" style="margin-bottom:0">Answer key <span style="font-weight:500;text-transform:none;letter-spacing:0">(strongly recommended for accuracy)</span></label>
-            <button class="btn btn-sm" id="gen-key-btn" onclick="genAnswerKey()" style="font-size:12px;padding:5px 10px"><span data-ic="sparkle"></span>Generate from passage</button>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-sm" id="key-upload-btn" onclick="document.getElementById('key-upload-input').click()" style="font-size:12px;padding:5px 10px"><span data-ic="upload"></span>Upload PDF</button>
+              <input type="file" id="key-upload-input" accept=".pdf,.jpg,.jpeg,.png,.docx,.txt" style="display:none">
+              <button class="btn btn-sm" id="gen-key-btn" onclick="genAnswerKey()" style="font-size:12px;padding:5px 10px"><span data-ic="sparkle"></span>Generate from passage</button>
+            </div>
           </div>
           <div id="gen-key-status" style="font-size:12px;color:var(--text2);margin-bottom:6px;display:none"></div>
           <textarea id="test-key" placeholder="1. A parrot&#10;2. Its wings are too small / it is too heavy&#10;3. nocturnal"></textarea>
-          <div style="font-size:11.5px;color:var(--text2);margin-top:5px">Tip: generate a key, check it, then mark — marking is far more reliable with a key it can trust.</div>
+          <div style="font-size:11.5px;color:var(--text2);margin-top:5px">Tip: paste or upload a key, check it, then mark — marking is far more reliable with a key it can trust.</div>
         </div>
       </div>
       <div class="field"><label class="lbl" for="session-name">Session name</label><input type="text" id="session-name" placeholder="e.g. 7B Writing — Kaitiakitanga — Term 2"></div>
@@ -771,6 +781,7 @@ var ICONS={
   camera:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/>',
   refresh:'<path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/>',
   trash:'<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
+  upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/>',
   download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>',
   printer:'<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/>',
   arrow:'<path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>',
@@ -1636,6 +1647,48 @@ async function deriveAnswerKey(key,paper,area,level){
   var raw=await gemini(key,[{text:p}],null);
   return String(raw).replace(/```/g,'').trim();
 }
+// Transcribe an uploaded file (PDF/image/docx/txt) into plain text via Gemini, so an uploaded
+// passage or answer key can be resolved to text ONCE and then reuse all the existing
+// text-based logic downstream (countQuestions, per-student prompts) unchanged.
+async function extractTextFromFile(key,file,instructions){
+  var cparts=await getContentParts(file);
+  var raw=await gemini(key,cparts.concat([{text:instructions}]),null);
+  return String(raw).replace(/```/g,'').trim();
+}
+async function uploadPaperFile(){
+  var input=document.getElementById('paper-upload-input');
+  var file=input.files&&input.files[0];if(!file)return;
+  var key=getKey();if(!key){input.value='';return}
+  var btn=document.getElementById('paper-upload-btn'),st=document.getElementById('paper-upload-status');
+  btn.disabled=true;btn.innerHTML='<span class="spinner" style="width:12px;height:12px;border-top-color:currentColor"></span> Reading…';
+  st.style.display='block';st.style.color='';st.textContent='Reading '+file.name+'…';
+  try{
+    var txt=await extractTextFromFile(key,file,'Transcribe this reading comprehension test EXACTLY as written: the full reading passage, then every question, numbered in order. Plain text only, no commentary, no markdown.');
+    if(!txt)throw new Error('No readable text found in this file.');
+    document.getElementById('test-paper').value=txt;
+    st.textContent='Passage & questions loaded from '+file.name+' — check it below, then mark.';
+  }catch(e){st.textContent='Could not read file: '+(e.message||e);st.style.color='var(--danger-text)'}
+  btn.disabled=false;btn.innerHTML=ic('upload')+'Upload PDF';
+  input.value='';
+}
+async function uploadKeyFile(){
+  var input=document.getElementById('key-upload-input');
+  var file=input.files&&input.files[0];if(!file)return;
+  var key=getKey();if(!key){input.value='';return}
+  var btn=document.getElementById('key-upload-btn'),st=document.getElementById('gen-key-status');
+  btn.disabled=true;btn.innerHTML='<span class="spinner" style="width:12px;height:12px;border-top-color:currentColor"></span> Reading…';
+  st.style.display='block';st.style.color='';st.textContent='Reading '+file.name+'…';
+  try{
+    var txt=await extractTextFromFile(key,file,'Transcribe this answer key as a PLAIN numbered list, one answer per line, exactly like:\n1. answer\n2. answer\nKeep each answer short. Where more than one wording is given, separate them with " / ". No commentary, no markdown.');
+    if(!txt)throw new Error('No readable text found in this file.');
+    document.getElementById('test-key').value=txt;
+    st.textContent='Answer key loaded from '+file.name+' — check it, edit anything, then mark.';
+  }catch(e){st.textContent='Could not read file: '+(e.message||e);st.style.color='var(--danger-text)'}
+  btn.disabled=false;btn.innerHTML=ic('upload')+'Upload PDF';
+  input.value='';
+}
+document.getElementById('paper-upload-input').addEventListener('change',uploadPaperFile);
+document.getElementById('key-upload-input').addEventListener('change',uploadKeyFile);
 async function genAnswerKey(){
   var key=getKey();if(!key)return;
   var paper=document.getElementById('test-paper').value.trim();
