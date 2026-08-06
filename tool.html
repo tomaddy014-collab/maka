@@ -468,12 +468,12 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <div class="upload-box empty-pulse" id="dropzone">
         <div class="upload-ico" style="margin-bottom:10px"><span data-ic="file"></span></div>
         <div style="font-size:14px;font-weight:500;margin-bottom:4px">Drag and drop files here</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:14px">PDF, JPG and PNG — or snap a photo. Scanned handwriting works too</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:14px">PDF, Word (.docx), text (.txt), JPG or PNG — typed or handwritten, or snap a photo</div>
         <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
           <button class="btn" id="pickbtn">Browse files</button>
           <button class="btn" id="camerabtn"><span data-ic="camera"></span>Take photo</button>
         </div>
-        <input type="file" id="fileinput" accept=".pdf,.jpg,.jpeg,.png" multiple style="display:none">
+        <input type="file" id="fileinput" accept=".pdf,.jpg,.jpeg,.png,.txt,.docx" multiple style="display:none">
         <input type="file" id="camerainput" accept="image/*" capture="environment" multiple style="display:none">
       </div>
       <ul class="flist" id="flist"></ul>
@@ -623,6 +623,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
 <script>
 var SURL='https://agwqenhduoxxeemklmpr.supabase.co';
 var SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnd3FlbmhkdW94eGVlbWtsbXByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MzkxNDAsImV4cCI6MjA5NDAxNTE0MH0.TZkrRgForSDTzQ4vZ9j36WncEAVBx4reG-ADcoohY8o';
@@ -971,8 +972,8 @@ document.getElementById('session-name').addEventListener('input',function(){this
 document.getElementById('task').addEventListener('input',updateStepState);
 document.getElementById('apikey').addEventListener('input',updateStepState);
 
-function fileIcon(f){return f.type==='application/pdf'?ic('file'):ic('image')}
-function fileTag(f){return f.type==='application/pdf'?'<span class="ftag ftag-pdf">PDF</span>':'<span class="ftag ftag-img">Image</span>'}
+function fileIcon(f){var t=f.type||'',n=(f.name||'').toLowerCase();if((t.indexOf('image/')===0))return ic('image');return ic('file')}
+function fileTag(f){var t=f.type||'',n=(f.name||'').toLowerCase();if(t==='application/pdf')return'<span class="ftag ftag-pdf">PDF</span>';if(n.slice(-5)==='.docx'||t.indexOf('officedocument.wordprocessingml')!==-1)return'<span class="ftag ftag-img">Word</span>';if(t==='text/plain'||n.slice(-4)==='.txt')return'<span class="ftag ftag-img">Text</span>';return'<span class="ftag ftag-img">Image</span>'}
 function renderFiles(){
   var el=document.getElementById('flist'),cnt=document.getElementById('upload-count');
   var dze=document.getElementById('dropzone');if(dze)dze.classList.toggle('empty-pulse',!files.length);
@@ -1019,16 +1020,22 @@ function setMarkMode(m){
   var mb=document.getElementById('markbtn');
   if(mb)mb.innerHTML=ic('sparkle')+(writing?'Mark all uploaded files':'Mark all tests');
 }
+function okFileType(f){
+  var t=f.type||'',n=(f.name||'').toLowerCase();
+  return ['application/pdf','image/jpeg','image/png','text/plain'].includes(t)
+    || t.indexOf('officedocument.wordprocessingml')!==-1
+    || n.slice(-5)==='.docx'||n.slice(-4)==='.txt';
+}
 function addFiles(list){
   var added=0,dupes=0,bad=0;
   Array.from(list).forEach(function(f){
-    if(!['application/pdf','image/jpeg','image/png'].includes(f.type)){bad++;return}
+    if(!okFileType(f)){bad++;return}
     if(files.some(function(x){return x.name===f.name})){dupes++;return}
     files.push(f);added++;
   });
   renderFiles();updMark();persistResults();
   if(dupes)showToast(dupes+' duplicate file'+(dupes!==1?'s':'')+' skipped (already added)','warn');
-  if(bad)showToast(bad+' file'+(bad!==1?'s':'')+' skipped — only PDF, JPG and PNG are supported','warn');
+  if(bad)showToast(bad+' file'+(bad!==1?'s':'')+' skipped — supported: PDF, Word (.docx), text (.txt), JPG, PNG','warn');
 }
 
 document.getElementById('pickbtn').onclick=function(e){e.preventDefault();document.getElementById('fileinput').click()};
@@ -1059,6 +1066,26 @@ document.getElementById('markbtn').onclick=runMarking;
 updMark();updateStepState();
 
 function toB64(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1])};r.onerror=function(){rej(new Error('Could not read this file — it may be corrupted or still downloading.'))};r.readAsDataURL(file)})}
+// Turn any supported file into Gemini content parts: PDFs/images go as inline data;
+// typed Word (.docx) and text (.txt) files are extracted to text on the device.
+async function getContentParts(file){
+  var t=file.type||'',name=(file.name||'').toLowerCase();
+  if(name.slice(-5)==='.docx'||t.indexOf('officedocument.wordprocessingml')!==-1){
+    if(!window.mammoth)throw new Error('Word reader still loading — try again in a moment, or save the file as PDF.');
+    var buf=await file.arrayBuffer();
+    var out=await window.mammoth.extractRawText({arrayBuffer:buf});
+    var txt=(out&&out.value||'').trim();
+    if(!txt)throw new Error('No text found in this Word file — try saving it as a PDF.');
+    return[{text:"STUDENT'S TYPED WORK (from '"+file.name+"'):\n"+txt}];
+  }
+  if(t==='text/plain'||name.slice(-4)==='.txt'){
+    var content=(await file.text()).trim();
+    if(!content)throw new Error('This text file is empty.');
+    return[{text:"STUDENT'S TYPED WORK (from '"+file.name+"'):\n"+content}];
+  }
+  var b64=await toB64(file);
+  return[{inline_data:{mime_type:t==='application/pdf'?'application/pdf':(t||'application/octet-stream'),data:b64}}];
+}
 // Turn raw Gemini API errors into clear, actionable guidance for teachers.
 function friendlyGeminiError(status,msg){
   msg=msg||'';
@@ -1151,11 +1178,11 @@ function makeLimiter(n){
 async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLimit){
   var ml=markLimit||function(fn){return Promise.resolve().then(fn)};
   var md=modLimit||function(fn){return Promise.resolve().then(fn)};
-  var mime,b64,r,onBusy=function(a,max){progressItems[idx].phase='Gemini busy — retrying ('+a+'/'+(max-1)+')…';renderProg()};
+  var cparts,r,onBusy=function(a,max){progressItems[idx].phase='Gemini busy — retrying ('+a+'/'+(max-1)+')…';renderProg()};
   try{
     r=await ml(async function(){
     progressItems[idx].status='working';progressItems[idx].phase='Marking…';renderProg();
-    mime=file.type==='application/pdf'?'application/pdf':file.type;b64=await toB64(file);
+    cparts=await getContentParts(file);
     var p1=[
       'You are a warm, encouraging NZ Years 7-8 teacher marking student work against the refreshed New Zealand Curriculum.',
       'Learning area: '+area+'. NZC Level: '+level+'. Task: '+(task||'General assessment')+'.',
@@ -1196,7 +1223,7 @@ async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLi
       'Give a "comment" for EVERY criterion. Give 2 to 3 items in "improve", each targeting a different criterion where the student can most easily gain marks, and each with a genuine worked "example". List up to 3 REAL spelling or punctuation fixes taken directly from the work in "accuracy" (use [] if the writing is technically accurate — never invent errors). Every quote MUST be real text taken directly from this student\'s work — never invented.',
       'TONE: write every comment, praise, suggestion, example and goal directly TO the student (you/your), warm and encouraging, in short plain words a 11-13 year old reads easily. Never talk about the student in third person and never sound harsh.'
     ].join('\n');
-    var rr=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:'File: "'+file.name+'"\n\n'+p1}],onBusy));
+    var rr=parseJSON(await gemini(key,cparts.concat([{text:'File: "'+file.name+'"\n\n'+p1}]),onBusy));
     rr.fileName=rr.fileName||file.name;
     return rr;
     });
@@ -1222,7 +1249,7 @@ async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLi
       '',
       'Return ONLY the updated raw JSON with the same keys (fileName, summary, criteria, praiseQuote, praise, improve, accuracy, goal). Keep summary as a warm 2-3 sentence overall comment to the student. No markdown, no explanation.'
     ].join('\n');
-    var mm=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:p2}],onBusy));
+    var mm=parseJSON(await gemini(key,cparts.concat([{text:p2}]),onBusy));
     mm.fileName=r.fileName;
     // Safeguard: if moderation dropped per-criterion comments (or a whole field), fall back to the first pass.
     preserveComments(mm,r);
@@ -1360,7 +1387,7 @@ async function markTest(key,file,paper,answerKey,area,level,idx,limit){
   try{
     return await ml(async function(){
       progressItems[idx].status='working';progressItems[idx].phase='Marking…';renderProg();
-      var mime=file.type==='application/pdf'?'application/pdf':file.type,b64=await toB64(file);
+      var cparts=await getContentParts(file);
       var p=[
         'You are a fair, encouraging NZ Years 7-8 teacher marking a reading comprehension test using logic. NZC Level '+level+', learning area '+area+'.',
         '',
@@ -1369,7 +1396,7 @@ async function markTest(key,file,paper,answerKey,area,level,idx,limit){
         '',
         answerKey?('ANSWER KEY (the correct answers to use):\n'+answerKey):'No answer key was given — work out the correct answer to each question directly from the passage above.',
         '',
-        'The attached file is ONE student\'s answer sheet. Read what the student wrote and mark EVERY question in the test right or wrong using logic:',
+        'ONE student\'s answers are provided (as an attached file or as typed text above). Read what the student wrote and mark EVERY question in the test right or wrong using logic:',
         '- Accept answers that are correct in meaning even if worded differently, abbreviated, or with minor spelling mistakes.',
         '- For literal / "find a word" questions the answer must match the passage.',
         '- Mark a partly-right answer correct only if it captures the key idea. If the student left it blank, mark it wrong with an empty studentAnswer.',
@@ -1385,7 +1412,7 @@ async function markTest(key,file,paper,answerKey,area,level,idx,limit){
         '',
         'Include one entry in "questions" for EVERY question in the test, in order. Give 1-2 items in "improve". Write summary and tips directly to the student (you/your), warm and encouraging.'
       ].join('\n');
-      var r=parseJSON(await gemini(key,[{inline_data:{mime_type:mime,data:b64}},{text:p}],onBusy));
+      var r=parseJSON(await gemini(key,cparts.concat([{text:p}]),onBusy));
       r.fileName=r.fileName||file.name;
       scrubResultLevelLanguage(r);
       finaliseTest(r);
