@@ -392,7 +392,6 @@ function renderSessions(){
         +'<div class="total-row">Total: <strong>'+esc(r.criteria_total||'')+'</strong></div>'
         +(praise?(function(){var p=parsePraise(praise);return'<div class="slbl">What you did well</div><div class="sbox praise">'+ic('award')+'<div>'+(p.quote?'<div class="quote">'+esc(p.quote)+'</div>':'')+'<span>'+esc(p.text)+'</span></div></div>'})():'')
         +(tips.length?'<div class="slbl">How to improve</div>'+tips.map(function(t){var pt=parseTip(t);var h='<div class="sbox improve">'+ic('bulb')+'<div>';if(pt.quote)h+='<div class="quote">'+esc(pt.quote)+'</div>';h+='<span>'+esc(pt.text)+'</span>';if(pt.example)h+='<div class="tryex"><span class="trylbl">Try</span> '+esc(pt.example)+'</div>';return h+'</div></div>'}).join(''):'')
-        +(meta.accuracy&&meta.accuracy.length?'<div class="slbl" style="margin-top:12px">Spelling &amp; punctuation to check</div><div class="fixlist">'+meta.accuracy.map(function(a){return'<span class="fix"><span class="fix-wrong">'+esc(a.wrong||'')+'</span>→<span class="fix-right">'+esc(a.correct||'')+'</span></span>'}).join('')+'</div>':'')
         +(meta.goal?'<div class="goalbox">'+ic('target')+'<div><div class="goal-lbl">Your goal for next time</div>'+esc(meta.goal)+'</div></div>':'')
       +'</div>'
     +'</div>';
