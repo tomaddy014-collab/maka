@@ -1083,19 +1083,27 @@ function loadResubSession(){
     st.textContent=RESUB.results.length+' original'+(RESUB.results.length!==1?'s':'')+' loaded — upload the revised work';
   }).catch(function(){st.textContent='Could not load the originals'});
 }
+// Find the original result a student name resolves to — ambiguity-safe: only returns a
+// match when exactly one prior result fits, so two students sharing a first name (or a
+// coincidental substring) never silently grab the wrong "before" score.
+function findPriorByName(nm){
+  if(!nm||!RESUB.results.length)return null;
+  var nmL=nm.toLowerCase();
+  var exact=RESUB.results.filter(function(pr){var pn=assignedStudentFor({fileName:pr.file_name})||'';return pn.toLowerCase()===nmL});
+  if(exact.length===1)return exact[0];
+  if(exact.length>1)return null; // ambiguous — don't guess
+  var first=nmL.split(/\s+/)[0];
+  var byFirst=RESUB.results.filter(function(pr){return(' '+(pr.file_name||'').toLowerCase()+' ').replace(/[\s\-_.]+/g,' ').indexOf(' '+first+' ')!==-1});
+  return byFirst.length===1?byFirst[0]:null;
+}
 // Find the prior result that a revision file belongs to (by matched student, then filename).
 function priorFor(file){
   if(!RESUB.results.length)return null;
-  var nm=assignedStudentFor({fileName:file.name});
-  if(nm){
-    var exact=RESUB.results.find(function(pr){var pn=assignedStudentFor({fileName:pr.file_name})||'';return pn&&pn.toLowerCase()===nm.toLowerCase()});
-    if(exact)return exact;
-    var first=nm.toLowerCase().split(/\s+/)[0];
-    var byFirst=RESUB.results.find(function(pr){return(' '+(pr.file_name||'').toLowerCase()+' ').replace(/[\s\-_.]+/g,' ').indexOf(' '+first+' ')!==-1});
-    if(byFirst)return byFirst;
-  }
+  var byName=findPriorByName(assignedStudentFor({fileName:file.name}));
+  if(byName)return byName;
   var stem=stripExt(file.name).toLowerCase();
-  return RESUB.results.find(function(pr){return stripExt(pr.file_name||'').toLowerCase()===stem})||null;
+  var byStem=RESUB.results.filter(function(pr){return stripExt(pr.file_name||'').toLowerCase()===stem});
+  return byStem.length===1?byStem[0]:null;
 }
 // Download a prior result's original file from storage and turn it into Gemini content parts.
 async function originalParts(prior){
@@ -1109,11 +1117,18 @@ async function originalParts(prior){
     return await getContentParts(file);
   }catch(e){return null}
 }
-// After marking a revision, attach the before→after + acted-on payload.
+// After marking a revision, attach the before→after + acted-on payload. Re-checks the match
+// now that the AI-detected studentName is known (the pre-mark guess only had the filename to
+// go on, so a generically-named typed file may not have matched until now).
 function attachRevision(res,revCtx){
-  if(!revCtx||!revCtx.prior||!res||res._error)return;
-  var prior=revCtx.prior,pmeta=fbParseMeta(prior.nzc_reference);
-  var rev={origSessionId:RESUB.sessionId,hadOriginal:!!revCtx.parts,addressed:Array.isArray(res.addressed)?res.addressed:[]};
+  if(!res||res._error||!RESUB.on)return;
+  var prior=revCtx&&revCtx.prior;
+  var betterName=assignedStudentFor(res);
+  var betterPrior=findPriorByName(betterName);
+  if(betterPrior&&(!prior||betterPrior!==prior))prior=betterPrior;
+  if(!prior)return;
+  var pmeta=fbParseMeta(prior.nzc_reference);
+  var rev={origSessionId:RESUB.sessionId,hadOriginal:!!(revCtx&&revCtx.parts),addressed:Array.isArray(res.addressed)?res.addressed:[]};
   if(res.type==='test'||Array.isArray(res.questions)){
     rev.priorScore=(pmeta.score!=null?pmeta.score:parseInt((prior.criteria_total||'').split('/')[0]))||0;
     rev.priorTotal=(pmeta.total!=null?pmeta.total:parseInt((prior.criteria_total||'').split('/')[1]))||0;
@@ -1503,16 +1518,42 @@ function testBand(pct){return pct>=85?'Excellent':pct>=70?'Good':pct>=50?'Develo
 // A question's mark: 1 (full), 0.5 (partial) or 0 — supports old results that used boolean `correct`.
 function qMark(q){if(!q)return 0;if(q.mark===1||q.mark===0.5||q.mark===0)return q.mark;var n=parseFloat(q.mark);if(n===1||n===0.5||n===0)return n;return q.correct?1:0}
 function fmtMark(n){return Number.isInteger(n)?String(n):n.toFixed(1)}
-function finaliseTest(r){
-  var qs=Array.isArray(r.questions)?r.questions:[];r.questions=qs;
+// expectedTotal (when known) is the AUTHORITATIVE question count — a student who leaves
+// questions blank must still be marked out of the full test, not just the ones the AI returned
+// an entry for. Missing question numbers are padded in as unanswered (mark 0).
+function finaliseTest(r,expectedTotal){
+  var qs=Array.isArray(r.questions)?r.questions:[];
   qs.forEach(function(q){if(q){q.mark=qMark(q);q.correct=q.mark>=1}});
-  var score=qs.reduce(function(a,q){return a+qMark(q)},0),total=qs.length;
+  if(expectedTotal>qs.length){
+    var haveN={};qs.forEach(function(q){if(q&&q.n)haveN[q.n]=true});
+    for(var n=1;n<=expectedTotal;n++){
+      if(!haveN[n])qs.push({n:n,question:'',studentAnswer:'',mark:0,correct:false,note:'Not answered'});
+    }
+    qs.sort(function(a,b){return(a.n||0)-(b.n||0)});
+  }
+  r.questions=qs;
+  var score=qs.reduce(function(a,q){return a+qMark(q)},0);
+  var total=expectedTotal&&expectedTotal>=qs.length?expectedTotal:qs.length;
   r.score=score;r.total=total;r.percent=total?Math.round(score/total*100):0;
   r.criteriaTotal=fmtMark(score)+'/'+total;r.overallScore=testBand(r.percent);r.criteria=[];r.type='test';
   return r;
 }
 // Derive a single answer key from the passage+questions — used so every student is marked
 // against the SAME answers (consistent + more reliable than inferring per student).
+// The true number of questions in the test — counted from the numbered answer key (most
+// reliable) or, failing that, from numbered lines in the passage/questions text. This is the
+// authoritative denominator so a student who skips questions is marked out of the FULL test,
+// not just the questions they attempted.
+function countQuestions(paper,answerKey){
+  function maxNum(text){
+    var max=0;String(text||'').split('\n').forEach(function(line){
+      var m=line.match(/^\s*(\d{1,3})[.)]/);
+      if(m){var n=parseInt(m[1],10);if(n>max)max=n}
+    });
+    return max;
+  }
+  return maxNum(answerKey)||maxNum(paper)||0;
+}
 async function deriveAnswerKey(key,paper,area,level){
   var p=[
     'You are making an ANSWER KEY for a reading comprehension test. NZC Level '+level+', learning area '+area+'.',
@@ -1542,7 +1583,7 @@ async function genAnswerKey(){
   }catch(e){st.textContent='Could not generate: '+(e.message||e);st.style.color='var(--danger-text)'}
   if(btn){btn.disabled=false;btn.innerHTML=ic('sparkle')+'Generate from passage'}
 }
-async function markTest(key,file,paper,answerKey,area,level,idx,limit,revCtx){
+async function markTest(key,file,paper,answerKey,area,level,idx,limit,revCtx,expectedTotal){
   var ml=limit||function(fn){return Promise.resolve().then(fn)};
   var onBusy=function(a,max){progressItems[idx].phase='Gemini busy — retrying ('+a+'/'+(max-1)+')…';renderProg()};
   try{
@@ -1563,6 +1604,7 @@ async function markTest(key,file,paper,answerKey,area,level,idx,limit,revCtx){
         '- 0 = wrong, or blank (use an empty studentAnswer for blanks).',
         '- For literal / "find a word" questions the answer must match the passage to earn 1.',
         '- Be fair and generous — reward a student who clearly knows the answer even if they wrote very little.',
+        '- If the student did NOT answer a question at all, STILL include it in "questions" with an empty studentAnswer and mark 0 — never skip or omit a question just because it wasn\'t attempted.',
         '',
         'OUTPUT FORMAT — return ONLY raw JSON, no markdown, no explanation:',
         '{',
@@ -1573,7 +1615,7 @@ async function markTest(key,file,paper,answerKey,area,level,idx,limit,revCtx){
         '  "improve": [{"suggestion": "One short, specific next-step tip written to the student (you/your). One sentence."}]',
         '}',
         '',
-        'Include one entry in "questions" for EVERY question in the test, in order. Give 1-2 items in "improve". Write summary and tips directly to the student (you/your), warm and encouraging.'
+        'The test has exactly '+expectedTotal+' question'+(expectedTotal===1?'':'s')+'. Include EXACTLY one entry in "questions" for each, numbered 1 to '+expectedTotal+', in order — even ones left blank. Give 1-2 items in "improve". Write summary and tips directly to the student (you/your), warm and encouraging.'
       ].join('\n');
       var sendParts=cparts,pFull=p;
       if(revCtx&&revCtx.prior){
@@ -1589,7 +1631,7 @@ async function markTest(key,file,paper,answerKey,area,level,idx,limit,revCtx){
       var r=parseJSON(await gemini(key,sendParts.concat([{text:pFull}]),onBusy));
       r.fileName=r.fileName||file.name;
       scrubResultLevelLanguage(r);
-      finaliseTest(r);
+      finaliseTest(r,expectedTotal);
       attachRevision(r,revCtx);
       progressItems[idx].status='done';progressItems[idx].phase='';renderProg();
       return r;
@@ -1614,12 +1656,15 @@ async function runTestMarking(){
     if(sb&&USER&&key!==(PROFILE.gemini_key||''))sb.from('profiles').update({gemini_key:key}).eq('id',USER.id).then(function(){PROFILE.gemini_key=key}).catch(function(){});
     // No key given → derive one from the passage ONCE so every student is marked consistently.
     if(!answerKey){try{answerKey=await deriveAnswerKey(key,paper,area,level);document.getElementById('test-key').value=answerKey;showToast('Generated an answer key from the passage — review it in the Answer key box','ok',5000)}catch(e){}}
+    // The true question count (from the key, or the passage) — authoritative so a student who
+    // skips questions is marked out of the FULL test, not just the ones they attempted.
+    var expectedTotal=countQuestions(paper,answerKey);
     document.getElementById('rsec').style.display='block';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='block';document.getElementById('save-status').innerHTML='';
     progressItems=files.map(function(f){return{name:f.name,status:'pending',phase:'',err:''}});renderProg();
     var out=new Array(files.length),limit=makeLimiter(3);
     var revCtxs=await buildRevCtxs();
-    await Promise.all(files.map(function(f,i){return markTest(key,f,paper,answerKey,area,level,i,limit,revCtxs[i]).then(function(res){out[i]=res})}));
-    for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r&&r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(2500);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markTest(key,files[i],paper,answerKey,area,level,i,null,revCtxs[i])}));fail.forEach(function(i,j){out[i]=ret[j]})}
+    await Promise.all(files.map(function(f,i){return markTest(key,f,paper,answerKey,area,level,i,limit,revCtxs[i],expectedTotal).then(function(res){out[i]=res})}));
+    for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r&&r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(2500);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markTest(key,files[i],paper,answerKey,area,level,i,null,revCtxs[i],expectedTotal)}));fail.forEach(function(i,j){out[i]=ret[j]})}
     out.forEach(function(r,i){r._file=files[i]});
     results=out;document.getElementById('progress').style.display='none';renderResults(out);
     var okCount=out.filter(function(r){return!r._error}).length,failCount=out.length-okCount;
@@ -1828,8 +1873,9 @@ function remarkTest(idx){
   var key=getKey();if(!key)return;
   var paper=document.getElementById('test-paper').value.trim(),answerKey=document.getElementById('test-key').value.trim();
   var area=document.getElementById('la').value,level=document.getElementById('cl').value;
+  var expectedTotal=countQuestions(paper,answerKey);
   progressItems[idx]={name:files[idx].name,status:'pending',phase:'',err:''};
-  markTest(key,files[idx],paper,answerKey,area,level,idx).then(function(res){res._file=files[idx];results[idx]=res;renderResults(results);persistResults();saveOneResult(idx)});
+  markTest(key,files[idx],paper,answerKey,area,level,idx,null,null,expectedTotal).then(function(res){res._file=files[idx];results[idx]=res;renderResults(results);persistResults();saveOneResult(idx)});
 }
 function renderResultCard(r,idx,editable){
   if(r.type==='test'||Array.isArray(r.questions))return renderTestCard(r,idx,editable);
