@@ -3,20 +3,20 @@ import { isCurrentWeek, weekDateRangeLabel } from "../lib/dates.js";
 
 export default function WeekNav({ weekKey, onPrev, onNext }) {
   return (
-    <div className="mx-auto flex max-w-2xl items-center justify-between px-4 pt-4">
+    <div className="mx-auto flex max-w-2xl items-center justify-between px-5 pt-5">
       <button
         type="button"
         onClick={onPrev}
         aria-label="Previous week"
-        className="rounded-full p-2 text-paper/70 transition-colors hover:bg-paper/10 hover:text-paper cursor-pointer"
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-surface text-ink-soft shadow-sm shadow-ink/5 transition-colors hover:text-mint active:scale-[0.94] cursor-pointer"
       >
-        <ChevronLeft size={20} />
+        <ChevronLeft size={18} />
       </button>
       <div className="text-center">
-        <p className="font-mono text-[11px] uppercase tracking-widest text-sage">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-mint">
           {isCurrentWeek(weekKey) ? "This week" : "Week of"}
         </p>
-        <p className="font-display text-lg text-paper">
+        <p className="text-lg font-semibold text-ink">
           {weekDateRangeLabel(weekKey)}
         </p>
       </div>
@@ -24,9 +24,9 @@ export default function WeekNav({ weekKey, onPrev, onNext }) {
         type="button"
         onClick={onNext}
         aria-label="Next week"
-        className="rounded-full p-2 text-paper/70 transition-colors hover:bg-paper/10 hover:text-paper cursor-pointer"
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-surface text-ink-soft shadow-sm shadow-ink/5 transition-colors hover:text-mint active:scale-[0.94] cursor-pointer"
       >
-        <ChevronRight size={20} />
+        <ChevronRight size={18} />
       </button>
     </div>
   );

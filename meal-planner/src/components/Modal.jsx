@@ -1,11 +1,33 @@
 import { useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 import { X } from "lucide-react";
 
-export default function Modal({ open, onClose, title, eyebrow, children, size = "md" }) {
+const overlayVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.2, ease: "easeOut" } },
+  exit: { opacity: 0, transition: { duration: 0.15, ease: "easeIn" } },
+};
+
+const panelVariants = {
+  hidden: { opacity: 0, y: 18, scale: 0.97 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { type: "spring", stiffness: 380, damping: 32 },
+  },
+  exit: {
+    opacity: 0,
+    y: 10,
+    scale: 0.98,
+    transition: { duration: 0.16, ease: "easeIn" },
+  },
+};
+
+export default function Modal({ onClose, title, eyebrow, children, size = "md" }) {
   const panelRef = useRef(null);
 
   useEffect(() => {
-    if (!open) return;
     function handleKey(e) {
       if (e.key === "Escape") onClose();
     }
@@ -16,47 +38,50 @@ export default function Modal({ open, onClose, title, eyebrow, children, size = 
       document.removeEventListener("keydown", handleKey);
       if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
     };
-  }, [open, onClose]);
-
-  if (!open) return null;
+  }, [onClose]);
 
   const maxWidth = size === "lg" ? "md:max-w-2xl" : "md:max-w-lg";
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 md:items-center md:p-4 animate-fade-in"
+    <motion.div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/35 p-0 backdrop-blur-sm md:items-center md:p-4"
+      variants={overlayVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div
+      <motion.div
         ref={panelRef}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`animate-sheet-up flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl bg-charcoal-light md:max-h-[85vh] md:rounded-2xl ${maxWidth} shadow-2xl focus:outline-none`}
+        variants={panelVariants}
+        className={`flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl bg-surface md:max-h-[85vh] md:rounded-3xl ${maxWidth} shadow-2xl shadow-ink/10 focus:outline-none`}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-paper/10 px-5 py-4">
+        <div className="flex items-start justify-between gap-4 border-b border-steel/60 px-6 py-5">
           <div>
             {eyebrow && (
-              <p className="font-mono text-[11px] uppercase tracking-widest text-sage">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-mint">
                 {eyebrow}
               </p>
             )}
-            <h2 className="font-display text-xl text-paper">{title}</h2>
+            <h2 className="text-xl font-semibold text-ink">{title}</h2>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="shrink-0 rounded-full p-2 text-paper/70 transition-colors hover:bg-paper/10 hover:text-paper cursor-pointer"
+            className="shrink-0 rounded-full bg-surface-soft p-2 text-ink-soft transition-colors hover:bg-steel/60 hover:text-ink cursor-pointer"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
-        <div className="overflow-y-auto px-5 py-4">{children}</div>
-      </div>
-    </div>
+        <div className="overflow-y-auto px-6 py-5">{children}</div>
+      </motion.div>
+    </motion.div>
   );
 }

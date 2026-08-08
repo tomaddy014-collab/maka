@@ -68,7 +68,7 @@ export default function RecipeDetailModal({
   );
 
   return (
-    <Modal open onClose={onClose} eyebrow={`${day} · ${slot}`} title="Recipe" size="lg">
+    <Modal onClose={onClose} eyebrow={`${day} · ${slot}`} title="Recipe" size="lg">
       <RecipeCard
         recipe={recipe}
         isFavorite={isFavorite}
@@ -86,21 +86,21 @@ export default function RecipeDetailModal({
         <button
           type="button"
           onClick={onEdit}
-          className="flex items-center justify-center gap-1.5 rounded-lg border border-paper/15 px-3 py-2 font-mono text-xs text-paper transition-colors hover:border-sage/50 hover:text-sage cursor-pointer"
+          className="flex items-center justify-center gap-1.5 rounded-full bg-surface-soft px-3 py-2.5 text-xs font-semibold text-ink transition-colors hover:bg-mint-tint hover:text-mint cursor-pointer"
         >
           <Pencil size={14} /> Edit
         </button>
         <button
           type="button"
           onClick={onReplace}
-          className="flex items-center justify-center gap-1.5 rounded-lg border border-paper/15 px-3 py-2 font-mono text-xs text-paper transition-colors hover:border-sage/50 hover:text-sage cursor-pointer"
+          className="flex items-center justify-center gap-1.5 rounded-full bg-surface-soft px-3 py-2.5 text-xs font-semibold text-ink transition-colors hover:bg-mint-tint hover:text-mint cursor-pointer"
         >
           <RefreshCw size={14} /> Replace
         </button>
         <button
           type="button"
           onClick={onRemove}
-          className="flex items-center justify-center gap-1.5 rounded-lg border border-rust/30 px-3 py-2 font-mono text-xs text-rust transition-colors hover:bg-rust/10 cursor-pointer"
+          className="flex items-center justify-center gap-1.5 rounded-full bg-coral-tint px-3 py-2.5 text-xs font-semibold text-coral transition-colors hover:bg-coral hover:text-white cursor-pointer"
         >
           <Trash2 size={14} /> Remove
         </button>

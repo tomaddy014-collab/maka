@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { Clock, Users, Heart } from "lucide-react";
 import Chip from "./Chip.jsx";
 
@@ -8,12 +9,22 @@ export default function RecipeCard({
   servingsControl,
   animate = false,
 }) {
+  const Wrapper = animate ? motion.div : "div";
+  const motionProps = animate
+    ? {
+        initial: { opacity: 0, scale: 0.96, y: 8 },
+        animate: { opacity: 1, scale: 1, y: 0 },
+        transition: { type: "spring", stiffness: 320, damping: 26 },
+      }
+    : {};
+
   return (
-    <div
-      className={`paper-card rounded-xl p-5 shadow-lg ${animate ? "animate-card-confirm" : ""}`}
+    <Wrapper
+      className="rounded-3xl border border-steel/60 bg-surface-soft p-6"
+      {...motionProps}
     >
       <div className="flex items-start justify-between gap-3">
-        <h3 className="font-display text-2xl leading-tight text-ink">
+        <h3 className="text-2xl font-semibold leading-tight text-ink">
           {recipe.title}
         </h3>
         {onToggleFavorite && (
@@ -22,22 +33,22 @@ export default function RecipeCard({
             onClick={onToggleFavorite}
             aria-pressed={isFavorite}
             aria-label={isFavorite ? "Remove from favourites" : "Add to favourites"}
-            className="shrink-0 rounded-full p-1.5 text-ink/50 transition-colors hover:bg-ink/5 hover:text-rust cursor-pointer"
+            className="shrink-0 rounded-full p-1.5 text-ink-soft transition-colors hover:bg-coral-tint hover:text-coral cursor-pointer"
           >
             <Heart
               size={22}
               fill={isFavorite ? "currentColor" : "none"}
-              className={isFavorite ? "text-rust" : ""}
+              className={isFavorite ? "text-coral" : ""}
             />
           </button>
         )}
       </div>
 
       {recipe.description && (
-        <p className="mt-1.5 text-sm text-ink/70">{recipe.description}</p>
+        <p className="mt-1.5 text-sm text-ink-soft">{recipe.description}</p>
       )}
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-xs text-ink/70">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-ink-soft">
         {recipe.cuisine && <span>{recipe.cuisine}</span>}
         {recipe.time_minutes != null && (
           <span className="flex items-center gap-1">
@@ -59,13 +70,13 @@ export default function RecipeCard({
       )}
 
       <div className="mt-5">
-        <h4 className="font-mono text-[11px] uppercase tracking-widest text-ink/50">
+        <h4 className="text-[11px] font-semibold uppercase tracking-widest text-ink-soft">
           Ingredients
         </h4>
         <ul className="mt-2 space-y-1 text-sm text-ink">
           {recipe.ingredients.map((item, i) => (
             <li key={i} className="flex gap-2">
-              <span className="text-rust">•</span>
+              <span className="text-mint">•</span>
               <span>{item}</span>
             </li>
           ))}
@@ -73,18 +84,18 @@ export default function RecipeCard({
       </div>
 
       <div className="mt-5">
-        <h4 className="font-mono text-[11px] uppercase tracking-widest text-ink/50">
+        <h4 className="text-[11px] font-semibold uppercase tracking-widest text-ink-soft">
           Method
         </h4>
         <ol className="mt-2 space-y-2 text-sm text-ink">
           {recipe.steps.map((step, i) => (
             <li key={i} className="flex gap-2.5">
-              <span className="font-mono text-ink/40">{i + 1}.</span>
+              <span className="font-semibold text-mint">{i + 1}.</span>
               <span>{step}</span>
             </li>
           ))}
         </ol>
       </div>
-    </div>
+    </Wrapper>
   );
 }

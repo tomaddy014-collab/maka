@@ -3,14 +3,14 @@ import { SLOTS, dayDateLabel } from "../lib/dates.js";
 
 export default function DaySection({ day, weekKey, slots, onSlotClick }) {
   return (
-    <section className="rounded-xl bg-charcoal-light p-4">
-      <div className="mb-3 flex items-baseline gap-2">
-        <h3 className="font-display text-lg text-paper">{day}</h3>
-        <span className="font-mono text-xs text-paper/40">
+    <section className="overflow-hidden rounded-3xl bg-surface shadow-sm shadow-ink/5">
+      <div className="flex items-baseline gap-2 px-5 pt-4 pb-1">
+        <h3 className="text-lg font-semibold text-ink">{day}</h3>
+        <span className="text-xs font-medium text-steel-deep">
           {dayDateLabel(weekKey, day)}
         </span>
       </div>
-      <div className="space-y-2">
+      <div className="divide-y divide-steel/60">
         {SLOTS.map((slot) => (
           <MealSlot
             key={slot}

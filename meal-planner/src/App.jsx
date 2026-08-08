@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import AppHeader from "./components/AppHeader.jsx";
 import WeekNav from "./components/WeekNav.jsx";
 import DaySection from "./components/DaySection.jsx";
@@ -29,6 +30,22 @@ import { callLLM, parseJSONResponse } from "./lib/llm.js";
 import { buildRescalePrompt, buildShoppingListPrompt } from "./lib/prompts.js";
 import { makeId } from "./lib/id.js";
 
+const screenVariants = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } },
+  exit: { opacity: 0, y: -8, transition: { duration: 0.15, ease: [0.7, 0, 0.84, 0] } },
+};
+
+const weekVariants = {
+  initial: (direction) => ({ opacity: 0, x: direction * 36 }),
+  animate: { opacity: 1, x: 0, transition: { duration: 0.24, ease: [0.16, 1, 0.3, 1] } },
+  exit: (direction) => ({
+    opacity: 0,
+    x: direction * -28,
+    transition: { duration: 0.16, ease: [0.7, 0, 0.84, 0] },
+  }),
+};
+
 export default function App() {
   const [weekKey, setWeekKey] = useState(currentWeekKey);
   const [plan, setPlan] = useState({});
@@ -39,6 +56,7 @@ export default function App() {
   const [modal, setModal] = useState(null);
   const [shoppingGenerating, setShoppingGenerating] = useState(false);
   const [shoppingError, setShoppingError] = useState("");
+  const [weekDirection, setWeekDirection] = useState(1);
 
   useEffect(() => {
     setFavorites(loadFavorites());
@@ -195,103 +213,146 @@ export default function App() {
   const isFavorite = (recipe) =>
     favorites.some((f) => isSameFavorite(f, recipe));
 
+  let modalElement = null;
+  if (modal?.kind === "plan") {
+    modalElement = (
+      <PlanningModal
+        key="plan"
+        day={modal.day}
+        slot={modal.slot}
+        favorites={favorites}
+        onAssign={(recipe) => assignRecipe(modal.day, modal.slot, recipe)}
+        onClose={() => setModal(null)}
+      />
+    );
+  } else if (modal?.kind === "detail") {
+    modalElement = (
+      <RecipeDetailModal
+        key="detail"
+        day={modal.day}
+        slot={modal.slot}
+        recipe={modal.recipe}
+        isFavorite={isFavorite(modal.recipe)}
+        onToggleFavorite={() => toggleFavorite(modal.recipe)}
+        onRescale={(target) =>
+          rescaleRecipe(modal.day, modal.slot, modal.recipe, target)
+        }
+        onEdit={() =>
+          setModal({ kind: "form", day: modal.day, slot: modal.slot, recipe: modal.recipe })
+        }
+        onReplace={() =>
+          setModal({ kind: "plan", day: modal.day, slot: modal.slot })
+        }
+        onRemove={() => removeRecipe(modal.day, modal.slot)}
+        onClose={() => setModal(null)}
+      />
+    );
+  } else if (modal?.kind === "form") {
+    modalElement = (
+      <RecipeFormModal
+        key="form"
+        day={modal.day}
+        slot={modal.slot}
+        recipe={modal.recipe}
+        onSubmit={(data) => editRecipe(modal.day, modal.slot, data)}
+        onClose={() => setModal(null)}
+      />
+    );
+  } else if (modal?.kind === "pastWeeks") {
+    modalElement = (
+      <PastWeeksModal
+        key="pastWeeks"
+        weeksIndex={weeksIndex}
+        viewingWeekKey={weekKey}
+        onSelect={repeatWeek}
+        onClose={() => setModal(null)}
+      />
+    );
+  }
+
   return (
-    <div className="min-h-full bg-charcoal pb-10">
+    <div className="min-h-full bg-bg pb-12">
       <AppHeader
         screen={screen}
         onChangeScreen={setScreen}
         onOpenPastWeeks={() => setModal({ kind: "pastWeeks" })}
       />
 
-      {screen === "week" && (
-        <>
-          <WeekNav
-            weekKey={weekKey}
-            onPrev={() => setWeekKey((k) => addWeeks(k, -1))}
-            onNext={() => setWeekKey((k) => addWeeks(k, 1))}
-          />
-          <main className="mx-auto max-w-2xl space-y-3 px-4 py-4">
-            {DAYS.map((day) => (
-              <DaySection
-                key={day}
-                day={day}
-                weekKey={weekKey}
-                slots={plan[day]}
-                onSlotClick={(slot, recipe) => {
-                  if (recipe) setModal({ kind: "detail", day, slot, recipe });
-                  else setModal({ kind: "plan", day, slot });
-                }}
-              />
-            ))}
-          </main>
-        </>
-      )}
+      <AnimatePresence mode="wait" initial={false}>
+        {screen === "week" && (
+          <motion.div
+            key="week"
+            variants={screenVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+          >
+            <WeekNav
+              weekKey={weekKey}
+              onPrev={() => {
+                setWeekDirection(-1);
+                setWeekKey((k) => addWeeks(k, -1));
+              }}
+              onNext={() => {
+                setWeekDirection(1);
+                setWeekKey((k) => addWeeks(k, 1));
+              }}
+            />
+            <div className="overflow-hidden">
+              <AnimatePresence mode="wait" custom={weekDirection} initial={false}>
+                <motion.main
+                  key={weekKey}
+                  custom={weekDirection}
+                  variants={weekVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  className="mx-auto max-w-2xl space-y-3 px-5 py-5"
+                >
+                  {DAYS.map((day) => (
+                    <DaySection
+                      key={day}
+                      day={day}
+                      weekKey={weekKey}
+                      slots={plan[day]}
+                      onSlotClick={(slot, recipe) => {
+                        if (recipe) setModal({ kind: "detail", day, slot, recipe });
+                        else setModal({ kind: "plan", day, slot });
+                      }}
+                    />
+                  ))}
+                </motion.main>
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
 
-      {screen === "shopping" && (
-        <ShoppingListView
-          weekKey={weekKey}
-          plannedCount={plannedCount}
-          shoppingList={shoppingList}
-          generating={shoppingGenerating}
-          error={shoppingError}
-          stale={
-            shoppingList != null &&
-            shoppingList.mealsSignature !== mealsSignature(plan)
-          }
-          onGenerate={generateShoppingList}
-          onToggleHave={toggleHave}
-        />
-      )}
+        {screen === "shopping" && (
+          <motion.div
+            key="shopping"
+            variants={screenVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+          >
+            <ShoppingListView
+              weekKey={weekKey}
+              plannedCount={plannedCount}
+              shoppingList={shoppingList}
+              generating={shoppingGenerating}
+              error={shoppingError}
+              stale={
+                shoppingList != null &&
+                shoppingList.mealsSignature !== mealsSignature(plan)
+              }
+              onGenerate={generateShoppingList}
+              onToggleHave={toggleHave}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {modal?.kind === "plan" && (
-        <PlanningModal
-          day={modal.day}
-          slot={modal.slot}
-          favorites={favorites}
-          onAssign={(recipe) => assignRecipe(modal.day, modal.slot, recipe)}
-          onClose={() => setModal(null)}
-        />
-      )}
-
-      {modal?.kind === "detail" && (
-        <RecipeDetailModal
-          day={modal.day}
-          slot={modal.slot}
-          recipe={modal.recipe}
-          isFavorite={isFavorite(modal.recipe)}
-          onToggleFavorite={() => toggleFavorite(modal.recipe)}
-          onRescale={(target) =>
-            rescaleRecipe(modal.day, modal.slot, modal.recipe, target)
-          }
-          onEdit={() =>
-            setModal({ kind: "form", day: modal.day, slot: modal.slot, recipe: modal.recipe })
-          }
-          onReplace={() =>
-            setModal({ kind: "plan", day: modal.day, slot: modal.slot })
-          }
-          onRemove={() => removeRecipe(modal.day, modal.slot)}
-          onClose={() => setModal(null)}
-        />
-      )}
-
-      {modal?.kind === "form" && (
-        <RecipeFormModal
-          day={modal.day}
-          slot={modal.slot}
-          recipe={modal.recipe}
-          onSubmit={(data) => editRecipe(modal.day, modal.slot, data)}
-          onClose={() => setModal(null)}
-        />
-      )}
-
-      {modal?.kind === "pastWeeks" && (
-        <PastWeeksModal
-          weeksIndex={weeksIndex}
-          viewingWeekKey={weekKey}
-          onSelect={repeatWeek}
-          onClose={() => setModal(null)}
-        />
-      )}
+      <AnimatePresence mode="wait">{modalElement}</AnimatePresence>
     </div>
   );
 }

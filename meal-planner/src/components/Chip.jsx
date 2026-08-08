@@ -1,12 +1,12 @@
-export default function Chip({ children, tone = "sage" }) {
+export default function Chip({ children, tone = "mint" }) {
   const toneClasses =
-    tone === "rust"
-      ? "bg-rust/15 text-rust border-rust/30"
-      : "bg-sage/15 text-sage border-sage/30";
+    tone === "coral"
+      ? "bg-coral-tint text-coral"
+      : "bg-mint-tint text-mint";
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[11px] uppercase tracking-wide ${toneClasses}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${toneClasses}`}
     >
       {children}
     </span>

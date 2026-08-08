@@ -22,7 +22,10 @@ const UNIT_WORDS = new Set([
 
 function parseIngredientLine(line) {
   const trimmed = line.trim().replace(/^-\s*/, "");
-  const tokens = trimmed.split(/\s+/);
+  // Split glued quantity+unit ("120g" -> "120 g") so both parse independently.
+  const tokens = trimmed
+    .replace(/^(\d+(?:\.\d+)?)([a-zA-Z]+)\b/, "$1 $2")
+    .split(/\s+/);
   let i = 0;
   const qtyTokens = [];
   while (i < tokens.length && qtyTokens.length < 2 && /^[\d./]+$/.test(tokens[i])) {
@@ -39,6 +42,9 @@ function parseIngredientLine(line) {
     quantityValue: parseQuantityValue(qtyTokens),
     unit,
     name: name || trimmed,
+    // Prep/serving notes stripped ("Butter, softened" -> "Butter") so the
+    // shopping list merges by the item you actually buy.
+    baseName: (name || trimmed).split(",")[0].trim(),
     raw: trimmed,
   };
 }
@@ -252,12 +258,12 @@ function buildMockShoppingList(meals) {
   meals.forEach((meal) => {
     meal.ingredients.forEach((line) => {
       const parsed = parseIngredientLine(line);
-      const normName = parsed.name.toLowerCase().trim();
+      const normName = parsed.baseName.toLowerCase().trim();
       if (!normName) return;
       const key = `${normName}|${parsed.unit}`;
       if (!merged.has(key)) {
         merged.set(key, {
-          name: parsed.name,
+          name: parsed.baseName,
           unit: parsed.unit,
           total: 0,
           hasValue: false,

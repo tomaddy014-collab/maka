@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Shuffle as ShuffleIcon, Clock } from "lucide-react";
 import Modal from "../Modal.jsx";
 import RecipeCard from "../RecipeCard.jsx";
@@ -17,7 +18,7 @@ const TABS = [
 ];
 
 const selectClass =
-  "w-full rounded-lg border border-paper/15 bg-charcoal px-3 py-2 text-sm text-paper focus:border-rust outline-none";
+  "w-full rounded-xl border border-steel bg-surface px-3 py-2.5 text-sm text-ink focus:border-mint outline-none";
 
 export default function PlanningModal({ day, slot, favorites, onAssign, onClose }) {
   const [tab, setTab] = useState("shuffle");
@@ -43,158 +44,186 @@ export default function PlanningModal({ day, slot, favorites, onAssign, onClose 
   }
 
   return (
-    <Modal
-      open
-      onClose={onClose}
-      eyebrow={day}
-      title={`Plan ${slot}`}
-      size="lg"
-    >
-      <div className="mb-4 flex gap-1 border-b border-paper/10 pb-1">
+    <Modal onClose={onClose} eyebrow={day} title={`Plan ${slot}`} size="lg">
+      <div className="mb-5 flex gap-5 border-b border-steel/60">
         {TABS.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`rounded-t-lg px-3 py-2 font-mono text-xs uppercase tracking-wide transition-colors cursor-pointer ${
-              tab === t.id
-                ? "bg-rust/15 text-rust"
-                : "text-paper/60 hover:text-paper"
+            className={`relative pb-3 text-sm font-semibold transition-colors cursor-pointer ${
+              tab === t.id ? "text-ink" : "text-ink-soft hover:text-ink"
             }`}
           >
             {t.label}
+            {tab === t.id && (
+              <motion.span
+                layoutId="planning-tab-underline"
+                className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-mint"
+                transition={{ type: "spring", stiffness: 420, damping: 34 }}
+              />
+            )}
           </button>
         ))}
       </div>
 
-      {tab === "shuffle" && (
-        <div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div>
-              <label className="mb-1 block font-mono text-[11px] uppercase tracking-widest text-paper/60">
-                Cuisine
-              </label>
-              <select
-                className={selectClass}
-                value={filters.cuisine}
-                onChange={(e) => setFilters((f) => ({ ...f, cuisine: e.target.value }))}
-              >
-                {CUISINE_OPTIONS.map((c) => (
-                  <option key={c} value={c}>
-                    {c === "surprise" ? "Surprise me" : c}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block font-mono text-[11px] uppercase tracking-widest text-paper/60">
-                Dietary
-              </label>
-              <select
-                className={selectClass}
-                value={filters.dietary}
-                onChange={(e) => setFilters((f) => ({ ...f, dietary: e.target.value }))}
-              >
-                {DIETARY_OPTIONS.map((d) => (
-                  <option key={d} value={d}>
-                    {d === "none" ? "No restrictions" : d}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block font-mono text-[11px] uppercase tracking-widest text-paper/60">
-                Time
-              </label>
-              <select
-                className={selectClass}
-                value={filters.time}
-                onChange={(e) => setFilters((f) => ({ ...f, time: e.target.value }))}
-              >
-                {TIME_OPTIONS.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleShuffle}
-            disabled={loading}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-rust px-4 py-2.5 font-mono text-sm font-semibold text-paper transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer"
+      <AnimatePresence mode="wait" initial={false}>
+        {tab === "shuffle" && (
+          <motion.div
+            key="shuffle"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.16 }}
           >
-            {loading ? <Spinner /> : <ShuffleIcon size={15} />}
-            {generated ? "Shuffle again" : "Shuffle"}
-          </button>
-
-          {error && (
-            <div className="mt-3">
-              <InlineError message={error} onRetry={handleShuffle} />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div>
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-ink-soft">
+                  Cuisine
+                </label>
+                <select
+                  className={selectClass}
+                  value={filters.cuisine}
+                  onChange={(e) => setFilters((f) => ({ ...f, cuisine: e.target.value }))}
+                >
+                  {CUISINE_OPTIONS.map((c) => (
+                    <option key={c} value={c}>
+                      {c === "surprise" ? "Surprise me" : c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-ink-soft">
+                  Dietary
+                </label>
+                <select
+                  className={selectClass}
+                  value={filters.dietary}
+                  onChange={(e) => setFilters((f) => ({ ...f, dietary: e.target.value }))}
+                >
+                  {DIETARY_OPTIONS.map((d) => (
+                    <option key={d} value={d}>
+                      {d === "none" ? "No restrictions" : d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-ink-soft">
+                  Time
+                </label>
+                <select
+                  className={selectClass}
+                  value={filters.time}
+                  onChange={(e) => setFilters((f) => ({ ...f, time: e.target.value }))}
+                >
+                  {TIME_OPTIONS.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          )}
 
-          {!generated && !loading && !error && (
-            <p className="mt-6 text-center font-mono text-xs text-paper/40">
-              Set your filters and hit shuffle for a {slot.toLowerCase()} idea.
-              <br />
-              <Clock size={12} className="mx-auto mt-2 opacity-50" />
-            </p>
-          )}
+            <button
+              type="button"
+              onClick={handleShuffle}
+              disabled={loading}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-mint px-4 py-3 text-sm font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+            >
+              {loading ? <Spinner /> : <ShuffleIcon size={15} />}
+              {generated ? "Shuffle again" : "Shuffle"}
+            </button>
 
-          {generated && (
-            <div className="mt-4">
-              <RecipeCard recipe={generated} animate />
-              <button
-                type="button"
-                onClick={() => onAssign(generated)}
-                className="mt-4 w-full rounded-lg bg-sage px-4 py-2.5 font-mono text-sm font-semibold text-ink transition-opacity hover:opacity-90 cursor-pointer"
-              >
-                Use for {slot}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+            {error && (
+              <div className="mt-3">
+                <InlineError message={error} onRetry={handleShuffle} />
+              </div>
+            )}
 
-      {tab === "favorites" && (
-        <div>
-          {favorites.length === 0 ? (
-            <p className="py-8 text-center font-mono text-sm text-paper/50">
-              No favourites saved yet. Heart a recipe from its detail view to
-              save it here.
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {favorites.map((fav) => (
-                <li key={fav.id}>
+            {!generated && !loading && !error && (
+              <p className="mt-8 text-center text-xs text-ink-soft">
+                Set your filters and hit shuffle for a {slot.toLowerCase()} idea.
+                <Clock size={14} className="mx-auto mt-2 opacity-50" />
+              </p>
+            )}
+
+            <AnimatePresence mode="wait">
+              {generated && (
+                <motion.div
+                  key={generated.title + generated.cuisine}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="mt-4"
+                >
+                  <RecipeCard recipe={generated} animate />
                   <button
                     type="button"
-                    onClick={() => onAssign(hydrateRecipe({ ...fav, id: undefined }))}
-                    className="flex w-full items-center justify-between gap-3 rounded-lg bg-paper px-4 py-3 text-left text-ink transition-transform hover:-translate-y-0.5 cursor-pointer"
+                    onClick={() => onAssign(generated)}
+                    className="mt-4 w-full rounded-full bg-ink px-4 py-3 text-sm font-semibold text-white transition-transform active:scale-[0.98] cursor-pointer"
                   >
-                    <div className="min-w-0">
-                      <p className="truncate font-display text-lg leading-tight">
-                        {fav.title}
-                      </p>
-                      <p className="font-mono text-xs text-ink/60">
-                        {fav.cuisine}
-                        {fav.time_minutes != null ? ` · ${fav.time_minutes} min` : ""}
-                      </p>
-                    </div>
+                    Use for {slot}
                   </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
 
-      {tab === "own" && (
-        <RecipeForm submitLabel={`Add to ${slot}`} onSubmit={(data) => onAssign(hydrateRecipe(data))} />
-      )}
+        {tab === "favorites" && (
+          <motion.div
+            key="favorites"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.16 }}
+          >
+            {favorites.length === 0 ? (
+              <p className="py-8 text-center text-sm text-ink-soft">
+                No favourites saved yet. Heart a recipe from its detail view to
+                save it here.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {favorites.map((fav) => (
+                  <li key={fav.id}>
+                    <button
+                      type="button"
+                      onClick={() => onAssign(hydrateRecipe({ ...fav, id: undefined }))}
+                      className="flex w-full items-center justify-between gap-3 rounded-2xl bg-surface-soft px-4 py-3.5 text-left text-ink transition-transform active:scale-[0.99] cursor-pointer"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-semibold leading-tight">
+                          {fav.title}
+                        </p>
+                        <p className="text-xs text-ink-soft">
+                          {fav.cuisine}
+                          {fav.time_minutes != null ? ` · ${fav.time_minutes} min` : ""}
+                        </p>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </motion.div>
+        )}
+
+        {tab === "own" && (
+          <motion.div
+            key="own"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.16 }}
+          >
+            <RecipeForm submitLabel={`Add to ${slot}`} onSubmit={(data) => onAssign(hydrateRecipe(data))} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Modal>
   );
 }

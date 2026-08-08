@@ -13,9 +13,9 @@ export default function PastWeeksModal({ weeksIndex, viewingWeekKey, onSelect, o
 
   return (
     <>
-      <Modal open onClose={onClose} eyebrow="Repeat a week" title="Past weeks">
+      <Modal onClose={onClose} eyebrow="Repeat a week" title="Past weeks">
         {weeks.length === 0 ? (
-          <p className="py-8 text-center font-mono text-sm text-paper/50">
+          <p className="py-8 text-center text-sm text-ink-soft">
             No past weeks with meals planned yet.
           </p>
         ) : (
@@ -25,22 +25,22 @@ export default function PastWeeksModal({ weeksIndex, viewingWeekKey, onSelect, o
                 <button
                   type="button"
                   onClick={() => setPending(weekKey)}
-                  className="flex w-full items-center justify-between gap-3 rounded-lg bg-paper px-4 py-3 text-left text-ink transition-transform hover:-translate-y-0.5 cursor-pointer"
+                  className="flex w-full items-center justify-between gap-3 rounded-2xl bg-surface-soft px-4 py-3.5 text-left text-ink transition-transform active:scale-[0.99] cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <CalendarDays size={16} className="text-ink/50" />
+                    <CalendarDays size={16} className="text-steel-deep" />
                     <div>
-                      <p className="font-display text-base leading-tight">
+                      <p className="text-base font-semibold leading-tight">
                         {weekDateRangeLabel(weekKey)}
                       </p>
                       {isCurrentWeek(weekKey) && (
-                        <p className="font-mono text-[10px] uppercase tracking-widest text-sage">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-mint">
                           This week
                         </p>
                       )}
                     </div>
                   </div>
-                  <span className="shrink-0 font-mono text-xs text-ink/60">
+                  <span className="shrink-0 text-xs font-medium text-ink-soft">
                     {count} meal{count === 1 ? "" : "s"}
                   </span>
                 </button>

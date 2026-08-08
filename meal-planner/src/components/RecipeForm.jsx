@@ -1,9 +1,9 @@
 import { useState } from "react";
 
 const fieldClass =
-  "w-full rounded-lg border border-paper/15 bg-charcoal px-3 py-2 text-sm text-paper placeholder-paper/30 focus:border-rust outline-none";
+  "w-full rounded-xl border border-steel bg-surface px-3.5 py-2.5 text-sm text-ink placeholder-ink-soft/50 transition-colors focus:border-mint outline-none";
 const labelClass =
-  "mb-1 block font-mono text-[11px] uppercase tracking-widest text-paper/60";
+  "mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-ink-soft";
 
 function blankState(initial) {
   return {
@@ -141,7 +141,7 @@ export default function RecipeForm({ initial, submitLabel = "Save", onSubmit, on
         </label>
         <textarea
           id="rf-ingredients"
-          className={`${fieldClass} min-h-28 resize-y font-mono`}
+          className={`${fieldClass} min-h-28 resize-y`}
           value={form.ingredients}
           onChange={(e) => update("ingredients", e.target.value)}
           placeholder={"2 cups flour\n1 tsp salt"}
@@ -154,28 +154,28 @@ export default function RecipeForm({ initial, submitLabel = "Save", onSubmit, on
         </label>
         <textarea
           id="rf-steps"
-          className={`${fieldClass} min-h-28 resize-y font-mono`}
+          className={`${fieldClass} min-h-28 resize-y`}
           value={form.steps}
           onChange={(e) => update("steps", e.target.value)}
           placeholder={"Preheat oven to 200C.\nMix dry ingredients."}
         />
       </div>
 
-      {error && <p className="font-mono text-xs text-rust">{error}</p>}
+      {error && <p className="text-xs font-medium text-coral">{error}</p>}
 
-      <div className="flex justify-end gap-3 pt-1">
+      <div className="flex justify-end gap-2 pt-1">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg px-4 py-2 font-mono text-sm text-paper/70 transition-colors hover:text-paper cursor-pointer"
+            className="rounded-full px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-soft hover:text-ink cursor-pointer"
           >
             Cancel
           </button>
         )}
         <button
           type="submit"
-          className="rounded-lg bg-rust px-4 py-2 font-mono text-sm font-semibold text-paper transition-opacity hover:opacity-90 cursor-pointer"
+          className="rounded-full bg-mint px-5 py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.97] cursor-pointer"
         >
           {submitLabel}
         </button>
