@@ -4,6 +4,7 @@ import { Shuffle as ShuffleIcon, Clock } from "lucide-react";
 import Modal from "../Modal.jsx";
 import RecipeCard from "../RecipeCard.jsx";
 import RecipeForm from "../RecipeForm.jsx";
+import ImportVideoTab from "../ImportVideoTab.jsx";
 import Spinner from "../Spinner.jsx";
 import InlineError from "../InlineError.jsx";
 import { callLLM, parseJSONResponse } from "../../lib/llm.js";
@@ -15,6 +16,7 @@ import { CUISINE_OPTIONS, DIETARY_OPTIONS, TIME_OPTIONS } from "../../lib/consta
 const TABS = [
   { id: "shuffle", label: "Shuffle" },
   { id: "favorites", label: "Favourites" },
+  { id: "video", label: "From video" },
   { id: "own", label: "Add my own" },
 ];
 
@@ -56,13 +58,13 @@ export default function PlanningModal({ day, slot, favorites, onAssign, onClose 
 
   return (
     <Modal onClose={onClose} eyebrow={day} title={`Plan ${slot}`} size="lg">
-      <div className="mb-5 flex gap-5 border-b border-steel/60">
+      <div className="mb-5 flex gap-4 overflow-x-auto border-b border-steel/60 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`relative pb-3 text-sm font-semibold transition-colors cursor-pointer ${
+            className={`relative shrink-0 whitespace-nowrap pb-3 text-sm font-semibold transition-colors cursor-pointer ${
               tab === t.id ? "text-ink" : "text-ink-soft hover:text-ink"
             }`}
           >
@@ -223,6 +225,21 @@ export default function PlanningModal({ day, slot, favorites, onAssign, onClose 
                 ))}
               </ul>
             )}
+          </motion.div>
+        )}
+
+        {tab === "video" && (
+          <motion.div
+            key="video"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.16 }}
+          >
+            <ImportVideoTab
+              slot={slot}
+              onAssign={(data) => onAssign(hydrateRecipe(data))}
+            />
           </motion.div>
         )}
 
