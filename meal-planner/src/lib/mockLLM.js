@@ -6,6 +6,7 @@
 
 import { MOCK_RECIPES } from "./mockRecipePool.js";
 import { GROCERY_CATEGORIES } from "./constants.js";
+import { NoMatchError } from "./errors.js";
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -128,22 +129,37 @@ function filterByTime(pool, time) {
 }
 
 function generateMockRecipe({ slot, cuisine, dietary, time }) {
-  let pool = MOCK_RECIPES[slot] || MOCK_RECIPES.Dinner;
+  // Slot, cuisine and dietary are hard constraints: quietly serving a Korean
+  // dish when Italian was asked for — or something with meat in it when the
+  // filter said Vegan — is worse than admitting there is no match.
+  let pool = MOCK_RECIPES.filter((r) => r.slot === slot);
 
   if (cuisine && cuisine !== "surprise") {
-    const byCuisine = pool.filter(
+    pool = pool.filter(
       (r) => r.cuisine.toLowerCase() === cuisine.toLowerCase(),
     );
-    if (byCuisine.length) pool = byCuisine;
   }
 
   if (dietary && dietary !== "none") {
-    const byDietary = pool.filter((r) =>
+    pool = pool.filter((r) =>
       r.dietary_tags.some((t) => t.toLowerCase() === dietary.toLowerCase()),
     );
-    if (byDietary.length) pool = byDietary;
   }
 
+  if (pool.length === 0) {
+    const wanted = [
+      cuisine && cuisine !== "surprise" ? cuisine : null,
+      dietary && dietary !== "none" ? dietary.toLowerCase() : null,
+    ]
+      .filter(Boolean)
+      .join(", ");
+    throw new NoMatchError(
+      `No ${wanted ? wanted + " " : ""}${slot.toLowerCase()} recipes available. Try loosening a filter.`,
+    );
+  }
+
+  // Time is a preference rather than a constraint — if nothing fits the
+  // window, return the closest match instead of failing outright.
   const byTime = filterByTime(pool, time);
   if (byTime.length) pool = byTime;
 

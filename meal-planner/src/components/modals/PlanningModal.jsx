@@ -9,6 +9,7 @@ import InlineError from "../InlineError.jsx";
 import { callLLM, parseJSONResponse } from "../../lib/llm.js";
 import { buildRecipePrompt } from "../../lib/prompts.js";
 import { hydrateRecipe } from "../../lib/recipeUtils.js";
+import { isNoMatch } from "../../lib/errors.js";
 import { CUISINE_OPTIONS, DIETARY_OPTIONS, TIME_OPTIONS } from "../../lib/constants.js";
 
 const TABS = [
@@ -26,6 +27,7 @@ export default function PlanningModal({ day, slot, favorites, onAssign, onClose 
   const [generated, setGenerated] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [retryable, setRetryable] = useState(true);
 
   async function handleShuffle() {
     setLoading(true);
@@ -36,8 +38,17 @@ export default function PlanningModal({ day, slot, favorites, onAssign, onClose 
       const parsed = parseJSONResponse(raw);
       if (!parsed.ok) throw new Error("Could not parse the recipe response.");
       setGenerated(hydrateRecipe(parsed.data));
-    } catch {
-      setError("Couldn't generate a recipe. Check your connection and try again.");
+    } catch (err) {
+      if (isNoMatch(err)) {
+        // Retrying an impossible filter combination just fails again.
+        setRetryable(false);
+        setError(err.message);
+      } else {
+        setRetryable(true);
+        setError(
+          "Couldn't generate a recipe. Check your connection and try again.",
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -139,7 +150,10 @@ export default function PlanningModal({ day, slot, favorites, onAssign, onClose 
 
             {error && (
               <div className="mt-3">
-                <InlineError message={error} onRetry={handleShuffle} />
+                <InlineError
+                  message={error}
+                  onRetry={retryable ? handleShuffle : undefined}
+                />
               </div>
             )}
 

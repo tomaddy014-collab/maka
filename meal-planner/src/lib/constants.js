@@ -1,18 +1,23 @@
+// Every cuisine here has Breakfast, Lunch and Dinner recipes in
+// mockRecipePool.js. Adding one without recipes will surface as an
+// "unavailable" message in the planner rather than a wrong-cuisine dish.
 export const CUISINE_OPTIONS = [
   "surprise",
-  "Italian",
-  "Mexican",
-  "Indian",
-  "Thai",
-  "Japanese",
-  "French",
   "American",
-  "Mediterranean",
-  "Vietnamese",
-  "Korean",
-  "Moroccan",
   "British",
   "Chinese",
+  "French",
+  "Greek",
+  "Indian",
+  "Italian",
+  "Japanese",
+  "Korean",
+  "Mexican",
+  "Middle Eastern",
+  "Moroccan",
+  "Spanish",
+  "Thai",
+  "Vietnamese",
 ];
 
 export const DIETARY_OPTIONS = [
