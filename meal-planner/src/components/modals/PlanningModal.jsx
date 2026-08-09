@@ -5,6 +5,7 @@ import Modal from "../Modal.jsx";
 import RecipeCard from "../RecipeCard.jsx";
 import RecipeForm from "../RecipeForm.jsx";
 import ImportVideoTab from "../ImportVideoTab.jsx";
+import PantryTab from "../PantryTab.jsx";
 import Spinner from "../Spinner.jsx";
 import InlineError from "../InlineError.jsx";
 import { callLLM, parseJSONResponse } from "../../lib/llm.js";
@@ -17,6 +18,7 @@ const TABS = [
   { id: "shuffle", label: "Shuffle" },
   { id: "favorites", label: "Favourites" },
   { id: "video", label: "From video" },
+  { id: "pantry", label: "My kitchen" },
   { id: "own", label: "Add my own" },
 ];
 
@@ -237,6 +239,21 @@ export default function PlanningModal({ day, slot, favorites, onAssign, onClose 
             transition={{ duration: 0.16 }}
           >
             <ImportVideoTab
+              slot={slot}
+              onAssign={(data) => onAssign(hydrateRecipe(data))}
+            />
+          </motion.div>
+        )}
+
+        {tab === "pantry" && (
+          <motion.div
+            key="pantry"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.16 }}
+          >
+            <PantryTab
               slot={slot}
               onAssign={(data) => onAssign(hydrateRecipe(data))}
             />
