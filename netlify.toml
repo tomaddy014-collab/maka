@@ -1,0 +1,27 @@
+# Netlify reads this file from the REPOSITORY ROOT only. The app lives in
+# meal-planner/, so `base` points there; `publish` and the functions directory
+# are then resolved relative to it (meal-planner/dist and
+# meal-planner/netlify/functions).
+#
+# dist/ is intentionally not committed — Netlify runs the build below and
+# produces it. Committing build output would go stale on every source change.
+
+[build]
+  base    = "meal-planner"
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory    = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Reading images takes longer than the 10s default. Netlify honours up to 26s
+# on paid plans; the Free tier caps at 10s and these calls may time out there.
+[functions."extract-recipe"]
+  timeout = 26
+
+[functions."identify-ingredients"]
+  timeout = 26
+
+[functions."recipe-from-pantry"]
+  timeout = 26
