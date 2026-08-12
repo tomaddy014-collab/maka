@@ -671,6 +671,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script>
 var SURL='https://agwqenhduoxxeemklmpr.supabase.co';
 var SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnd3FlbmhkdW94eGVlbWtsbXByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MzkxNDAsImV4cCI6MjA5NDAxNTE0MH0.TZkrRgForSDTzQ4vZ9j36WncEAVBx4reG-ADcoohY8o';
@@ -1254,18 +1255,59 @@ function pdfBase64ToFile(b64,name){
   for(var i=0;i<chars.length;i++)bytes[i]=chars.charCodeAt(i);
   return new File([bytes],name,{type:'application/pdf'});
 }
-// Every supported file is converted to an actual PDF — one reliable, consistent format
-// regardless of what the teacher uploads (PDF, Word, text, or a photo/scan). Returns the
-// original file unchanged if it's already a PDF (or an unrecognised type we can't convert).
+// Read a .docx's own XML directly (via JSZip) so Word/Google Docs Track Changes are handled
+// correctly: text inside <w:ins> (an accepted insertion — e.g. a student's typed answer) is
+// kept and clearly flagged; text inside <w:del> (a tracked deletion) is dropped entirely.
+// Plain mammoth text-extraction flattens everything to plain text with no such distinction,
+// which is how a student's inserted answers were going missing.
+var DOCX_NS='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+async function extractDocxText(file){
+  if(!window.JSZip)throw new Error('Document reader still loading — try again in a moment, or save the file as PDF.');
+  var buf=await file.arrayBuffer();
+  var zip=await window.JSZip.loadAsync(buf);
+  var docXml=zip.file('word/document.xml');
+  if(!docXml)throw new Error('Could not read this Word file — it may be corrupted.');
+  var xmlText=await docXml.async('text');
+  var xml=new DOMParser().parseFromString(xmlText,'application/xml');
+  if(xml.getElementsByTagName('parsererror').length)throw new Error('Could not parse this Word file.');
+  var paragraphs=xml.getElementsByTagNameNS(DOCX_NS,'p');
+  var lines=[];
+  function walk(node,out){
+    for(var c=node.firstChild;c;c=c.nextSibling){
+      if(c.nodeType!==1)continue;
+      var local=c.localName;
+      if(local==='del')continue; // tracked deletion — drop entirely, including its text
+      if(local==='t'){out.push(c.textContent);continue}
+      if(local==='tab'){out.push('\t');continue}
+      if(local==='br'||local==='cr'){out.push('\n');continue}
+      if(local==='ins'){out.push(' «STUDENT ANSWER: ');walk(c,out);out.push(' »');continue}
+      walk(c,out);
+    }
+  }
+  for(var i=0;i<paragraphs.length;i++){
+    var out=[];walk(paragraphs[i],out);
+    lines.push(out.join(''));
+  }
+  return lines.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+// Fall back to mammoth's plain extraction if the XML-level read fails for any reason.
+async function extractDocxTextFallback(file){
+  if(!window.mammoth)throw new Error('Word reader still loading — try again in a moment, or save the file as PDF.');
+  var buf=await file.arrayBuffer();
+  var out=await window.mammoth.extractRawText({arrayBuffer:buf});
+  return(out&&out.value||'').trim();
+}
+// Every supported file (PDF, Word, text, image) is converted to an actual PDF — one reliable
+// format regardless of what's uploaded. Returns the original file unchanged if it's already a
+// PDF (or an unrecognised type we can't convert).
 async function ensurePDFFile(file){
   var t=file.type||'',name=(file.name||'').toLowerCase();
   if(t==='application/pdf'||name.slice(-4)==='.pdf')return file;
   var pdfB64;
   if(name.slice(-5)==='.docx'||t.indexOf('officedocument.wordprocessingml')!==-1){
-    if(!window.mammoth)throw new Error('Word reader still loading — try again in a moment, or save the file as PDF.');
-    var buf=await file.arrayBuffer();
-    var out=await window.mammoth.extractRawText({arrayBuffer:buf});
-    var txt=(out&&out.value||'').trim();
+    var txt;
+    try{txt=await extractDocxText(file)}catch(e){txt=''}
+    if(!txt)try{txt=await extractDocxTextFallback(file)}catch(e){}
     if(!txt)throw new Error('No text found in this Word file — try saving it as a PDF.');
     pdfB64=textToPDFBase64(txt);
   }else if(t==='text/plain'||name.slice(-4)==='.txt'){
@@ -1724,7 +1766,7 @@ async function markTest(key,file,paper,answerKey,area,level,idx,limit,revCtx,exp
         '',
         answerKey?('ANSWER KEY (the correct answers to use):\n'+answerKey):'No answer key was given — work out the correct answer to each question directly from the passage above.',
         '',
-        'ONE student\'s answers are provided (as an attached file or as typed text above). Read what the student wrote and give EVERY question a "mark" of 1, 0.5, or 0 using logic. Judge each question by its TYPE:',
+        'ONE student\'s answers are provided (as an attached file or as typed text above). Read CAREFULLY — the document may be the ORIGINAL test with the student\'s answers added into it, e.g. via Word/Google Docs Track Changes or Suggesting mode. If you see text wrapped like «STUDENT ANSWER: ...», that is a tracked insertion — it IS the student\'s answer for whichever question it follows; use it directly. Elsewhere, actively look for anything the student added beyond the original question text (typed after a question, in a blank, underlined, highlighted, in a different style, or otherwise clearly not part of the original test) — that added text is their answer, not the question restated. Give EVERY question a "mark" of 1, 0.5, or 0 using logic. Judge each question by its TYPE:',
         '',
         'LITERAL / factual questions (the answer is stated directly in the passage, e.g. "find a word that means...", "what is X"):',
         '- 1 = matches the passage, even if short, abbreviated, reworded, or with minor spelling mistakes. Do NOT require full sentences or restating the question.',
