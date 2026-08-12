@@ -1093,6 +1093,10 @@ function okFileType(f){
 }
 // ── Resubmissions: mark revised work against a past session ─────────────────
 var RESUB={on:false,sessionId:'',results:[]};
+// If the uploaded test passage is already a real PDF, it's kept and attached directly to every
+// marking request rather than being flattened to text first — full visual fidelity, no lossy
+// transcription step. Non-PDF uploads (docx/image/txt) are still transcribed to text once.
+var TEST_PAPER_FILE=null;
 function toggleResub(){
   RESUB.on=document.getElementById('resub-check').checked;
   document.getElementById('resub-pick').style.display=RESUB.on?'':'none';
@@ -1674,12 +1678,12 @@ function countQuestions(paper,answerKey){
   }
   return maxNum(answerKey)||maxNum(paper)||0;
 }
-async function deriveAnswerKey(key,paper,area,level){
+async function deriveAnswerKey(key,paper,paperFile,area,level){
   var p=[
     'You are making an ANSWER KEY / marking guide for a reading comprehension test. NZC Level '+level+', learning area '+area+'.',
     '',
-    'Reading passage and questions:',
-    paper,
+    paperFile?'The reading passage and questions are in the attached PDF.':'Reading passage and questions:',
+    paperFile?'':paper,
     '',
     'For EVERY question, work out what "correct" looks like, based on the QUESTION TYPE:',
     '- LITERAL questions (find a word/fact stated directly in the passage): give the exact answer from the passage. If more than one wording is acceptable, list them separated by " / ".',
@@ -1691,7 +1695,8 @@ async function deriveAnswerKey(key,paper,area,level){
     '2. e.g. answer (for an inferential question)',
     'Keep each line short. No commentary, no extra text, no markdown.'
   ].join('\n');
-  var raw=await gemini(key,[{text:p}],null);
+  var parts=(paperFile?await getContentParts(paperFile):[]).concat([{text:p}]);
+  var raw=await gemini(key,parts,null);
   return String(raw).replace(/```/g,'').trim();
 }
 // Transcribe an uploaded file (PDF/image/docx/txt) into plain text via Gemini, so an uploaded
@@ -1702,11 +1707,29 @@ async function extractTextFromFile(key,file,instructions){
   var raw=await gemini(key,cparts.concat([{text:instructions}]),null);
   return String(raw).replace(/```/g,'').trim();
 }
+function clearPaperFile(){
+  TEST_PAPER_FILE=null;
+  var st=document.getElementById('paper-upload-status');
+  if(st){st.style.display='none';st.innerHTML=''}
+}
 async function uploadPaperFile(){
   var input=document.getElementById('paper-upload-input');
   var file=input.files&&input.files[0];if(!file)return;
+  var st=document.getElementById('paper-upload-status');
+  var isPDF=file.type==='application/pdf'||/\.pdf$/i.test(file.name);
+  if(isPDF){
+    // Already a real PDF — keep it as-is and attach it directly to every marking request,
+    // instead of flattening it to text first. Full visual fidelity, no lossy transcription.
+    TEST_PAPER_FILE=file;
+    document.getElementById('test-paper').value='';
+    st.style.display='block';st.style.color='';
+    st.innerHTML=esc(file.name)+' attached as a PDF — Māka will read it directly when marking. <a href="#" onclick="clearPaperFile();return false" style="color:var(--gold);text-decoration:underline">Remove</a>';
+    input.value='';
+    return;
+  }
+  TEST_PAPER_FILE=null;
   var key=getKey();if(!key){input.value='';return}
-  var btn=document.getElementById('paper-upload-btn'),st=document.getElementById('paper-upload-status');
+  var btn=document.getElementById('paper-upload-btn');
   btn.disabled=true;btn.innerHTML='<span class="spinner" style="width:12px;height:12px;border-top-color:currentColor"></span> Reading…';
   st.style.display='block';st.style.color='';st.textContent='Reading '+file.name+'…';
   try{
@@ -1736,37 +1759,41 @@ async function uploadKeyFile(){
 }
 document.getElementById('paper-upload-input').addEventListener('change',uploadPaperFile);
 document.getElementById('key-upload-input').addEventListener('change',uploadKeyFile);
+// If the teacher types/pastes into the passage box after attaching a PDF, prefer what they
+// typed — clear the stale attachment so there's no ambiguity about which one gets used.
+document.getElementById('test-paper').addEventListener('input',function(){if(TEST_PAPER_FILE)clearPaperFile()});
 async function genAnswerKey(){
   var key=getKey();if(!key)return;
   var paper=document.getElementById('test-paper').value.trim();
-  if(!paper){alert('Paste the reading passage and questions first.');return}
+  if(!paper&&!TEST_PAPER_FILE){alert('Paste or upload the reading passage and questions first.');return}
   var btn=document.getElementById('gen-key-btn'),st=document.getElementById('gen-key-status');
   var area=document.getElementById('la').value,level=document.getElementById('cl').value;
   if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner" style="width:12px;height:12px;border-top-color:currentColor"></span> Generating…'}
   st.style.display='block';st.style.color='';st.textContent='Reading the passage…';
   try{
-    document.getElementById('test-key').value=await deriveAnswerKey(key,paper,area,level);
+    document.getElementById('test-key').value=await deriveAnswerKey(key,paper,TEST_PAPER_FILE,area,level);
     st.textContent='Answer key generated — check it, edit anything, then mark.';
   }catch(e){st.textContent='Could not generate: '+(e.message||e);st.style.color='var(--danger-text)'}
   if(btn){btn.disabled=false;btn.innerHTML=ic('sparkle')+'Generate from passage'}
 }
-async function markTest(key,file,paper,answerKey,area,level,idx,limit,revCtx,expectedTotal){
+async function markTest(key,file,paper,paperFile,answerKey,area,level,idx,limit,revCtx,expectedTotal){
   var ml=limit||function(fn){return Promise.resolve().then(fn)};
   var onBusy=function(a,max){progressItems[idx].phase='Gemini busy — retrying ('+a+'/'+(max-1)+')…';renderProg()};
   try{
     return await ml(async function(){
       progressItems[idx].status='working';progressItems[idx].phase=revCtx?'Comparing…':'Marking…';renderProg();
       var cparts=await getContentParts(file);
+      var paperParts=paperFile?await getContentParts(paperFile):[];
       var lv=levelInfo(level);
       var p=[
         'You are a fair, encouraging NZ '+lv.years+' teacher marking a reading comprehension test using logic. NZC Level '+level+', learning area '+area+'.',
         '',
-        'THE TEST (reading passage and questions):',
-        paper,
+        paperFile?'THE TEST (reading passage and questions) is in the FIRST attached PDF below.':'THE TEST (reading passage and questions):',
+        paperFile?'':paper,
         '',
         answerKey?('ANSWER KEY (the correct answers to use):\n'+answerKey):'No answer key was given — work out the correct answer to each question directly from the passage above.',
         '',
-        'ONE student\'s answers are provided (as an attached file or as typed text above). Read CAREFULLY — the document may be the ORIGINAL test with the student\'s answers added into it, e.g. via Word/Google Docs Track Changes or Suggesting mode. If you see text wrapped like «STUDENT ANSWER: ...», that is a tracked insertion — it IS the student\'s answer for whichever question it follows; use it directly. Elsewhere, actively look for anything the student added beyond the original question text (typed after a question, in a blank, underlined, highlighted, in a different style, or otherwise clearly not part of the original test) — that added text is their answer, not the question restated. Give EVERY question a "mark" of 1, 0.5, or 0 using logic. Judge each question by its TYPE:',
+        (paperFile?'The STUDENT\'S ANSWER FILE (a separate attached file, after the test paper PDF, labelled "STUDENT\'S ANSWER FILE") is what you are marking':'ONE student\'s answers are provided (as an attached file or as typed text above)')+'. Read CAREFULLY — the document may be the ORIGINAL test with the student\'s answers added into it, e.g. via Word/Google Docs Track Changes or Suggesting mode. If you see text wrapped like «STUDENT ANSWER: ...», that is a tracked insertion — it IS the student\'s answer for whichever question it follows; use it directly. Elsewhere, actively look for anything the student added beyond the original question text (typed after a question, in a blank, underlined, highlighted, in a different style, or otherwise clearly not part of the original test) — that added text is their answer, not the question restated. Give EVERY question a "mark" of 1, 0.5, or 0 using logic. Judge each question by its TYPE:',
         '',
         'LITERAL / factual questions (the answer is stated directly in the passage, e.g. "find a word that means...", "what is X"):',
         '- 1 = matches the passage, even if short, abbreviated, reworded, or with minor spelling mistakes. Do NOT require full sentences or restating the question.',
@@ -1800,17 +1827,18 @@ async function markTest(key,file,paper,answerKey,area,level,idx,limit,revCtx,exp
         '',
         'The test has exactly '+expectedTotal+' question'+(expectedTotal===1?'':'s')+'. Include EXACTLY one entry in "questions" for each, numbered 1 to '+expectedTotal+', in order — even ones left blank. Give 1-2 items in "improve". Write summary and tips directly to the student (you/your), warm and encouraging.'
       ].join('\n');
-      var sendParts=cparts,pFull=p;
+      var answerParts=cparts,pFull=p;
       if(revCtx&&revCtx.prior){
         var _pm=fbParseMeta(revCtx.prior.nzc_reference),_tips=(revCtx.prior.next_steps||[]).map(String);
         pFull=p+'\n\n'+[
           'THIS IS A RESUBMISSION — the student re-did the test after feedback.',
-          revCtx.parts?'Their FIRST attempt and their NEW attempt are both provided above (FIRST attempt first). Mark the NEW attempt.':'Mark this NEW attempt.',
+          revCtx.parts?'Their FIRST attempt and their NEW attempt are both provided in the STUDENT\'S ANSWER FILE section below (FIRST attempt first). Mark the NEW attempt.':'Mark this NEW attempt.',
           'Previous feedback: '+(_tips.length?_tips.join('  |  '):'(none recorded)')+(_pm.goal?('  |  Goal: '+_pm.goal):''),
           'ALSO add an "addressed" array — one entry per prior tip/goal: {"feedback":"the prior tip/goal shortened","status":"addressed" | "partly" | "not_yet","note":"one short sentence to the student on how they did this time"}.'
         ].join('\n');
-        if(revCtx.parts)sendParts=[{text:'FIRST ATTEMPT:'}].concat(revCtx.parts,[{text:'NEW ATTEMPT:'}],cparts);
+        if(revCtx.parts)answerParts=[{text:'FIRST ATTEMPT:'}].concat(revCtx.parts,[{text:'NEW ATTEMPT:'}],cparts);
       }
+      var sendParts=paperFile?[{text:'TEST PAPER PDF:'}].concat(paperParts,[{text:"STUDENT'S ANSWER FILE:"}],answerParts):answerParts;
       var r=parseJSON(await gemini(key,sendParts.concat([{text:pFull}]),onBusy));
       r.fileName=r.fileName||file.name;
       scrubResultLevelLanguage(r);
@@ -1826,7 +1854,7 @@ async function runTestMarking(){
   var key=getKey();if(!key)return;
   if(!files.length){alert('Upload the students\' answer sheets first.');return}
   var paper=document.getElementById('test-paper').value.trim();
-  if(!paper){alert('Paste the reading passage and questions first.');return}
+  if(!paper&&!TEST_PAPER_FILE){alert('Paste or upload the reading passage and questions first.');return}
   var answerKey=document.getElementById('test-key').value.trim();
   var area=document.getElementById('la').value,level=document.getElementById('cl').value;
   var sname=document.getElementById('session-name').value.trim()||('Test '+new Date().toLocaleDateString('en-NZ'));
@@ -1840,7 +1868,7 @@ async function runTestMarking(){
     // No key given → derive one from the passage ONCE so every student is marked consistently.
     if(!answerKey){
       try{
-        answerKey=await deriveAnswerKey(key,paper,area,level);
+        answerKey=await deriveAnswerKey(key,paper,TEST_PAPER_FILE,area,level);
         document.getElementById('test-key').value=answerKey;
         showToast('Generated an answer key from the passage — review it in the Answer key box','ok',5000);
       }catch(e){
@@ -1853,12 +1881,13 @@ async function runTestMarking(){
     // The true question count (from the key, or the passage) — authoritative so a student who
     // skips questions is marked out of the FULL test, not just the ones they attempted.
     var expectedTotal=countQuestions(paper,answerKey);
+    var paperFile=TEST_PAPER_FILE;
     document.getElementById('rsec').style.display='block';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='block';document.getElementById('save-status').innerHTML='';
     progressItems=files.map(function(f){return{name:f.name,status:'pending',phase:'',err:''}});renderProg();
     var out=new Array(files.length),limit=makeLimiter(3);
     var revCtxs=await buildRevCtxs();
-    await Promise.all(files.map(function(f,i){return markTest(key,f,paper,answerKey,area,level,i,limit,revCtxs[i],expectedTotal).then(function(res){out[i]=res})}));
-    for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r&&r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(2500);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markTest(key,files[i],paper,answerKey,area,level,i,null,revCtxs[i],expectedTotal)}));fail.forEach(function(i,j){out[i]=ret[j]})}
+    await Promise.all(files.map(function(f,i){return markTest(key,f,paper,paperFile,answerKey,area,level,i,limit,revCtxs[i],expectedTotal).then(function(res){out[i]=res})}));
+    for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r&&r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(2500);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markTest(key,files[i],paper,paperFile,answerKey,area,level,i,null,revCtxs[i],expectedTotal)}));fail.forEach(function(i,j){out[i]=ret[j]})}
     out.forEach(function(r,i){r._file=files[i]});
     results=out;document.getElementById('progress').style.display='none';renderResults(out);
     var okCount=out.filter(function(r){return!r._error}).length,failCount=out.length-okCount;
@@ -2073,7 +2102,7 @@ function remarkTest(idx){
   var area=document.getElementById('la').value,level=document.getElementById('cl').value;
   var expectedTotal=countQuestions(paper,answerKey);
   progressItems[idx]={name:files[idx].name,status:'pending',phase:'',err:''};
-  markTest(key,files[idx],paper,answerKey,area,level,idx,null,null,expectedTotal).then(function(res){res._file=files[idx];results[idx]=res;renderResults(results);persistResults();saveOneResult(idx)});
+  markTest(key,files[idx],paper,TEST_PAPER_FILE,answerKey,area,level,idx,null,null,expectedTotal).then(function(res){res._file=files[idx];results[idx]=res;renderResults(results);persistResults();saveOneResult(idx)});
 }
 function renderResultCard(r,idx,editable){
   if(r.type==='test'||Array.isArray(r.questions))return renderTestCard(r,idx,editable);
