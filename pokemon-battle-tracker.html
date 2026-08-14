@@ -437,6 +437,24 @@ input,select,textarea{font:inherit;color:inherit;}
 .panel-head h3{margin:0;font-size:11px;letter-spacing:.15em;text-transform:uppercase;font-weight:800;color:var(--dim);flex:1 1 auto;}
 .panel-body{padding:12px 14px;}
 
+/* collapsible how-to */
+.help summary{
+  list-style:none;cursor:pointer;
+  padding:10px 14px;border-bottom:1px solid var(--line-soft);background:var(--surface-2);
+  display:flex;align-items:center;gap:8px;
+}
+.help summary::-webkit-details-marker{display:none;}
+.help summary h3{
+  margin:0;font-size:11px;letter-spacing:.15em;text-transform:uppercase;
+  font-weight:800;color:var(--dim);flex:1 1 auto;
+}
+.help .chev{color:var(--dim);font-size:19px;line-height:1;transition:transform .2s ease;}
+.help[open] .chev{transform:rotate(90deg);}
+.help[open] summary{border-bottom-color:var(--line-soft);}
+.steps{margin:0;padding-left:1.25em;display:flex;flex-direction:column;gap:7px;}
+.steps li{font-size:13.5px;line-height:1.45;}
+.steps b{font-weight:750;}
+
 .coin-face{
   font-family:var(--display);font-size:34px;font-weight:800;text-align:center;
   min-height:46px;display:flex;align-items:center;justify-content:center;gap:10px;letter-spacing:-.02em;
@@ -497,6 +515,19 @@ input,select,textarea{font:inherit;color:inherit;}
     <section class="teams" id="teams" aria-label="Players"></section>
 
     <aside class="side">
+
+      <details class="panel help" open>
+        <summary><h3>How to use this</h3><span class="chev" aria-hidden="true">›</span></summary>
+        <div class="panel-body">
+          <ol class="steps">
+            <li><b>Find your card.</b> Type its name in the box on your side and tap the match. Its real HP and attacks load in.</li>
+            <li><b>Attack.</b> Tap one of your attacks — that much damage comes off your opponent. A <b>×2</b> button appears when they are weak to your type.</li>
+            <li><b>Take a prize.</b> Knocked something out? Tap one of your prize cards. Six each — first to take them all wins.</li>
+            <li><b>Energy and conditions</b> are counters. Tap to turn them on and off.</li>
+            <li><b>Tapped the wrong thing?</b> <b>Undo</b> puts it back.</li>
+          </ol>
+        </div>
+      </details>
 
       <section class="panel">
         <div class="panel-head"><h3>Coin &amp; dice</h3></div>
@@ -609,6 +640,14 @@ var CARD_DB = {"s":[["Base","1999"],["Jungle","1999"],["Wizards Black Star Promo
     return found;
   }
 
+  /* Cards start unnamed, so messages need something to call them. */
+  function countersText(damage){
+    var n = damage / 10;
+    return damage + " dmg<br>" + n + (n === 1 ? " counter" : " counters");
+  }
+
+  function nameOf(m){ return m.name.trim() || "This Pokémon"; }
+
   function spriteHtml(m, ti){
     var png = SPRITE_PNG[speciesOf(m.name)];
     if(!png) return '<span class="sprite-stage"><span class="sprite-blank"></span></span>';
@@ -638,7 +677,7 @@ var CARD_DB = {"s":[["Base","1999"],["Jungle","1999"],["Wizards Black Star Promo
   function newMon(name, hp){
     return {
       id: nextId(),
-      name: name || "Tap “Find a card” to load one",
+      name: name || "",
       hp: hp || 60,
       maxHp: hp || 60,
       types: "",
@@ -820,7 +859,8 @@ var CARD_DB = {"s":[["Base","1999"],["Jungle","1999"],["Wizards Black Star Promo
       '<div class="mon-top">' +
         spriteHtml(m, ti) +
         '<span class="id-block">' +
-          '<input class="mon-name" data-name="' + m.id + '" value="' + esc(m.name) + '" aria-label="Pokémon name">' +
+          '<input class="mon-name" data-name="' + m.id + '" value="' + esc(m.name) + '" ' +
+            'placeholder="Find a card below…" aria-label="Pokémon name">' +
           '<span class="pips">' + pips(m.types) + '</span>' +
         '</span>' +
       '</div>' +
@@ -838,7 +878,7 @@ var CARD_DB = {"s":[["Base","1999"],["Jungle","1999"],["Wizards Black Star Promo
           '<input data-maxhp="' + m.id + '" value="' + m.maxHp + '" inputmode="numeric" aria-label="Printed HP">' +
         '</span>' +
         '<span class="hp-track"><span class="hp-fill ' + hpClass(m) + '" style="width:' + pct + '%"></span></span>' +
-        '<span class="counters">' + damage + ' dmg<br>' + (damage / 10) + ' counters</span>' +
+        '<span class="counters">' + countersText(damage) + '</span>' +
       '</div>' +
 
       '<div class="attacks">' +
@@ -927,7 +967,7 @@ var CARD_DB = {"s":[["Base","1999"],["Jungle","1999"],["Wizards Black Star Promo
     var before = m.hp;
     var after = clamp(before + delta, 0, m.maxHp);
     if(after === before){
-      toast(delta < 0 ? m.name + " is already knocked out" : m.name + " is at full HP");
+      toast(delta < 0 ? nameOf(m) + " is already knocked out" : nameOf(m) + " is at full HP");
       return;
     }
     /* snapshot before the change, so Undo lands on the pre-damage state */
@@ -936,11 +976,11 @@ var CARD_DB = {"s":[["Base","1999"],["Jungle","1999"],["Wizards Black Star Promo
     var change = after - before;
     if(change < 0) fx[ti] = after === 0 ? "ko" : "hit";
     if(change < 0){
-      logIt('<em>' + esc(m.name) + '</em> took <span class="dmg">' + Math.abs(change) + '</span>' +
+      logIt('<em>' + esc(nameOf(m)) + '</em> took <span class="dmg">' + Math.abs(change) + '</span>' +
         (note ? " from " + note : " damage") + ' (' + before + ' → ' + m.hp + ')');
-      if(m.hp === 0) logIt('<em>' + esc(m.name) + '</em> was knocked out — take a prize card!');
+      if(m.hp === 0) logIt('<em>' + esc(nameOf(m)) + '</em> was knocked out — take a prize card!');
     }else{
-      logIt('<em>' + esc(m.name) + '</em> healed <span class="heal">' + change + '</span> (' + before + ' → ' + m.hp + ')');
+      logIt('<em>' + esc(nameOf(m)) + '</em> healed <span class="heal">' + change + '</span> (' + before + ' → ' + m.hp + ')');
     }
     render();
   }
@@ -958,7 +998,7 @@ var CARD_DB = {"s":[["Base","1999"],["Jungle","1999"],["Wizards Black Star Promo
       return;
     }
     var amount = doubled ? base * 2 : base;
-    var note = '<em>' + esc(attacker.name) + '</em>&rsquo;s ' + esc(a[0]) +
+    var note = '<em>' + esc(nameOf(attacker)) + '</em>&rsquo;s ' + esc(a[0]) +
       (doubled ? " (weakness &times;2)" : "");
     applyDelta(state.teams[1 - ti].mon.id, -amount, note);
   }
@@ -1028,8 +1068,8 @@ var CARD_DB = {"s":[["Base","1999"],["Jungle","1999"],["Wizards Black Star Promo
       var key = t.getAttribute("data-status");
       var i = m3.status.indexOf(key);
       snapshot();
-      if(i >= 0){ m3.status.splice(i, 1); logIt('<em>' + esc(m3.name) + '</em> is no longer ' + key); }
-      else{ m3.status.push(key); logIt('<em>' + esc(m3.name) + '</em> is now ' + key + '!'); }
+      if(i >= 0){ m3.status.splice(i, 1); logIt('<em>' + esc(nameOf(m3)) + '</em> is no longer ' + key); }
+      else{ m3.status.push(key); logIt('<em>' + esc(nameOf(m3)) + '</em> is now ' + key + '!'); }
       render(); return;
     }
 
@@ -1060,16 +1100,16 @@ var CARD_DB = {"s":[["Base","1999"],["Jungle","1999"],["Wizards Black Star Promo
       snapshot();
       m5.hp = m5.maxHp;
       m5.status = [];
-      logIt('<em>' + esc(m5.name) + '</em> had all damage counters removed');
+      logIt('<em>' + esc(nameOf(m5)) + '</em> had all damage counters removed');
       render(); return;
     }
 
     if(t.hasAttribute("data-ko")){
       var ti6 = teamOf(t.getAttribute("data-ko")); if(ti6 < 0) return;
       var m6 = state.teams[ti6].mon;
-      if(!confirm(m6.name + " is knocked out — clear the card and start a new one?")) return;
+      if(!confirm(nameOf(m6) + " is knocked out — clear the card and start a new one?")) return;
       snapshot();
-      logIt('<em>' + esc(m6.name) + '</em> was knocked out');
+      logIt('<em>' + esc(nameOf(m6)) + '</em> was knocked out');
       state.teams[ti6].mon = newMon();
       render();
       var box2 = document.querySelector('[data-search="' + ti6 + '"]');
@@ -1140,7 +1180,7 @@ var CARD_DB = {"s":[["Base","1999"],["Jungle","1999"],["Wizards Black Star Promo
     fill.style.width = pct + "%";
     fill.className = "hp-fill " + hpClass(m);
     var dmg = m.maxHp - m.hp;
-    card.querySelector(".counters").innerHTML = dmg + " dmg<br>" + (dmg / 10) + " counters";
+    card.querySelector(".counters").innerHTML = countersText(dmg);
     card.classList.toggle("ko", m.hp <= 0);
     var pill = document.querySelectorAll(".standing")[ti];
     if(pill){
@@ -1151,8 +1191,33 @@ var CARD_DB = {"s":[["Base","1999"],["Jungle","1999"],["Wizards Black Star Promo
 
   /* ---------------- top bar ---------------- */
 
+  /* Between turns, poison puts a damage counter on. It is the rule classes
+     forget most, so it happens automatically — one snapshot covers the whole
+     turn change, so a single Undo puts everything back. Burn varies by era, so
+     that one only gets a reminder. */
   document.getElementById("turn-up").addEventListener("click", function(){
-    snapshot(); state.turn += 1; logIt("— Turn " + state.turn + " —"); render();
+    snapshot();
+    state.turn += 1;
+    logIt("— Turn " + state.turn + " —");
+
+    state.teams.forEach(function(team, ti){
+      var m = team.mon;
+      if(m.hp <= 0) return;
+
+      if(m.status.indexOf("Poisoned") >= 0){
+        var before = m.hp;
+        m.hp = clamp(m.hp - 10, 0, m.maxHp);
+        fx[ti] = m.hp === 0 ? "ko" : "hit";
+        logIt('<em>' + esc(nameOf(m)) + '</em> took <span class="dmg">10</span> from poison (' +
+          before + ' → ' + m.hp + ')');
+        if(m.hp === 0) logIt('<em>' + esc(nameOf(m)) + '</em> was knocked out — take a prize card!');
+      }
+      if(m.status.indexOf("Burned") >= 0){
+        logIt('<em>' + esc(nameOf(m)) + '</em> is Burned — flip a coin, 20 damage if tails');
+      }
+    });
+
+    render();
   });
   document.getElementById("turn-down").addEventListener("click", function(){
     if(state.turn <= 1) return;
