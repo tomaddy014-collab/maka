@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Battle Desk</title>
+<style>
+/* ---------- tokens: light is the base, dark redefines only values ---------- */
+:root{
+  --bg:#eef1f6;
+  --surface:#ffffff;
+  --surface-2:#f5f7fb;
+  --sunken:#e6eaf2;
+  --line:#d3dae6;
+  --line-soft:#e4e9f1;
+  --text:#161a24;
+  --dim:#5a6376;
+  --accent:#2f6db8;
+  --accent-soft:#e3edf9;
+  --on-accent:#ffffff;
+  --brand:#d93a2b;
+  --ok:#2f9e44;
+  --warn:#c97a00;
+  --crit:#cf3a2c;
+  --ok-bg:#e8f6ec;
+  --warn-bg:#fdf1de;
+  --crit-bg:#fbe9e7;
+  --shadow:0 1px 2px rgba(18,24,40,.06), 0 8px 24px rgba(18,24,40,.07);
+  --shadow-lift:0 2px 4px rgba(18,24,40,.08), 0 18px 40px rgba(18,24,40,.14);
+  --radius:14px;
+  --display:"Avenir Next","Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono","Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d0f16;
+    --surface:#171b26;
+    --surface-2:#1d2231;
+    --sunken:#10131c;
+    --line:#2b3243;
+    --line-soft:#232937;
+    --text:#eef1f7;
+    --dim:#97a1b5;
+    --accent:#66a3e8;
+    --accent-soft:#1b2637;
+    --on-accent:#0d0f16;
+    --brand:#f2604f;
+    --ok:#4ade80;
+    --warn:#fbbf24;
+    --crit:#f87171;
+    --ok-bg:#14261a;
+    --warn-bg:#2a2110;
+    --crit-bg:#2c1717;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    --shadow-lift:0 2px 4px rgba(0,0,0,.45), 0 18px 40px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d0f16;
+  --surface:#171b26;
+  --surface-2:#1d2231;
+  --sunken:#10131c;
+  --line:#2b3243;
+  --line-soft:#232937;
+  --text:#eef1f7;
+  --dim:#97a1b5;
+  --accent:#66a3e8;
+  --accent-soft:#1b2637;
+  --on-accent:#0d0f16;
+  --brand:#f2604f;
+  --ok:#4ade80;
+  --warn:#fbbf24;
+  --crit:#f87171;
+  --ok-bg:#14261a;
+  --warn-bg:#2a2110;
+  --crit-bg:#2c1717;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  --shadow-lift:0 2px 4px rgba(0,0,0,.45), 0 18px 40px rgba(0,0,0,.5);
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--body);
+  font-size:16px;
+  line-height:1.45;
+  -webkit-text-size-adjust:100%;
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important;}
+}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px;}
+button{font:inherit;color:inherit;}
+input,select{font:inherit;color:inherit;}
+
+/* ---------- shell ---------- */
+.wrap{max-width:1500px;margin:0 auto;padding:18px 20px 60px;}
+
+.topbar{
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:12px 16px;
+  position:sticky;top:10px;z-index:40;
+}
+.brandmark{
+  width:34px;height:34px;border-radius:50%;flex:0 0 auto;
+  background:linear-gradient(to bottom,var(--brand) 0 47%, var(--line) 47% 53%, var(--surface-2) 53% 100%);
+  border:2px solid var(--text);
+  position:relative;
+}
+.brandmark::after{
+  content:"";position:absolute;left:50%;top:50%;width:11px;height:11px;
+  transform:translate(-50%,-50%);border-radius:50%;
+  background:var(--surface);border:2px solid var(--text);
+}
+.brandtext{display:flex;flex-direction:column;line-height:1.1;}
+.brandtext strong{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:-.01em;}
+.brandtext span{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:600;}
+.topbar .spacer{flex:1 1 auto;}
+
+.turnbox{
+  display:flex;align-items:center;gap:10px;
+  background:var(--sunken);border:1px solid var(--line-soft);
+  border-radius:10px;padding:6px 8px 6px 12px;
+}
+.turnbox .label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:700;}
+.turnbox .count{font-family:var(--mono);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;min-width:2ch;text-align:center;}
+
+/* ---------- buttons ---------- */
+.btn{
+  border:1px solid var(--line);
+  background:var(--surface);
+  border-radius:9px;
+  padding:7px 12px;
+  font-weight:650;
+  font-size:14px;
+  cursor:pointer;
+  transition:background .14s ease, transform .1s ease, border-color .14s ease;
+  white-space:nowrap;
+}
+.btn:hover{background:var(--surface-2);border-color:var(--accent);}
+.btn:active{transform:translateY(1px);}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+.btn.primary:hover{filter:brightness(1.07);}
+.btn.ghost{background:transparent;}
+.btn.tiny{padding:4px 9px;font-size:13px;border-radius:8px;}
+.btn.danger:hover{border-color:var(--crit);color:var(--crit);}
+.btn.icon{padding:6px 9px;line-height:1;}
+
+/* ---------- layout ---------- */
+.stage{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 320px;
+  gap:18px;
+  margin-top:18px;
+  align-items:start;
+}
+.teams{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start;}
+@media (max-width:1180px){ .stage{grid-template-columns:minmax(0,1fr);} }
+@media (max-width:820px){ .teams{grid-template-columns:minmax(0,1fr);} }
+
+.team{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+.team-head{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 14px;
+  border-bottom:1px solid var(--line-soft);
+  background:var(--surface-2);
+}
+.team-head .side{
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;
+  color:var(--on-accent);background:var(--accent);
+  padding:3px 8px;border-radius:6px;
+}
+.team-head input.teamname{
+  flex:1 1 auto;min-width:0;
+  font-family:var(--display);font-weight:800;font-size:19px;
+  background:transparent;border:1px solid transparent;border-radius:8px;
+  padding:3px 6px;
+}
+.team-head input.teamname:hover{border-color:var(--line);}
+.team-head input.teamname:focus{border-color:var(--accent);background:var(--surface);outline:none;}
+.team-body{padding:12px;display:flex;flex-direction:column;gap:12px;}
+.team-foot{padding:0 12px 12px;}
+
+/* ---------- pokemon card ---------- */
+.mon{
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--surface);
+  overflow:hidden;
+  transition:box-shadow .18s ease, opacity .18s ease;
+}
+.mon:hover{box-shadow:var(--shadow-lift);}
+.mon.fainted{opacity:.62;}
+.mon.fainted .mon-name{text-decoration:line-through;text-decoration-thickness:2px;}
+.mon.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft);}
+
+.mon-top{display:flex;align-items:center;gap:8px;padding:10px 12px 8px;flex-wrap:wrap;}
+.mon-name{
+  font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:-.01em;
+  background:transparent;border:1px solid transparent;border-radius:8px;padding:2px 6px;
+  flex:1 1 130px;min-width:0;
+}
+.mon-name:hover{border-color:var(--line);}
+.mon-name:focus{border-color:var(--accent);background:var(--surface-2);outline:none;}
+.lvl{
+  font-family:var(--mono);font-size:12px;color:var(--dim);font-weight:700;
+  display:inline-flex;align-items:center;gap:3px;
+}
+.lvl input{
+  width:3.5ch;background:transparent;border:1px solid transparent;border-radius:6px;
+  font-family:var(--mono);font-size:13px;font-weight:700;text-align:center;color:var(--text);
+  padding:1px 2px;
+}
+.lvl input:hover{border-color:var(--line);}
+.lvl input:focus{border-color:var(--accent);outline:none;}
+
+.types{display:flex;gap:5px;flex-wrap:wrap;}
+.type-badge{
+  font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  color:#fff;padding:3px 7px;border-radius:5px;
+  text-shadow:0 1px 1px rgba(0,0,0,.28);
+  cursor:pointer;border:none;
+}
+.type-badge.add{
+  background:transparent;color:var(--dim);border:1px dashed var(--line);
+  text-shadow:none;width:74px;padding:3px 4px;cursor:pointer;
+}
+
+/* HP */
+.hp-row{padding:2px 12px 8px;display:flex;align-items:center;gap:10px;}
+.hp-track{
+  display:block;
+  flex:1 1 auto;height:14px;border-radius:8px;background:var(--sunken);
+  border:1px solid var(--line-soft);overflow:hidden;position:relative;
+}
+.hp-fill{
+  display:block;
+  height:100%;border-radius:7px 0 0 7px;
+  transition:width .35s cubic-bezier(.2,.8,.3,1), background-color .3s ease;
+}
+.hp-fill.ok{background:var(--ok);}
+.hp-fill.warn{background:var(--warn);}
+.hp-fill.crit{background:var(--crit);}
+.hp-nums{
+  font-family:var(--mono);font-variant-numeric:tabular-nums;
+  font-size:15px;font-weight:700;white-space:nowrap;
+}
+.hp-nums input{
+  width:4.5ch;text-align:right;background:transparent;border:1px solid transparent;
+  border-radius:6px;font:inherit;color:inherit;padding:1px 2px;
+}
+.hp-nums input:hover{border-color:var(--line);}
+.hp-nums input:focus{border-color:var(--accent);outline:none;background:var(--surface-2);}
+.hp-nums .slash{color:var(--dim);}
+.hp-pct{font-family:var(--mono);font-size:12px;color:var(--dim);min-width:4ch;text-align:right;}
+
+/* damage pad */
+.pad{
+  display:flex;gap:6px;align-items:center;flex-wrap:wrap;
+  padding:8px 12px;background:var(--surface-2);border-top:1px solid var(--line-soft);
+}
+.pad .pill{
+  font-family:var(--mono);font-size:13px;font-weight:700;
+  border:1px solid var(--line);background:var(--surface);
+  border-radius:7px;padding:4px 8px;cursor:pointer;min-width:40px;
+  transition:background .12s ease,border-color .12s ease,color .12s ease;
+}
+.pad .pill.dmg:hover{background:var(--crit-bg);border-color:var(--crit);color:var(--crit);}
+.pad .pill.heal:hover{background:var(--ok-bg);border-color:var(--ok);color:var(--ok);}
+.pad .amt{
+  width:62px;font-family:var(--mono);font-size:14px;font-weight:700;text-align:center;
+  border:1px solid var(--line);border-radius:7px;padding:4px 6px;background:var(--surface);
+}
+.pad .amt:focus{border-color:var(--accent);outline:none;}
+.pad .sep{flex:1 1 auto;}
+
+/* status chips */
+.chips{display:flex;gap:5px;flex-wrap:wrap;padding:8px 12px;border-top:1px solid var(--line-soft);}
+.chip{
+  font-size:11px;font-weight:800;letter-spacing:.07em;
+  border:1px solid var(--line);background:var(--surface);color:var(--dim);
+  border-radius:20px;padding:3px 10px;cursor:pointer;
+  transition:all .13s ease;
+}
+.chip:hover{border-color:var(--dim);}
+.chip.on{color:#fff;border-color:transparent;text-shadow:0 1px 1px rgba(0,0,0,.25);}
+
+/* details */
+.more{border-top:1px solid var(--line-soft);padding:10px 12px 12px;background:var(--sunken);}
+.more h4{
+  margin:0 0 6px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--dim);font-weight:800;
+}
+.stages{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px;}
+.stat{
+  background:var(--surface);border:1px solid var(--line);border-radius:9px;
+  padding:5px 4px;text-align:center;
+}
+.stat .nm{font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--dim);text-transform:uppercase;}
+.stat .val{font-family:var(--mono);font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;}
+.stat .val.up{color:var(--ok);}
+.stat .val.down{color:var(--crit);}
+.stat .ctrl{display:flex;gap:3px;justify-content:center;margin-top:3px;}
+.stat .ctrl button{
+  border:1px solid var(--line);background:var(--surface-2);border-radius:5px;
+  width:22px;height:20px;line-height:1;cursor:pointer;font-size:13px;font-weight:800;padding:0;
+}
+.stat .ctrl button:hover{border-color:var(--accent);color:var(--accent);}
+
+.moves{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+.move{display:flex;align-items:center;gap:6px;}
+.move input.mname{
+  flex:1 1 auto;min-width:0;background:var(--surface);border:1px solid var(--line);
+  border-radius:7px;padding:4px 8px;font-size:13.5px;
+}
+.move input.mname:focus{border-color:var(--accent);outline:none;}
+.move .pp{
+  font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--dim);
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.move .pp input{
+  width:3.5ch;text-align:center;background:transparent;border:1px solid transparent;
+  border-radius:5px;font:inherit;color:var(--text);
+}
+.move .pp input:focus{border-color:var(--accent);outline:none;}
+
+.notes{
+  width:100%;background:var(--surface);border:1px solid var(--line);border-radius:8px;
+  padding:6px 9px;font-size:13.5px;font-family:var(--body);resize:vertical;min-height:46px;color:var(--text);
+}
+.notes:focus{border-color:var(--accent);outline:none;}
+
+.mon-actions{display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--line-soft);flex-wrap:wrap;}
+
+/* ---------- sidebar ---------- */
+.side{display:flex;flex-direction:column;gap:18px;}
+.panel{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;
+}
+.panel-head{
+  padding:10px 14px;border-bottom:1px solid var(--line-soft);background:var(--surface-2);
+  display:flex;align-items:center;gap:8px;
+}
+.panel-head h3{
+  margin:0;font-size:11px;letter-spacing:.15em;text-transform:uppercase;
+  font-weight:800;color:var(--dim);flex:1 1 auto;
+}
+.panel-body{padding:12px 14px;}
+
+.timer-face{
+  font-family:var(--mono);font-size:44px;font-weight:800;text-align:center;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.1;
+}
+.timer-face.low{color:var(--crit);}
+.timer-row{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;justify-content:center;}
+
+.roll-out{
+  font-family:var(--mono);font-size:38px;font-weight:800;text-align:center;
+  min-height:52px;display:flex;align-items:center;justify-content:center;gap:10px;
+}
+.roll-out .small{font-size:14px;color:var(--dim);font-weight:600;}
+.roll-row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;}
+
+.log{list-style:none;margin:0;padding:0;max-height:340px;overflow-y:auto;}
+.log li{
+  display:flex;gap:8px;padding:6px 14px;border-bottom:1px solid var(--line-soft);
+  font-size:13px;line-height:1.35;
+}
+.log li:last-child{border-bottom:none;}
+.log .t{
+  font-family:var(--mono);font-size:11px;font-weight:700;color:var(--dim);
+  flex:0 0 auto;padding-top:1px;
+}
+.log .empty{color:var(--dim);font-style:italic;padding:10px 14px;font-size:13px;}
+.log em{font-style:normal;font-weight:700;}
+.log .dmg{color:var(--crit);font-weight:700;}
+.log .heal{color:var(--ok);font-weight:700;}
+
+.hint{font-size:12.5px;color:var(--dim);margin:8px 0 0;}
+.footnote{margin-top:26px;text-align:center;font-size:12.5px;color:var(--dim);}
+
+/* toast */
+#toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+  background:var(--text);color:var(--bg);padding:9px 18px;border-radius:24px;
+  font-size:14px;font-weight:650;opacity:0;pointer-events:none;
+  transition:opacity .2s ease, transform .2s ease;z-index:90;box-shadow:var(--shadow-lift);
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="topbar">
+    <div class="brandmark" aria-hidden="true"></div>
+    <div class="brandtext">
+      <strong id="battle-title-display">Battle Desk</strong>
+      <span>Class battle tracker</span>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="turnbox">
+      <span class="label">Turn</span>
+      <button class="btn tiny" id="turn-down" title="Previous turn">&minus;</button>
+      <span class="count" id="turn-count">1</span>
+      <button class="btn tiny primary" id="turn-up">Next turn</button>
+    </div>
+
+    <button class="btn" id="undo-btn" title="Undo the last change">Undo</button>
+    <button class="btn" id="theme-btn" title="Switch light / dark">Theme</button>
+    <button class="btn danger" id="reset-btn">New battle</button>
+  </header>
+
+  <main class="stage">
+    <section class="teams" id="teams" aria-label="Teams"></section>
+
+    <aside class="side">
+
+      <section class="panel">
+        <div class="panel-head"><h3>Turn timer</h3></div>
+        <div class="panel-body">
+          <div class="timer-face" id="timer-face">1:00</div>
+          <div class="timer-row">
+            <button class="btn tiny" data-timer="30">30s</button>
+            <button class="btn tiny" data-timer="60">60s</button>
+            <button class="btn tiny" data-timer="120">2m</button>
+          </div>
+          <div class="timer-row">
+            <button class="btn tiny primary" id="timer-toggle">Start</button>
+            <button class="btn tiny" id="timer-reset">Reset</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h3>Dice &amp; coin</h3></div>
+        <div class="panel-body">
+          <div class="roll-out" id="roll-out"><span class="small">Roll to decide</span></div>
+          <div class="roll-row">
+            <button class="btn tiny" data-roll="coin">Coin</button>
+            <button class="btn tiny" data-roll="6">d6</button>
+            <button class="btn tiny" data-roll="20">d20</button>
+            <button class="btn tiny" data-roll="100">d100</button>
+          </div>
+          <p class="hint">d100 doubles as an accuracy check &mdash; roll under the move&rsquo;s accuracy to hit.</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h3>Battle log</h3>
+          <button class="btn tiny ghost" id="log-clear">Clear</button>
+        </div>
+        <ul class="log" id="log"></ul>
+      </section>
+
+    </aside>
+  </main>
+
+  <p class="footnote">Everything saves in this browser automatically. Bookmark the page and the battle will still be here next lesson.</p>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- data ---------------- */
+
+  var TYPES = {
+    Normal:"#9099a1", Fire:"#e8622b", Water:"#3a83d6", Electric:"#d6a626",
+    Grass:"#4ea54b", Ice:"#4fb0c4", Fighting:"#bf3f36", Poison:"#8a4494",
+    Ground:"#a3743a", Flying:"#6f8ed4", Psychic:"#d3527a", Bug:"#7a9c2a",
+    Rock:"#a08b47", Ghost:"#5a5a9c", Dragon:"#5761c9", Dark:"#5a4a44",
+    Steel:"#6f8b9c", Fairy:"#cf6ba6"
+  };
+  var TYPE_NAMES = Object.keys(TYPES);
+
+  var STATUSES = {
+    PSN:{label:"Poison", color:"#8a4494"},
+    BRN:{label:"Burn",   color:"#e8622b"},
+    PAR:{label:"Paralysis", color:"#d6a626"},
+    SLP:{label:"Sleep",  color:"#6f8ed4"},
+    FRZ:{label:"Freeze", color:"#4fb0c4"},
+    CNF:{label:"Confusion", color:"#cf6ba6"},
+    FLN:{label:"Flinch", color:"#9099a1"}
+  };
+  var STATUS_KEYS = Object.keys(STATUSES);
+  var STATS = ["Atk","Def","SpA","SpD","Spe"];
+
+  var STORE = "battle-desk-v1";
+  var uid = 0;
+  function nextId(){ uid += 1; return "m" + Date.now().toString(36) + uid; }
+
+  function newMon(name){
+    return {
+      id: nextId(),
+      name: name || "New Pokémon",
+      level: 50,
+      types: [],
+      hp: 100,
+      maxHp: 100,
+      status: [],
+      stages: {Atk:0, Def:0, SpA:0, SpD:0, Spe:0},
+      moves: [
+        {name:"", pp:15, maxPp:15},
+        {name:"", pp:15, maxPp:15},
+        {name:"", pp:15, maxPp:15},
+        {name:"", pp:15, maxPp:15}
+      ],
+      notes: "",
+      open: false,
+      active: false
+    };
+  }
+
+  function freshState(){
+    return {
+      turn: 1,
+      teams: [
+        {name:"Red's team",  mons:[newMon("Charmander"), newMon("Squirtle")]},
+        {name:"Blue's team", mons:[newMon("Bulbasaur"),  newMon("Pikachu")]}
+      ],
+      log: []
+    };
+  }
+
+  var state = load() || freshState();
+  var history = [];
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORE);
+      if(!raw) return null;
+      var s = JSON.parse(raw);
+      if(!s || !Array.isArray(s.teams) || s.teams.length !== 2) return null;
+      /* fill in anything an older save is missing */
+      s.log = s.log || [];
+      s.turn = s.turn || 1;
+      s.teams.forEach(function(t){
+        t.mons = (t.mons || []).map(function(m){
+          var base = newMon(m.name);
+          base.id = m.id || base.id;
+          ["level","hp","maxHp","notes","open","active"].forEach(function(k){
+            if(m[k] !== undefined) base[k] = m[k];
+          });
+          base.types = Array.isArray(m.types) ? m.types : [];
+          base.status = Array.isArray(m.status) ? m.status : [];
+          if(m.stages) STATS.forEach(function(k){ base.stages[k] = m.stages[k] || 0; });
+          if(Array.isArray(m.moves) && m.moves.length) base.moves = m.moves;
+          return base;
+        });
+      });
+      return s;
+    }catch(e){ return null; }
+  }
+
+  function save(){
+    try{ localStorage.setItem(STORE, JSON.stringify(state)); }catch(e){}
+  }
+
+  function snapshot(){
+    history.push(JSON.stringify(state));
+    if(history.length > 60) history.shift();
+  }
+
+  /* ---------------- helpers ---------------- */
+
+  function clamp(n, lo, hi){ return Math.max(lo, Math.min(hi, n)); }
+
+  function findMon(id){
+    for(var i=0;i<state.teams.length;i++){
+      var mons = state.teams[i].mons;
+      for(var j=0;j<mons.length;j++){
+        if(mons[j].id === id) return {mon:mons[j], team:state.teams[i], ti:i, mi:j};
+      }
+    }
+    return null;
+  }
+
+  function hpClass(mon){
+    var r = mon.maxHp > 0 ? mon.hp / mon.maxHp : 0;
+    if(r <= 0.2) return "crit";
+    if(r <= 0.5) return "warn";
+    return "ok";
+  }
+
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  function toast(msg){
+    var el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function(){ el.classList.remove("show"); }, 1800);
+  }
+
+  function logIt(html){
+    state.log.unshift({turn: state.turn, html: html});
+    if(state.log.length > 200) state.log.pop();
+  }
+
+  /* ---------------- rendering ---------------- */
+
+  function render(){
+    renderTeams();
+    renderLog();
+    document.getElementById("turn-count").textContent = state.turn;
+    save();
+  }
+
+  function renderTeams(){
+    var host = document.getElementById("teams");
+    host.innerHTML = state.teams.map(function(team, ti){
+      return '' +
+      '<section class="team">' +
+        '<div class="team-head">' +
+          '<span class="side">' + (ti === 0 ? "SIDE A" : "SIDE B") + '</span>' +
+          '<input class="teamname" data-team="' + ti + '" value="' + esc(team.name) + '" aria-label="Team name">' +
+          '<span class="lvl standing">' + team.mons.filter(function(m){return m.hp > 0;}).length + ' / ' + team.mons.length + ' standing</span>' +
+        '</div>' +
+        '<div class="team-body">' +
+          (team.mons.length ? team.mons.map(function(m){ return monCard(m, ti); }).join("") :
+            '<p class="hint">No Pokémon on this side yet.</p>') +
+        '</div>' +
+        '<div class="team-foot">' +
+          '<button class="btn tiny" data-add-mon="' + ti + '">+ Add Pokémon</button>' +
+        '</div>' +
+      '</section>';
+    }).join("");
+  }
+
+  function monCard(m, ti){
+    var pct = m.maxHp > 0 ? clamp(Math.round((m.hp / m.maxHp) * 100), 0, 100) : 0;
+    var fainted = m.hp <= 0;
+
+    var typeHtml = m.types.map(function(t){
+      return '<button class="type-badge" style="background:' + TYPES[t] + '" data-type-remove="' + m.id + '" data-type="' + t + '" title="Remove type">' + t + '</button>';
+    }).join("");
+    if(m.types.length < 2){
+      typeHtml += '<select class="type-badge add" data-type-add="' + m.id + '" aria-label="Add a type">' +
+        '<option value="">+ type</option>' +
+        TYPE_NAMES.map(function(t){ return '<option value="' + t + '">' + t + '</option>'; }).join("") +
+        '</select>';
+    }
+
+    var chips = STATUS_KEYS.map(function(k){
+      var on = m.status.indexOf(k) >= 0;
+      return '<button class="chip' + (on ? " on" : "") + '"' +
+        (on ? ' style="background:' + STATUSES[k].color + '"' : "") +
+        ' data-status="' + k + '" data-mon="' + m.id + '" title="' + STATUSES[k].label + '">' + k + '</button>';
+    }).join("");
+
+    var stagesHtml = STATS.map(function(s){
+      var v = m.stages[s] || 0;
+      var cls = v > 0 ? " up" : (v < 0 ? " down" : "");
+      return '<div class="stat">' +
+        '<div class="nm">' + s + '</div>' +
+        '<div class="val' + cls + '">' + (v > 0 ? "+" : "") + v + '</div>' +
+        '<div class="ctrl">' +
+          '<button data-stage="-1" data-stat="' + s + '" data-mon="' + m.id + '" aria-label="Lower ' + s + '">&minus;</button>' +
+          '<button data-stage="1" data-stat="' + s + '" data-mon="' + m.id + '" aria-label="Raise ' + s + '">+</button>' +
+        '</div>' +
+      '</div>';
+    }).join("");
+
+    var movesHtml = m.moves.map(function(mv, i){
+      return '<div class="move">' +
+        '<input class="mname" data-move-name="' + i + '" data-mon="' + m.id + '" value="' + esc(mv.name) + '" placeholder="Move ' + (i+1) + '">' +
+        '<button class="btn tiny" data-move-use="' + i + '" data-mon="' + m.id + '" title="Use one PP">Use</button>' +
+        '<span class="pp">PP <input data-move-pp="' + i + '" data-mon="' + m.id + '" value="' + mv.pp + '" inputmode="numeric">/' +
+        '<input data-move-maxpp="' + i + '" data-mon="' + m.id + '" value="' + mv.maxPp + '" inputmode="numeric"></span>' +
+      '</div>';
+    }).join("");
+
+    return '' +
+    '<article class="mon' + (fainted ? " fainted" : "") + (m.active ? " active" : "") + '" data-card="' + m.id + '">' +
+      '<div class="mon-top">' +
+        '<input class="mon-name" data-name="' + m.id + '" value="' + esc(m.name) + '" aria-label="Pokémon name">' +
+        '<span class="lvl">Lv<input data-level="' + m.id + '" value="' + m.level + '" inputmode="numeric" aria-label="Level"></span>' +
+        '<span class="types">' + typeHtml + '</span>' +
+      '</div>' +
+
+      '<div class="hp-row">' +
+        '<span class="hp-nums">' +
+          '<input data-hp="' + m.id + '" value="' + m.hp + '" inputmode="numeric" aria-label="Current HP">' +
+          '<span class="slash">/</span>' +
+          '<input data-maxhp="' + m.id + '" value="' + m.maxHp + '" inputmode="numeric" aria-label="Max HP">' +
+        '</span>' +
+        '<span class="hp-track"><span class="hp-fill ' + hpClass(m) + '" style="width:' + pct + '%"></span></span>' +
+        '<span class="hp-pct">' + pct + '%</span>' +
+      '</div>' +
+
+      '<div class="pad">' +
+        '<button class="pill dmg" data-delta="-10" data-mon="' + m.id + '">&minus;10</button>' +
+        '<button class="pill dmg" data-delta="-5"  data-mon="' + m.id + '">&minus;5</button>' +
+        '<button class="pill dmg" data-delta="-1"  data-mon="' + m.id + '">&minus;1</button>' +
+        '<input class="amt" data-amt="' + m.id + '" placeholder="0" inputmode="numeric" aria-label="Custom amount">' +
+        '<button class="pill dmg" data-custom="dmg" data-mon="' + m.id + '">Hit</button>' +
+        '<button class="pill heal" data-custom="heal" data-mon="' + m.id + '">Heal</button>' +
+        '<span class="sep"></span>' +
+        '<button class="pill heal" data-delta="1"  data-mon="' + m.id + '">+1</button>' +
+        '<button class="pill heal" data-delta="5"  data-mon="' + m.id + '">+5</button>' +
+        '<button class="pill heal" data-delta="10" data-mon="' + m.id + '">+10</button>' +
+      '</div>' +
+
+      '<div class="chips">' + chips + '</div>' +
+
+      (m.open ?
+      '<div class="more">' +
+        '<h4>Stat changes</h4>' +
+        '<div class="stages">' + stagesHtml + '</div>' +
+        '<h4>Moves</h4>' +
+        '<div class="moves">' + movesHtml + '</div>' +
+        '<h4>Notes</h4>' +
+        '<textarea class="notes" data-notes="' + m.id + '" placeholder="Held item, ability, anything to remember…">' + esc(m.notes) + '</textarea>' +
+      '</div>' : "") +
+
+      '<div class="mon-actions">' +
+        '<button class="btn tiny" data-toggle="' + m.id + '">' + (m.open ? "Hide details" : "Details") + '</button>' +
+        '<button class="btn tiny" data-active="' + m.id + '">' + (m.active ? "In battle ✓" : "Send out") + '</button>' +
+        '<button class="btn tiny" data-full="' + m.id + '">Full heal</button>' +
+        '<button class="btn tiny danger" data-remove="' + m.id + '">Remove</button>' +
+      '</div>' +
+    '</article>';
+  }
+
+  function renderLog(){
+    var host = document.getElementById("log");
+    if(!state.log.length){
+      host.innerHTML = '<li class="empty">Nothing has happened yet.</li>';
+      return;
+    }
+    host.innerHTML = state.log.map(function(e){
+      return '<li><span class="t">T' + e.turn + '</span><span>' + e.html + '</span></li>';
+    }).join("");
+  }
+
+  /* ---------------- HP changes ---------------- */
+
+  function applyDelta(id, delta){
+    var f = findMon(id);
+    if(!f || !delta) return;
+    var m = f.mon;
+    var before = m.hp;
+    m.hp = clamp(m.hp + delta, 0, m.maxHp);
+    var change = m.hp - before;
+    if(change === 0){ return; }
+
+    snapshot();
+    if(change < 0){
+      logIt('<em>' + esc(m.name) + '</em> took <span class="dmg">' + Math.abs(change) + '</span> damage (' + before + ' → ' + m.hp + ')');
+      if(m.hp === 0) logIt('<em>' + esc(m.name) + '</em> fainted!');
+    }else{
+      logIt('<em>' + esc(m.name) + '</em> recovered <span class="heal">' + change + '</span> HP (' + before + ' → ' + m.hp + ')');
+    }
+    render();
+  }
+
+  /* ---------------- events ---------------- */
+
+  document.addEventListener("click", function(ev){
+    var t = ev.target.closest("button");
+    if(!t) return;
+    var id = t.getAttribute("data-mon");
+
+    if(t.hasAttribute("data-delta")){
+      applyDelta(id, parseInt(t.getAttribute("data-delta"), 10));
+      return;
+    }
+
+    if(t.hasAttribute("data-custom")){
+      var box = document.querySelector('[data-amt="' + id + '"]');
+      var n = Math.abs(parseInt(box && box.value, 10) || 0);
+      if(!n){ toast("Type an amount first"); if(box) box.focus(); return; }
+      applyDelta(id, t.getAttribute("data-custom") === "dmg" ? -n : n);
+      return;
+    }
+
+    if(t.hasAttribute("data-status")){
+      var f = findMon(id); if(!f) return;
+      var key = t.getAttribute("data-status");
+      var i = f.mon.status.indexOf(key);
+      snapshot();
+      if(i >= 0){
+        f.mon.status.splice(i, 1);
+        logIt('<em>' + esc(f.mon.name) + '</em> is no longer affected by ' + STATUSES[key].label.toLowerCase());
+      }else{
+        f.mon.status.push(key);
+        logIt('<em>' + esc(f.mon.name) + '</em> was hit by ' + STATUSES[key].label.toLowerCase() + '!');
+      }
+      render(); return;
+    }
+
+    if(t.hasAttribute("data-stage")){
+      var f2 = findMon(id); if(!f2) return;
+      var st = t.getAttribute("data-stat");
+      var dir = parseInt(t.getAttribute("data-stage"), 10);
+      var cur = f2.mon.stages[st] || 0;
+      var next = clamp(cur + dir, -6, 6);
+      if(next === cur){ toast(st + " can't go " + (dir > 0 ? "higher" : "lower")); return; }
+      snapshot();
+      f2.mon.stages[st] = next;
+      logIt('<em>' + esc(f2.mon.name) + '</em>&rsquo;s ' + st + ' ' + (dir > 0 ? "rose" : "fell") + ' (now ' + (next > 0 ? "+" : "") + next + ')');
+      render(); return;
+    }
+
+    if(t.hasAttribute("data-type-remove")){
+      var f3 = findMon(id); if(!f3) return;
+      snapshot();
+      f3.mon.types = f3.mon.types.filter(function(x){ return x !== t.getAttribute("data-type"); });
+      render(); return;
+    }
+
+    if(t.hasAttribute("data-move-use")){
+      var f4 = findMon(id); if(!f4) return;
+      var mv = f4.mon.moves[parseInt(t.getAttribute("data-move-use"), 10)];
+      if(!mv) return;
+      if(mv.pp <= 0){ toast("No PP left for that move"); return; }
+      snapshot();
+      mv.pp -= 1;
+      logIt('<em>' + esc(f4.mon.name) + '</em> used ' + esc(mv.name || "a move") + ' (' + mv.pp + ' PP left)');
+      render(); return;
+    }
+
+    if(t.hasAttribute("data-toggle")){
+      var f5 = findMon(t.getAttribute("data-toggle")); if(!f5) return;
+      f5.mon.open = !f5.mon.open;
+      render(); return;
+    }
+
+    if(t.hasAttribute("data-active")){
+      var f6 = findMon(t.getAttribute("data-active")); if(!f6) return;
+      var turningOn = !f6.mon.active;
+      f6.team.mons.forEach(function(m){ m.active = false; });
+      f6.mon.active = turningOn;
+      if(turningOn) logIt('<em>' + esc(f6.mon.name) + '</em> was sent out');
+      render(); return;
+    }
+
+    if(t.hasAttribute("data-full")){
+      var f7 = findMon(t.getAttribute("data-full")); if(!f7) return;
+      snapshot();
+      f7.mon.hp = f7.mon.maxHp;
+      f7.mon.status = [];
+      STATS.forEach(function(s){ f7.mon.stages[s] = 0; });
+      logIt('<em>' + esc(f7.mon.name) + '</em> was fully restored');
+      render(); return;
+    }
+
+    if(t.hasAttribute("data-remove")){
+      var f8 = findMon(t.getAttribute("data-remove")); if(!f8) return;
+      if(!confirm("Remove " + f8.mon.name + " from the battle?")) return;
+      snapshot();
+      f8.team.mons.splice(f8.mi, 1);
+      render(); return;
+    }
+
+    if(t.hasAttribute("data-add-mon")){
+      snapshot();
+      var team = state.teams[parseInt(t.getAttribute("data-add-mon"), 10)];
+      team.mons.push(newMon("New Pokémon"));
+      render();
+      var last = document.querySelector('[data-name="' + team.mons[team.mons.length-1].id + '"]');
+      if(last){ last.focus(); last.select(); }
+      return;
+    }
+
+    if(t.hasAttribute("data-timer")){ setTimer(parseInt(t.getAttribute("data-timer"), 10)); return; }
+    if(t.hasAttribute("data-roll")){ roll(t.getAttribute("data-roll")); return; }
+  });
+
+  /* text/number fields: commit on input so nothing is lost */
+  document.addEventListener("input", function(ev){
+    var el = ev.target;
+    var id = el.getAttribute("data-mon");
+
+    function num(v, lo, hi){ return clamp(parseInt(v, 10) || 0, lo, hi); }
+
+    if(el.hasAttribute("data-team")){
+      state.teams[parseInt(el.getAttribute("data-team"), 10)].name = el.value;
+      save(); return;
+    }
+    if(el.hasAttribute("data-name")){
+      var f = findMon(el.getAttribute("data-name")); if(f){ f.mon.name = el.value; save(); } return;
+    }
+    if(el.hasAttribute("data-level")){
+      var f2 = findMon(el.getAttribute("data-level")); if(f2){ f2.mon.level = num(el.value, 1, 100); save(); } return;
+    }
+    if(el.hasAttribute("data-notes")){
+      var f3 = findMon(el.getAttribute("data-notes")); if(f3){ f3.mon.notes = el.value; save(); } return;
+    }
+    if(el.hasAttribute("data-move-name")){
+      var f4 = findMon(id); if(f4){ f4.mon.moves[+el.getAttribute("data-move-name")].name = el.value; save(); } return;
+    }
+    if(el.hasAttribute("data-move-pp")){
+      var f5 = findMon(id); if(f5){ f5.mon.moves[+el.getAttribute("data-move-pp")].pp = num(el.value, 0, 999); save(); } return;
+    }
+    if(el.hasAttribute("data-move-maxpp")){
+      var f6 = findMon(id); if(f6){ f6.mon.moves[+el.getAttribute("data-move-maxpp")].maxPp = num(el.value, 0, 999); save(); } return;
+    }
+
+    /* HP fields update the bar live without re-rendering (keeps the caret put) */
+    if(el.hasAttribute("data-hp") || el.hasAttribute("data-maxhp")){
+      var mid = el.getAttribute("data-hp") || el.getAttribute("data-maxhp");
+      var f7 = findMon(mid); if(!f7) return;
+      if(el.hasAttribute("data-maxhp")){
+        f7.mon.maxHp = num(el.value, 1, 9999);
+        if(f7.mon.hp > f7.mon.maxHp) f7.mon.hp = f7.mon.maxHp;
+      }else{
+        f7.mon.hp = num(el.value, 0, f7.mon.maxHp);
+      }
+      refreshBar(f7.mon);
+      save(); return;
+    }
+  });
+
+  document.addEventListener("change", function(ev){
+    var el = ev.target;
+    if(el.hasAttribute("data-type-add")){
+      var f = findMon(el.getAttribute("data-type-add"));
+      if(f && el.value && f.mon.types.indexOf(el.value) < 0 && f.mon.types.length < 2){
+        snapshot();
+        f.mon.types.push(el.value);
+      }
+      render();
+    }
+  });
+
+  /* Typed HP edits update the card in place — a full re-render here would
+     rebuild the input and throw away the caret mid-keystroke. */
+  function refreshBar(m){
+    var card = document.querySelector('[data-card="' + m.id + '"]');
+    if(!card) return;
+    var pct = m.maxHp > 0 ? clamp(Math.round((m.hp / m.maxHp) * 100), 0, 100) : 0;
+    var fill = card.querySelector(".hp-fill");
+    fill.style.width = pct + "%";
+    fill.className = "hp-fill " + hpClass(m);
+    card.querySelector(".hp-pct").textContent = pct + "%";
+    card.classList.toggle("fainted", m.hp <= 0);
+    refreshCounts();
+  }
+
+  function refreshCounts(){
+    document.querySelectorAll(".team-head .standing").forEach(function(el, i){
+      var mons = state.teams[i].mons;
+      el.textContent = mons.filter(function(m){ return m.hp > 0; }).length + " / " + mons.length + " standing";
+    });
+  }
+
+  /* ---------------- top bar ---------------- */
+
+  document.getElementById("turn-up").addEventListener("click", function(){
+    snapshot();
+    state.turn += 1;
+    logIt("— Turn " + state.turn + " begins —");
+    render();
+  });
+  document.getElementById("turn-down").addEventListener("click", function(){
+    if(state.turn <= 1) return;
+    snapshot();
+    state.turn -= 1;
+    render();
+  });
+
+  document.getElementById("undo-btn").addEventListener("click", function(){
+    if(!history.length){ toast("Nothing to undo"); return; }
+    state = JSON.parse(history.pop());
+    render();
+    toast("Undone");
+  });
+
+  document.getElementById("reset-btn").addEventListener("click", function(){
+    if(!confirm("Start a new battle? This clears every Pokémon and the log.")) return;
+    snapshot();
+    state = freshState();
+    render();
+    toast("New battle ready");
+  });
+
+  document.getElementById("log-clear").addEventListener("click", function(){
+    snapshot();
+    state.log = [];
+    render();
+  });
+
+  document.getElementById("theme-btn").addEventListener("click", function(){
+    var root = document.documentElement;
+    var dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var cur = root.getAttribute("data-theme") || (dark ? "dark" : "light");
+    var next = cur === "dark" ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try{ localStorage.setItem(STORE + "-theme", next); }catch(e){}
+  });
+  try{
+    var savedTheme = localStorage.getItem(STORE + "-theme");
+    if(savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
+  }catch(e){}
+
+  /* ---------------- timer ---------------- */
+
+  var timerLen = 60, timerLeft = 60, timerId = null;
+
+  function paintTimer(){
+    var mm = Math.floor(timerLeft / 60), ss = timerLeft % 60;
+    var face = document.getElementById("timer-face");
+    face.textContent = mm + ":" + (ss < 10 ? "0" : "") + ss;
+    face.classList.toggle("low", timerLeft <= 10);
+  }
+  function setTimer(sec){
+    timerLen = sec; timerLeft = sec;
+    stopTimer(); paintTimer();
+  }
+  function stopTimer(){
+    if(timerId){ clearInterval(timerId); timerId = null; }
+    document.getElementById("timer-toggle").textContent = "Start";
+  }
+  document.getElementById("timer-toggle").addEventListener("click", function(){
+    if(timerId){ stopTimer(); return; }
+    if(timerLeft <= 0) timerLeft = timerLen;
+    this.textContent = "Pause";
+    timerId = setInterval(function(){
+      timerLeft -= 1;
+      if(timerLeft <= 0){ timerLeft = 0; paintTimer(); stopTimer(); toast("Time's up!"); return; }
+      paintTimer();
+    }, 1000);
+  });
+  document.getElementById("timer-reset").addEventListener("click", function(){ setTimer(timerLen); });
+  paintTimer();
+
+  /* ---------------- dice ---------------- */
+
+  function roll(kind){
+    var out = document.getElementById("roll-out");
+    if(kind === "coin"){
+      var heads = Math.random() < 0.5;
+      out.innerHTML = (heads ? "Heads" : "Tails") + ' <span class="small">coin</span>';
+      logIt("Coin flip: <em>" + (heads ? "Heads" : "Tails") + "</em>");
+    }else{
+      var sides = parseInt(kind, 10);
+      var n = 1 + Math.floor(Math.random() * sides);
+      out.innerHTML = n + ' <span class="small">d' + sides + '</span>';
+      logIt("Rolled <em>" + n + "</em> on a d" + sides);
+    }
+    renderLog();
+    save();
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
