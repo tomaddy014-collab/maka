@@ -153,6 +153,43 @@ input,select,textarea{font:inherit;color:inherit;}
 .btn.tiny{padding:4px 9px;font-size:13px;border-radius:8px;}
 .btn.danger:hover{border-color:var(--crit);color:var(--crit);}
 
+/* coin flip lives in the top bar too — it is the most used control in a game
+   and stays reachable there while the page scrolls */
+.flip-out{
+  font-family:var(--mono);font-size:14px;font-weight:800;
+  min-width:5.5ch;text-align:center;color:var(--dim);
+}
+.flip-out.heads{color:var(--accent);}
+.flip-out.tails{color:var(--brand);}
+
+/* ---------- big screen (casting to a TV) ----------
+   Everything is laid out for a laptop at arm's length; across a classroom it
+   needs to be far bigger. `zoom` scales the whole page and still reflows and
+   keeps typing and hit-testing correct, which transform: scale does not. */
+body.tv{zoom:1.6;}
+body.tv .wrap{max-width:none;padding:10px 12px 24px;}
+body.tv .stage{grid-template-columns:minmax(0,1fr);}   /* players get the full width */
+body.tv aside.side{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;align-items:start;
+}
+body.tv .help{display:none;}
+body.tv .mon.named .finder{display:none;}   /* search is a setup step, not a battle one */
+body.tv .log{max-height:220px;}
+/* Tighter rows so both players still fit a 1080p screen without scrolling —
+   the type stays big; only the padding gives way. */
+body.tv .stage{margin-top:12px;}
+body.tv .team-head{padding:8px 14px;}
+body.tv .prizes{padding-top:6px;}
+body.tv .mon-top{padding:8px 14px 4px;}
+body.tv .hp-row{padding:0 14px 8px;}
+body.tv .attacks,
+body.tv .pad,
+body.tv .energy,
+body.tv .chips,
+body.tv .mon-actions{padding-top:7px;padding-bottom:7px;}
+body.tv .atk{margin-bottom:5px;}
+
 /* ---------- layout ---------- */
 .stage{
   display:grid;
@@ -178,7 +215,7 @@ input,select,textarea{font:inherit;color:inherit;}
   background:var(--surface-2);
   border-radius:var(--radius) var(--radius) 0 0;
 }
-.team-head .side{
+.team-head .side-tag{
   font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;
   color:var(--on-accent);background:var(--accent);
   padding:3px 8px;border-radius:6px;white-space:nowrap;flex:0 0 auto;
@@ -499,6 +536,9 @@ input,select,textarea{font:inherit;color:inherit;}
 
     <div class="spacer"></div>
 
+    <button class="btn" id="flip-top">Flip a coin</button>
+    <span class="flip-out" id="flip-out">&mdash;</span>
+
     <div class="turnbox">
       <span class="label">Turn</span>
       <button class="btn tiny" id="turn-down" title="Previous turn">&minus;</button>
@@ -507,6 +547,7 @@ input,select,textarea{font:inherit;color:inherit;}
     </div>
 
     <button class="btn" id="undo-btn" title="Undo the last change">Undo</button>
+    <button class="btn" id="tv-btn" title="Scale everything up for a TV">Big screen</button>
     <button class="btn" id="theme-btn" title="Switch light / dark">Theme</button>
     <button class="btn danger" id="reset-btn">New battle</button>
   </header>
@@ -806,7 +847,7 @@ var CARD_DB = {"s":[["Base","1999"],["Jungle","1999"],["Wizards Black Star Promo
       return '' +
       '<section class="team">' +
         '<div class="team-head">' +
-          '<span class="side">' + (ti === 0 ? "PLAYER 1" : "PLAYER 2") + '</span>' +
+          '<span class="side-tag">' + (ti === 0 ? "PLAYER 1" : "PLAYER 2") + '</span>' +
           '<input class="teamname" data-team="' + ti + '" value="' + esc(team.name) + '" aria-label="Player name">' +
           '<span class="standing' + (ko ? " out" : "") + '">' + (ko ? "Knocked out" : "Active") + '</span>' +
           '<div class="prizes">' +
@@ -854,7 +895,8 @@ var CARD_DB = {"s":[["Base","1999"],["Jungle","1999"],["Wizards Black Star Promo
     }).join("") : '<p class="no-attacks">No attacks loaded. Find a card above, or use the damage buttons below.</p>';
 
     return '' +
-    '<article class="mon' + (ko ? " ko" : "") + '" data-card="' + m.id + '">' +
+    '<article class="mon' + (ko ? " ko" : "") + (m.name.trim() ? " named" : "") +
+      '" data-card="' + m.id + '">' +
 
       '<div class="mon-top">' +
         spriteHtml(m, ti) +
@@ -1236,6 +1278,30 @@ var CARD_DB = {"s":[["Base","1999"],["Jungle","1999"],["Wizards Black Star Promo
   document.getElementById("log-clear").addEventListener("click", function(){
     snapshot(); state.log = []; render();
   });
+  document.getElementById("flip-top").addEventListener("click", function(){ roll("coin"); });
+
+  var TV_KEY = STORE + "-tv";
+
+  /* Scale to whatever screen it is plugged into: aim to fit both players in the
+     window height. The CSS carries a sensible fixed zoom as a fallback. */
+  function tvZoom(){
+    if(!document.body.classList.contains("tv")){ document.body.style.zoom = ""; return; }
+    var z = Math.max(1, Math.min(2, window.innerHeight / 670));
+    document.body.style.zoom = z.toFixed(2);
+  }
+
+  function setTv(on){
+    document.body.classList.toggle("tv", on);
+    document.getElementById("tv-btn").textContent = on ? "Normal size" : "Big screen";
+    tvZoom();
+    try{ localStorage.setItem(TV_KEY, on ? "1" : "0"); }catch(e){}
+  }
+  window.addEventListener("resize", tvZoom);
+  document.getElementById("tv-btn").addEventListener("click", function(){
+    setTv(!document.body.classList.contains("tv"));
+  });
+  try{ if(localStorage.getItem(TV_KEY) === "1") setTv(true); }catch(e){}
+
   document.getElementById("theme-btn").addEventListener("click", function(){
     var root = document.documentElement;
     var dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -1282,8 +1348,12 @@ var CARD_DB = {"s":[["Base","1999"],["Jungle","1999"],["Wizards Black Star Promo
     var out = document.getElementById("coin-face");
     if(kind === "coin"){
       var heads = Math.random() < 0.5;
-      out.innerHTML = (heads ? "Heads" : "Tails") + ' <span class="small">coin flip</span>';
-      logIt("Coin flip: <em>" + (heads ? "Heads" : "Tails") + "</em>");
+      var face = heads ? "Heads" : "Tails";
+      out.innerHTML = face + ' <span class="small">coin flip</span>';
+      var chip = document.getElementById("flip-out");
+      chip.textContent = face;
+      chip.className = "flip-out " + (heads ? "heads" : "tails");
+      logIt("Coin flip: <em>" + face + "</em>");
     }else{
       var sides = parseInt(kind, 10);
       var n = 1 + Math.floor(Math.random() * sides);
