@@ -2,29 +2,36 @@
 /**
  * Builds the offline card database that Battle Desk searches.
  *
- * Source: https://github.com/PokemonTCG/pokemon-tcg-data (the data behind the
- * Pokémon TCG API). Clone it, then:
+ * Three public sources, all cloned locally first:
  *
- *   node scripts/build-card-data.js /path/to/pokemon-tcg-data
+ *   node scripts/build-card-data.js <pokemon-tcg-data> <PokeAPI/sprites> <PokeAPI/pokeapi>
  *
- * The trimmed data is written straight into pokemon-battle-tracker.html between
- * the CARD-DATA markers, so the page stays a single self-contained file that
- * works from a USB stick with no network.
+ *   1. github.com/PokemonTCG/pokemon-tcg-data  — the card text (HP, attacks…)
+ *   2. github.com/PokeAPI/sprites              — the pixel sprites
+ *   3. github.com/PokeAPI/pokeapi              — the species name → number list
+ *
+ * Everything is written straight into pokemon-battle-tracker.html between the
+ * CARD-DATA markers, so the page stays a single self-contained file that works
+ * from a USB stick with no network.
  *
  * Only what a battle needs is kept — name, HP, types, attacks and their printed
  * damage, weakness, resistance, retreat cost — so ~26 MB of source JSON comes
  * out around a tenth of the size. Card images are left out on purpose: they are
- * the bulk of the data and they are not ours to redistribute.
+ * the bulk of the data and they are not ours to redistribute. The 96px sprites
+ * are small enough to embed (~1 MB for all 1,025 species) and are what the page
+ * animates when a card is played.
  */
 
 const fs = require("fs");
 const path = require("path");
 
 const SRC = process.argv[2];
+const SPRITES = process.argv[3];
+const POKEAPI = process.argv[4];
 const OUT = path.join(__dirname, "..", "pokemon-battle-tracker.html");
 
 if (!SRC || !fs.existsSync(path.join(SRC, "cards", "en"))) {
-  console.error("usage: node scripts/build-card-data.js /path/to/pokemon-tcg-data");
+  console.error("usage: node scripts/build-card-data.js <pokemon-tcg-data> <sprites> <pokeapi>");
   process.exit(1);
 }
 
@@ -92,7 +99,33 @@ const cards = [...byKey.values()]
   .sort((a, b) => a.n.localeCompare(b.n) || a.h - b.h)
   .map(e => [e.n, e.h, e.t, e.a, e.w, e.r, e.c, e.p]);
 
-const payload = JSON.stringify({ s: sets, c: cards });
+/* ---- species names and sprites ----
+   The page resolves a sprite from whatever name is on screen, so a hand-typed
+   "Pikachu" gets a sprite too, not just a card picked from the search. */
+const species = {};
+const sprites = {};
+let spriteBytes = 0;
+
+if (POKEAPI && SPRITES) {
+  const csv = fs.readFileSync(path.join(POKEAPI, "data/v2/csv/pokemon_species.csv"), "utf8");
+  const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  for (const line of csv.trim().split("\n").slice(1)) {
+    const [id, identifier] = line.split(",");
+    const n = parseInt(id, 10);
+    if (!n || n > 1025) continue;
+    species[norm(identifier)] = n;
+
+    const file = path.join(SPRITES, "sprites/pokemon", n + ".png");
+    if (fs.existsSync(file)) {
+      const buf = fs.readFileSync(file);
+      spriteBytes += buf.length;
+      sprites[n] = buf.toString("base64");
+    }
+  }
+}
+
+const payload = JSON.stringify({ s: sets, c: cards, sp: species, im: sprites });
 
 /* ---- splice into the page ---- */
 const START = "/*CARD-DATA-START*/";
@@ -109,5 +142,7 @@ console.log(
   "cards read:   " + seen + "\n" +
   "stat lines:   " + cards.length + "\n" +
   "sets:         " + sets.length + "\n" +
+  "species:      " + Object.keys(species).length + "\n" +
+  "sprites:      " + Object.keys(sprites).length + " (" + (spriteBytes / 1048576).toFixed(2) + " MB raw)\n" +
   "data size:    " + (payload.length / 1048576).toFixed(2) + " MB"
 );
