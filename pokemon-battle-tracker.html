@@ -327,6 +327,10 @@ body.tv .atk{margin-bottom:5px;}
   background:transparent;border:1px solid transparent;border-radius:8px;padding:2px 6px;
   flex:1 1 130px;min-width:0;
 }
+/* the longest card names — "Moltres & Zapdos & Articuno-GX" — step down a size
+   rather than scrolling out of sight inside the input */
+.mon-name.long{font-size:19px;}
+.mon-name.tiny{font-size:16px;}
 .mon-name:hover{border-color:var(--line);}
 .mon-name:focus{border-color:var(--accent);background:var(--surface-2);outline:none;}
 
@@ -835,6 +839,7 @@ var CARD_DB = {"s":[["Base","1999"],["Jungle","1999"],["Wizards Black Star Promo
 
   function render(){
     renderTeams();
+    tvZoom();             /* card heights change with the card played */
     fx = {};              /* one-shot: the classes are in the HTML we just wrote */
     renderLog();
     document.getElementById("turn-count").textContent = state.turn;
@@ -901,7 +906,8 @@ var CARD_DB = {"s":[["Base","1999"],["Jungle","1999"],["Wizards Black Star Promo
       '<div class="mon-top">' +
         spriteHtml(m, ti) +
         '<span class="id-block">' +
-          '<input class="mon-name" data-name="' + m.id + '" value="' + esc(m.name) + '" ' +
+          '<input class="mon-name' + (m.name.length > 26 ? " tiny" : (m.name.length > 18 ? " long" : "")) +
+            '" data-name="' + m.id + '" value="' + esc(m.name) + '" ' +
             'placeholder="Find a card below…" aria-label="Pokémon name">' +
           '<span class="pips">' + pips(m.types) + '</span>' +
         '</span>' +
@@ -1282,12 +1288,22 @@ var CARD_DB = {"s":[["Base","1999"],["Jungle","1999"],["Wizards Black Star Promo
 
   var TV_KEY = STORE + "-tv";
 
-  /* Scale to whatever screen it is plugged into: aim to fit both players in the
-     window height. The CSS carries a sensible fixed zoom as a fallback. */
+  /* Scale to whatever screen it is plugged into. Card heights vary a lot — a
+     four-attack card is far taller than a one-attack card — so measure the real
+     content unscaled, then pick the zoom that fits both players on screen. */
   function tvZoom(){
-    if(!document.body.classList.contains("tv")){ document.body.style.zoom = ""; return; }
-    var z = Math.max(1, Math.min(2, window.innerHeight / 670));
-    document.body.style.zoom = z.toFixed(2);
+    var body = document.body;
+    if(!body.classList.contains("tv")){ body.style.zoom = ""; return; }
+
+    body.style.zoom = "1";                       /* measure at true size */
+    var bottom = 0;
+    document.querySelectorAll(".team").forEach(function(t){
+      bottom = Math.max(bottom, t.getBoundingClientRect().bottom + window.scrollY);
+    });
+
+    var needed = bottom + 14;                    /* a little breathing room */
+    var z = needed > 0 ? window.innerHeight / needed : 1.6;
+    body.style.zoom = Math.max(1, Math.min(2, z)).toFixed(2);
   }
 
   function setTv(on){
