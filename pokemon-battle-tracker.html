@@ -181,7 +181,7 @@ input,select{font:inherit;color:inherit;}
 .team-head .side{
   font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;
   color:var(--on-accent);background:var(--accent);
-  padding:3px 8px;border-radius:6px;
+  padding:3px 8px;border-radius:6px;white-space:nowrap;flex:0 0 auto;
 }
 .team-head input.teamname{
   flex:1 1 auto;min-width:0;
@@ -191,8 +191,12 @@ input,select{font:inherit;color:inherit;}
 }
 .team-head input.teamname:hover{border-color:var(--line);}
 .team-head input.teamname:focus{border-color:var(--accent);background:var(--surface);outline:none;}
-.team-body{padding:12px;display:flex;flex-direction:column;gap:12px;}
-.team-foot{padding:0 12px 12px;}
+.team-body{padding:12px;}
+.standing{
+  font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ok);background:var(--ok-bg);border-radius:20px;padding:4px 10px;flex:0 0 auto;
+}
+.standing.out{color:var(--crit);background:var(--crit-bg);}
 
 /* ---------- pokemon card ---------- */
 .mon{
@@ -205,11 +209,10 @@ input,select{font:inherit;color:inherit;}
 .mon:hover{box-shadow:var(--shadow-lift);}
 .mon.fainted{opacity:.62;}
 .mon.fainted .mon-name{text-decoration:line-through;text-decoration-thickness:2px;}
-.mon.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft);}
 
-.mon-top{display:flex;align-items:center;gap:8px;padding:10px 12px 8px;flex-wrap:wrap;}
+.mon-top{display:flex;align-items:center;gap:8px;padding:12px 14px 10px;flex-wrap:wrap;}
 .mon-name{
-  font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:-.01em;
+  font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:-.015em;
   background:transparent;border:1px solid transparent;border-radius:8px;padding:2px 6px;
   flex:1 1 130px;min-width:0;
 }
@@ -236,14 +239,14 @@ input,select{font:inherit;color:inherit;}
 }
 .type-badge.add{
   background:transparent;color:var(--dim);border:1px dashed var(--line);
-  text-shadow:none;width:74px;padding:3px 4px;cursor:pointer;
+  text-shadow:none;width:82px;padding:3px 4px;cursor:pointer;
 }
 
 /* HP */
-.hp-row{padding:2px 12px 8px;display:flex;align-items:center;gap:10px;}
+.hp-row{padding:2px 14px 12px;display:flex;align-items:center;gap:12px;}
 .hp-track{
   display:block;
-  flex:1 1 auto;height:14px;border-radius:8px;background:var(--sunken);
+  flex:1 1 auto;height:20px;border-radius:10px;background:var(--sunken);
   border:1px solid var(--line-soft);overflow:hidden;position:relative;
 }
 .hp-fill{
@@ -256,7 +259,7 @@ input,select{font:inherit;color:inherit;}
 .hp-fill.crit{background:var(--crit);}
 .hp-nums{
   font-family:var(--mono);font-variant-numeric:tabular-nums;
-  font-size:15px;font-weight:700;white-space:nowrap;
+  font-size:22px;font-weight:700;white-space:nowrap;
 }
 .hp-nums input{
   width:4.5ch;text-align:right;background:transparent;border:1px solid transparent;
@@ -268,24 +271,31 @@ input,select{font:inherit;color:inherit;}
 .hp-pct{font-family:var(--mono);font-size:12px;color:var(--dim);min-width:4ch;text-align:right;}
 
 /* damage pad */
+/* damage on the left, healing on the right, the shared amount box between them */
 .pad{
-  display:flex;gap:6px;align-items:center;flex-wrap:wrap;
-  padding:8px 12px;background:var(--surface-2);border-top:1px solid var(--line-soft);
+  display:grid;
+  grid-template-columns:repeat(4,1fr) 72px repeat(4,1fr);
+  gap:6px;align-items:center;
+  padding:10px 14px;background:var(--surface-2);border-top:1px solid var(--line-soft);
+}
+@media (max-width:620px){
+  .pad{grid-template-columns:repeat(3,1fr);}
+  .pad .amt{width:100%;}
 }
 .pad .pill{
-  font-family:var(--mono);font-size:13px;font-weight:700;
+  font-family:var(--mono);font-size:15px;font-weight:700;
   border:1px solid var(--line);background:var(--surface);
-  border-radius:7px;padding:4px 8px;cursor:pointer;min-width:40px;
+  border-radius:8px;padding:7px 6px;cursor:pointer;
   transition:background .12s ease,border-color .12s ease,color .12s ease;
 }
 .pad .pill.dmg:hover{background:var(--crit-bg);border-color:var(--crit);color:var(--crit);}
 .pad .pill.heal:hover{background:var(--ok-bg);border-color:var(--ok);color:var(--ok);}
 .pad .amt{
-  width:62px;font-family:var(--mono);font-size:14px;font-weight:700;text-align:center;
-  border:1px solid var(--line);border-radius:7px;padding:4px 6px;background:var(--surface);
+  width:100%;
+  font-family:var(--mono);font-size:15px;font-weight:700;text-align:center;
+  border:1px solid var(--line);border-radius:8px;padding:7px 6px;background:var(--surface);
 }
 .pad .amt:focus{border-color:var(--accent);outline:none;}
-.pad .sep{flex:1 1 auto;}
 
 /* status chips */
 .chips{display:flex;gap:5px;flex-wrap:wrap;padding:8px 12px;border-top:1px solid var(--line-soft);}
@@ -526,8 +536,7 @@ input,select{font:inherit;color:inherit;}
         {name:"", pp:15, maxPp:15}
       ],
       notes: "",
-      open: false,
-      active: false
+      open: true
     };
   }
 
@@ -535,8 +544,8 @@ input,select{font:inherit;color:inherit;}
     return {
       turn: 1,
       teams: [
-        {name:"Red's team",  mons:[newMon("Charmander"), newMon("Squirtle")]},
-        {name:"Blue's team", mons:[newMon("Bulbasaur"),  newMon("Pikachu")]}
+        {name:"Red",  mon: newMon("Charmander")},
+        {name:"Blue", mon: newMon("Bulbasaur")}
       ],
       log: []
     };
@@ -555,18 +564,19 @@ input,select{font:inherit;color:inherit;}
       s.log = s.log || [];
       s.turn = s.turn || 1;
       s.teams.forEach(function(t){
-        t.mons = (t.mons || []).map(function(m){
-          var base = newMon(m.name);
-          base.id = m.id || base.id;
-          ["level","hp","maxHp","notes","open","active"].forEach(function(k){
-            if(m[k] !== undefined) base[k] = m[k];
-          });
-          base.types = Array.isArray(m.types) ? m.types : [];
-          base.status = Array.isArray(m.status) ? m.status : [];
-          if(m.stages) STATS.forEach(function(k){ base.stages[k] = m.stages[k] || 0; });
-          if(Array.isArray(m.moves) && m.moves.length) base.moves = m.moves;
-          return base;
+        /* saves from the roster version kept an array — keep whoever was first */
+        var m = t.mon || (Array.isArray(t.mons) ? t.mons[0] : null) || {};
+        var base = newMon(m.name);
+        base.id = m.id || base.id;
+        ["level","hp","maxHp","notes","open"].forEach(function(k){
+          if(m[k] !== undefined) base[k] = m[k];
         });
+        base.types = Array.isArray(m.types) ? m.types : [];
+        base.status = Array.isArray(m.status) ? m.status : [];
+        if(m.stages) STATS.forEach(function(k){ base.stages[k] = m.stages[k] || 0; });
+        if(Array.isArray(m.moves) && m.moves.length) base.moves = m.moves;
+        t.mon = base;
+        delete t.mons;
       });
       return s;
     }catch(e){ return null; }
@@ -587,10 +597,7 @@ input,select{font:inherit;color:inherit;}
 
   function findMon(id){
     for(var i=0;i<state.teams.length;i++){
-      var mons = state.teams[i].mons;
-      for(var j=0;j<mons.length;j++){
-        if(mons[j].id === id) return {mon:mons[j], team:state.teams[i], ti:i, mi:j};
-      }
+      if(state.teams[i].mon.id === id) return {mon:state.teams[i].mon, team:state.teams[i], ti:i};
     }
     return null;
   }
@@ -637,21 +644,16 @@ input,select{font:inherit;color:inherit;}
       '<section class="team">' +
         '<div class="team-head">' +
           '<span class="side">' + (ti === 0 ? "SIDE A" : "SIDE B") + '</span>' +
-          '<input class="teamname" data-team="' + ti + '" value="' + esc(team.name) + '" aria-label="Team name">' +
-          '<span class="lvl standing">' + team.mons.filter(function(m){return m.hp > 0;}).length + ' / ' + team.mons.length + ' standing</span>' +
+          '<input class="teamname" data-team="' + ti + '" value="' + esc(team.name) + '" aria-label="Trainer name">' +
+          '<span class="standing' + (team.mon.hp <= 0 ? " out" : "") + '">' +
+            (team.mon.hp <= 0 ? "Fainted" : "In battle") + '</span>' +
         '</div>' +
-        '<div class="team-body">' +
-          (team.mons.length ? team.mons.map(function(m){ return monCard(m, ti); }).join("") :
-            '<p class="hint">No Pokémon on this side yet.</p>') +
-        '</div>' +
-        '<div class="team-foot">' +
-          '<button class="btn tiny" data-add-mon="' + ti + '">+ Add Pokémon</button>' +
-        '</div>' +
+        '<div class="team-body">' + monCard(team.mon) + '</div>' +
       '</section>';
     }).join("");
   }
 
-  function monCard(m, ti){
+  function monCard(m){
     var pct = m.maxHp > 0 ? clamp(Math.round((m.hp / m.maxHp) * 100), 0, 100) : 0;
     var fainted = m.hp <= 0;
 
@@ -695,7 +697,7 @@ input,select{font:inherit;color:inherit;}
     }).join("");
 
     return '' +
-    '<article class="mon' + (fainted ? " fainted" : "") + (m.active ? " active" : "") + '" data-card="' + m.id + '">' +
+    '<article class="mon' + (fainted ? " fainted" : "") + '" data-card="' + m.id + '">' +
       '<div class="mon-top">' +
         '<input class="mon-name" data-name="' + m.id + '" value="' + esc(m.name) + '" aria-label="Pokémon name">' +
         '<span class="lvl">Lv<input data-level="' + m.id + '" value="' + m.level + '" inputmode="numeric" aria-label="Level"></span>' +
@@ -716,10 +718,9 @@ input,select{font:inherit;color:inherit;}
         '<button class="pill dmg" data-delta="-10" data-mon="' + m.id + '">&minus;10</button>' +
         '<button class="pill dmg" data-delta="-5"  data-mon="' + m.id + '">&minus;5</button>' +
         '<button class="pill dmg" data-delta="-1"  data-mon="' + m.id + '">&minus;1</button>' +
-        '<input class="amt" data-amt="' + m.id + '" placeholder="0" inputmode="numeric" aria-label="Custom amount">' +
         '<button class="pill dmg" data-custom="dmg" data-mon="' + m.id + '">Hit</button>' +
+        '<input class="amt" data-amt="' + m.id + '" placeholder="0" inputmode="numeric" aria-label="Custom damage or healing amount">' +
         '<button class="pill heal" data-custom="heal" data-mon="' + m.id + '">Heal</button>' +
-        '<span class="sep"></span>' +
         '<button class="pill heal" data-delta="1"  data-mon="' + m.id + '">+1</button>' +
         '<button class="pill heal" data-delta="5"  data-mon="' + m.id + '">+5</button>' +
         '<button class="pill heal" data-delta="10" data-mon="' + m.id + '">+10</button>' +
@@ -739,9 +740,8 @@ input,select{font:inherit;color:inherit;}
 
       '<div class="mon-actions">' +
         '<button class="btn tiny" data-toggle="' + m.id + '">' + (m.open ? "Hide details" : "Details") + '</button>' +
-        '<button class="btn tiny" data-active="' + m.id + '">' + (m.active ? "In battle ✓" : "Send out") + '</button>' +
         '<button class="btn tiny" data-full="' + m.id + '">Full heal</button>' +
-        '<button class="btn tiny danger" data-remove="' + m.id + '">Remove</button>' +
+        '<button class="btn tiny danger" data-swap="' + m.id + '">Swap in a new Pokémon</button>' +
       '</div>' +
     '</article>';
   }
@@ -850,15 +850,6 @@ input,select{font:inherit;color:inherit;}
       render(); return;
     }
 
-    if(t.hasAttribute("data-active")){
-      var f6 = findMon(t.getAttribute("data-active")); if(!f6) return;
-      var turningOn = !f6.mon.active;
-      f6.team.mons.forEach(function(m){ m.active = false; });
-      f6.mon.active = turningOn;
-      if(turningOn) logIt('<em>' + esc(f6.mon.name) + '</em> was sent out');
-      render(); return;
-    }
-
     if(t.hasAttribute("data-full")){
       var f7 = findMon(t.getAttribute("data-full")); if(!f7) return;
       snapshot();
@@ -869,21 +860,15 @@ input,select{font:inherit;color:inherit;}
       render(); return;
     }
 
-    if(t.hasAttribute("data-remove")){
-      var f8 = findMon(t.getAttribute("data-remove")); if(!f8) return;
-      if(!confirm("Remove " + f8.mon.name + " from the battle?")) return;
+    if(t.hasAttribute("data-swap")){
+      var f8 = findMon(t.getAttribute("data-swap")); if(!f8) return;
+      if(!confirm("Swap out " + f8.mon.name + "? The new Pokémon starts fresh.")) return;
       snapshot();
-      f8.team.mons.splice(f8.mi, 1);
-      render(); return;
-    }
-
-    if(t.hasAttribute("data-add-mon")){
-      snapshot();
-      var team = state.teams[parseInt(t.getAttribute("data-add-mon"), 10)];
-      team.mons.push(newMon("New Pokémon"));
+      f8.team.mon = newMon("New Pokémon");
+      logIt('<em>' + esc(f8.team.name) + '</em> swapped in a new Pokémon');
       render();
-      var last = document.querySelector('[data-name="' + team.mons[team.mons.length-1].id + '"]');
-      if(last){ last.focus(); last.select(); }
+      var nameBox = document.querySelector('[data-name="' + f8.team.mon.id + '"]');
+      if(nameBox){ nameBox.focus(); nameBox.select(); }
       return;
     }
 
@@ -964,8 +949,9 @@ input,select{font:inherit;color:inherit;}
 
   function refreshCounts(){
     document.querySelectorAll(".team-head .standing").forEach(function(el, i){
-      var mons = state.teams[i].mons;
-      el.textContent = mons.filter(function(m){ return m.hp > 0; }).length + " / " + mons.length + " standing";
+      var out = state.teams[i].mon.hp <= 0;
+      el.textContent = out ? "Fainted" : "In battle";
+      el.classList.toggle("out", out);
     });
   }
 
