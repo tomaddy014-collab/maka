@@ -1,0 +1,21 @@
+# Netlify config — only used if this repo is connected to a Netlify site.
+#
+# The repo root is published as-is, so index.html (Maths with Mr Addy) stays at
+# the site root. The battle tracker gets a short path that is easy to read out
+# to a class: <your-site>.netlify.app/battle
+#
+# status = 200 rewrites rather than redirects, so the address bar keeps the
+# short URL instead of flipping to the long filename.
+
+[build]
+  publish = "."
+
+[[redirects]]
+  from = "/battle"
+  to = "/pokemon-battle-tracker.html"
+  status = 200
+
+[[redirects]]
+  from = "/battle/"
+  to = "/pokemon-battle-tracker.html"
+  status = 200
