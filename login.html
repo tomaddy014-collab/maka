@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Māka — Sign in</title>
+<script>
+(function(){try{
+  var t=localStorage.getItem('maka-theme');
+  if(!t)t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+  if(t==='dark')document.documentElement.setAttribute('data-theme','dark');
+}catch(e){}})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#2d5a27;--green-bg:#e8f0e6;
+  --paper:#f5f0e8;--paper-dark:#ede7d9;
+  --ink:#0f0e0c;--ink-light:#3a3630;--text2:#7a7468;
+  --gold:#c8840a;--gold-soft:rgba(200,132,10,0.12);
+  --danger:#a32d2d;--danger-bg:#fcebeb;
+  --border:rgba(15,14,12,0.14);
+  --ease:cubic-bezier(0.25,0.46,0.45,0.94);--ease-spring:cubic-bezier(.16,1,.3,1)}
+[data-theme="dark"]{
+  --green:#7fb87a;--green-bg:#23302180;
+  --paper:#161513;--paper-dark:#242220;
+  --ink:#ece9e3;--ink-light:#c9c5bd;--text2:#a9a49b;
+  --gold:#e0a52a;--gold-soft:rgba(224,165,42,0.16);
+  --danger:#e89a9a;--danger-bg:#3a2020;
+  --border:rgba(255,255,255,0.16);
+}
+[data-theme="dark"] .logo>span{color:#ece9e3!important}
+[data-theme="dark"] .logo span span span{background:#ece9e3!important}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 1.25rem;position:relative}
+
+a.back{font-size:13px;color:var(--text2);text-decoration:none;margin-bottom:2.5rem;align-self:flex-start;max-width:400px;width:100%;position:relative;z-index:1;transition:color .2s var(--ease),transform .2s var(--ease);display:inline-flex;align-items:center;gap:4px}
+a.back:hover{color:var(--ink);transform:translateX(-3px)}
+.logo{display:block;margin:0 auto .5rem;text-align:center;position:relative;z-index:1}
+.logo span{color:var(--green)}
+.tag{font-size:14px;color:var(--text2);text-align:center;margin-bottom:2.5rem;position:relative;z-index:1}
+.box{background:transparent;border:none;border-radius:20px;padding:0;width:100%;max-width:400px;position:relative;z-index:1;
+  opacity:0;transform:translateY(14px);animation:riseIn .6s .05s var(--ease) forwards}
+@keyframes riseIn{to{opacity:1;transform:translateY(0)}}
+
+.tabs{display:flex;gap:2px;background:var(--paper-dark);border-radius:100px;padding:4px;margin-bottom:2rem;position:relative}
+.tab{flex:1;padding:11px;border-radius:100px;border:none;background:none;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:color .25s var(--ease);position:relative;z-index:1}
+.tab.active{color:var(--ink)}
+.tab-indicator{position:absolute;top:4px;bottom:4px;left:4px;border-radius:100px;background:var(--paper);box-shadow:0 1px 6px rgba(0,0,0,0.1);
+  transition:transform .3s var(--ease),width .3s var(--ease);width:calc(50% - 4px);z-index:0}
+
+.field{margin-bottom:1.5rem;opacity:0;transform:translateY(8px);animation:fieldIn .45s var(--ease) forwards}
+.field:nth-child(1){animation-delay:.05s}.field:nth-child(2){animation-delay:.1s}.field:nth-child(3){animation-delay:.15s}
+@keyframes fieldIn{to{opacity:1;transform:translateY(0)}}
+label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px;letter-spacing:.02em;transition:color .2s var(--ease)}
+input{width:100%;min-height:46px;padding:12px 4px;border:1.5px solid transparent;border-bottom-color:var(--border);border-radius:10px;font-size:15px;font-family:'DM Sans',sans-serif;background:transparent;color:var(--ink);
+  transition:border-color .15s var(--ease),background .15s var(--ease),box-shadow .15s var(--ease),padding .15s var(--ease)}
+input::placeholder{color:var(--text2);opacity:.6}
+input:focus{outline:none;border-color:var(--gold);background:#fff;padding:12px 14px;box-shadow:0 0 0 4px var(--gold-soft)}
+.btn{width:100%;min-height:50px;padding:14px;border-radius:100px;border:none;background:var(--ink);color:#fff;font-size:15px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:.5rem;
+  transition:background .25s var(--ease),transform .12s var(--ease),box-shadow .25s var(--ease);box-shadow:0 2px 14px rgba(15,14,12,0.16)}
+.btn:hover:not(:disabled){background:var(--ink-light);transform:translateY(-1px);box-shadow:0 8px 22px rgba(15,14,12,0.24)}
+.btn:active:not(:disabled){transform:scale(.97)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.msg{font-size:13px;line-height:1.5;padding:11px 14px;border-radius:10px;margin-bottom:1.25rem;display:none}
+.msg.err{color:var(--danger);background:var(--danger-bg);border-left:3px solid var(--danger);animation:slideDown .3s var(--ease)}
+.msg.ok{color:var(--green);background:var(--green-bg);border-left:3px solid var(--green);animation:slideDown .3s var(--ease)}
+.msg.ok::before{content:'✓';display:inline-block;font-weight:700;margin-right:6px;animation:checkPop .45s var(--ease-spring)}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes checkPop{0%{transform:scale(.3)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+.panel{display:none}
+.panel.active{display:block;animation:panelIn .35s var(--ease)}
+@keyframes panelIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.link-btn{width:100%;background:none;border:none;font-size:13px;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:1.25rem;text-align:center;display:block;
+  transition:color .2s var(--ease)}
+.link-btn:hover{color:var(--ink)}
+.footer{font-size:12px;color:var(--text2);text-align:center;margin-top:2rem;position:relative;z-index:1}
+.tab:focus-visible,.btn:focus-visible,.link-btn:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<a href="index.html" class="back">← Back to Māka</a>
+<div class="logo" style="text-decoration:none;display:inline-block;position:relative;padding-bottom:7px">
+    <span style="font-family:'Fraunces',Georgia,serif;font-size:28px;font-weight:900;color:#0f0e0c;letter-spacing:-0.02em;line-height:1;white-space:nowrap">m<span style="position:relative;display:inline-block"><span style="position:absolute;top:2px;left:50%;transform:translateX(-50%);width:55%;height:2.5px;background:#0f0e0c;border-radius:1px"></span>a</span>ka</span>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190 20" style="position:absolute;bottom:-3px;left:0;width:100%;height:20px;pointer-events:none">
+  <defs><linearGradient id="fg_l1" x1="100%" y1="0%" x2="0%" y2="0%">
+    <stop offset="0%" style="stop-color:#f0b429;stop-opacity:1"/>
+    <stop offset="65%" style="stop-color:#d4a017;stop-opacity:0.65"/>
+    <stop offset="100%" style="stop-color:#d4a017;stop-opacity:0.03"/>
+  </linearGradient></defs>
+  <path d="M 183 7 C 150 11, 90 15, 30 16 C 12 16, 2 14, 0 12" fill="none" stroke="url(#fg_l1)" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 176 6 C 171 1, 164 0, 156 1" fill="none" stroke="#f0b429" stroke-width="1" stroke-linecap="round" opacity="0.9"/>
+  <path d="M 162 8 C 156 3, 149 2, 141 3" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.8"/>
+  <path d="M 147 9 C 141 5, 134 4, 126 5" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.72"/>
+  <path d="M 131 10 C 125 7, 118 6, 110 7" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.62"/>
+  <path d="M 114 11 C 108 8, 101 8, 93 8" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.52"/>
+  <path d="M 96 12 C 90 10, 83 9, 75 10" fill="none" stroke="#f0b429" stroke-width="0.7" stroke-linecap="round" opacity="0.42"/>
+  <path d="M 77 12 C 71 11, 64 10, 56 11" fill="none" stroke="#f0b429" stroke-width="0.6" stroke-linecap="round" opacity="0.32"/>
+  <path d="M 174 8 C 169 13, 162 15, 154 14" fill="none" stroke="#f0b429" stroke-width="1" stroke-linecap="round" opacity="0.8"/>
+  <path d="M 159 9 C 154 14, 147 16, 139 15" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.72"/>
+  <path d="M 144 10 C 139 15, 132 17, 124 16" fill="none" stroke="#f0b429" stroke-width="0.9" stroke-linecap="round" opacity="0.64"/>
+  <path d="M 128 11 C 123 16, 116 17, 108 16" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.55"/>
+  <path d="M 111 12 C 106 16, 99 17, 91 16" fill="none" stroke="#f0b429" stroke-width="0.8" stroke-linecap="round" opacity="0.46"/>
+  <path d="M 93 13 C 88 16, 81 17, 73 16" fill="none" stroke="#f0b429" stroke-width="0.7" stroke-linecap="round" opacity="0.36"/>
+  <path d="M 73 13 C 68 16, 61 16, 53 15" fill="none" stroke="#f0b429" stroke-width="0.6" stroke-linecap="round" opacity="0.26"/>
+  <path d="M 3 13 C 2 12, 1 11, 0.5 10" fill="none" stroke="#ede7d9" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 1 11 C 0.5 10, 0 9.5, 0 9" fill="none" stroke="#f5f0e8" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
+  </div>
+<div class="tag">AI marking for NZ teachers</div>
+
+<div class="box">
+  <div class="tabs" id="tabs">
+    <div class="tab-indicator" id="tab-indicator"></div>
+    <button class="tab active" onclick="show('login')">Sign in</button>
+    <button class="tab" onclick="show('signup')">Create account</button>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <div id="panel-login" class="panel active">
+    <div class="field"><label>Email</label><input type="email" id="l-email" placeholder="you@school.ac.nz" autocomplete="email"></div>
+    <div class="field"><label>Password</label><input type="password" id="l-pass" placeholder="••••••••"></div>
+    <button class="btn" id="l-btn" onclick="doLogin()">Sign in →</button>
+    <button class="link-btn" onclick="show('reset')">Forgot password?</button>
+  </div>
+
+  <div id="panel-signup" class="panel">
+    <div class="field"><label>Name</label><input type="text" id="s-name" placeholder="Your name"></div>
+    <div class="field"><label>Email</label><input type="email" id="s-email" placeholder="you@school.ac.nz" autocomplete="email"></div>
+    <div class="field"><label>Password</label><input type="password" id="s-pass" placeholder="At least 6 characters"></div>
+    <button class="btn" id="s-btn" onclick="doSignup()">Create account →</button>
+  </div>
+
+  <div id="panel-reset" class="panel">
+    <p style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.5">Enter your email and we'll send a reset link.</p>
+    <div class="field"><label>Email</label><input type="email" id="r-email" placeholder="you@school.ac.nz"></div>
+    <button class="btn" id="r-btn" onclick="doReset()">Send reset link →</button>
+    <button class="link-btn" onclick="show('login')">← Back to sign in</button>
+  </div>
+
+  <div id="panel-newpass" class="panel">
+    <p style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.5">Set your new password.</p>
+    <div class="field"><label>New password</label><input type="password" id="np-pass" placeholder="At least 6 characters"></div>
+    <div class="field"><label>Confirm password</label><input type="password" id="np-confirm" placeholder="Repeat password"></div>
+    <button class="btn" id="np-btn" onclick="doNewPass()">Update password →</button>
+  </div>
+</div>
+
+<div class="footer">Māka · NZC Assessment Tool · Student data never stored externally</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var sb=supabase.createClient(
+  'https://agwqenhduoxxeemklmpr.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnd3FlbmhkdW94eGVlbWtsbXByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MzkxNDAsImV4cCI6MjA5NDAxNTE0MH0.TZkrRgForSDTzQ4vZ9j36WncEAVBx4reG-ADcoohY8o'
+);
+
+function show(panel){
+  var tabs=document.querySelectorAll('.tab');
+  ['login','signup','reset','newpass'].forEach(function(p,i){
+    tabs[i]&&tabs[i].classList.toggle('active',p===panel);
+    document.getElementById('panel-'+p).classList.toggle('active',p===panel);
+  });
+  var ind=document.getElementById('tab-indicator');
+  if(ind){
+    var idx=panel==='signup'?1:0;
+    ind.style.transform='translateX('+(idx*100)+'%)';
+  }
+  clearMsg();
+}
+function setMsg(text,type){var m=document.getElementById('msg');m.textContent=text;m.className='msg '+type;m.style.display='block'}
+function clearMsg(){var m=document.getElementById('msg');m.style.display='none'}
+
+// If already signed in, redirect
+sb.auth.getSession().then(function(res){
+  if(res.data&&res.data.session)window.location.href='tool.html';
+});
+
+// Handle password recovery link
+sb.auth.onAuthStateChange(function(event){
+  if(event==='PASSWORD_RECOVERY'){
+    document.getElementById('tabs').style.display='none';
+    show('newpass');
+  }
+});
+
+function doLogin(){
+  var email=document.getElementById('l-email').value.trim();
+  var pass=document.getElementById('l-pass').value;
+  if(!email||!pass){setMsg('Please fill in all fields.','err');return}
+  var btn=document.getElementById('l-btn');btn.disabled=true;btn.textContent='Signing in…';
+  sb.auth.signInWithPassword({email:email,password:pass}).then(function(res){
+    if(res.error){setMsg(res.error.message,'err');btn.disabled=false;btn.textContent='Sign in →'}
+    else window.location.href='tool.html';
+  });
+}
+
+function doSignup(){
+  var name=document.getElementById('s-name').value.trim();
+  var email=document.getElementById('s-email').value.trim();
+  var pass=document.getElementById('s-pass').value;
+  if(!name||!email||!pass){setMsg('Please fill in all fields.','err');return}
+  if(pass.length<6){setMsg('Password must be at least 6 characters.','err');return}
+  var btn=document.getElementById('s-btn');btn.disabled=true;btn.textContent='Creating account…';
+  sb.auth.signUp({email:email,password:pass,options:{data:{display_name:name}}}).then(function(res){
+    if(res.error){setMsg(res.error.message,'err');btn.disabled=false;btn.textContent='Create account →';return}
+    if(res.data&&res.data.session){window.location.href='tool.html';return}
+    setMsg('Account created! Check your email to confirm, then sign in.','ok');
+    btn.disabled=false;btn.textContent='Create account →';
+    show('login');
+    document.getElementById('l-email').value=email;
+  });
+}
+
+function doReset(){
+  var email=document.getElementById('r-email').value.trim();
+  if(!email){setMsg('Please enter your email.','err');return}
+  var btn=document.getElementById('r-btn');btn.disabled=true;btn.textContent='Sending…';
+  sb.auth.resetPasswordForEmail(email,{redirectTo:'https://makrd.netlify.app/login.html'}).then(function(res){
+    if(res.error)setMsg(res.error.message,'err');
+    else setMsg('Reset link sent! Check your inbox.','ok');
+    btn.disabled=false;btn.textContent='Send reset link →';
+  });
+}
+
+function doNewPass(){
+  var pass=document.getElementById('np-pass').value;
+  var conf=document.getElementById('np-confirm').value;
+  if(!pass||!conf){setMsg('Please fill in both fields.','err');return}
+  if(pass.length<6){setMsg('Password must be at least 6 characters.','err');return}
+  if(pass!==conf){setMsg('Passwords do not match.','err');return}
+  var btn=document.getElementById('np-btn');btn.disabled=true;btn.textContent='Updating…';
+  sb.auth.updateUser({password:pass}).then(function(res){
+    if(res.error){setMsg(res.error.message,'err');btn.disabled=false;btn.textContent='Update password →'}
+    else{setMsg('Password updated! Redirecting…','ok');setTimeout(function(){window.location.href='tool.html'},1500)}
+  });
+}
+
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Enter')return;
+  var active=document.querySelector('.panel.active');
+  if(!active)return;
+  if(active.id==='panel-login')doLogin();
+  else if(active.id==='panel-signup')doSignup();
+  else if(active.id==='panel-reset')doReset();
+  else if(active.id==='panel-newpass')doNewPass();
+});
+</script>
+</body>
+</html>
