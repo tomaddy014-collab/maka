@@ -519,6 +519,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
         <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
           <button class="btn" id="pickbtn">Browse files</button>
           <button class="btn" id="camerabtn"><span data-ic="camera"></span>Take photo</button>
+          <button class="btn" id="pastebtn"><span data-ic="file"></span>Paste work</button>
         </div>
         <input type="file" id="fileinput" accept=".pdf,.jpg,.jpeg,.png,.txt,.docx" multiple style="display:none">
         <input type="file" id="camerainput" accept="image/*" capture="environment" multiple style="display:none">
@@ -664,6 +665,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 
 <div class="modal-bg" id="rename-modal"><div class="modal"><div class="modal-title">Rename session</div><input type="text" id="rename-input" placeholder="Session name"><div class="modal-footer"><button class="btn" onclick="closeModal('rename-modal')">Cancel</button><button class="btn btn-p" onclick="confirmRename()">Rename</button></div></div></div>
 <div class="modal-bg" id="add-stu-modal"><div class="modal"><div class="modal-title">Add student</div><div class="field"><label class="lbl">Name</label><input type="text" id="new-stu-name" placeholder="Student name"></div><div class="grid2" style="margin-bottom:0"><div class="field"><label class="lbl">Year level</label><select id="new-stu-year"><option value="">Select</option><option>Year 3</option><option>Year 4</option><option>Year 5</option><option>Year 6</option><option>Year 7</option><option>Year 8</option></select></div><div class="field"><label class="lbl">Gender</label><select id="new-stu-gender"><option value="">Select</option><option value="boy">Boy (he/him)</option><option value="girl">Girl (she/her)</option><option value="nonbinary">Non-binary (they/them)</option></select></div></div><div class="modal-footer"><button class="btn" onclick="closeModal('add-stu-modal')">Cancel</button><button class="btn btn-p" onclick="addStu()">Add</button></div></div></div>
+<div class="modal-bg" id="paste-modal"><div class="modal"><div class="modal-title">Paste student work</div><div class="field"><label class="lbl">Student</label><select id="paste-stu"><option value="">— Select student —</option></select></div><div class="field"><label class="lbl">Work</label><textarea id="paste-text" rows="10" placeholder="Paste the student's writing or answers here…" style="width:100%;resize:vertical;font-family:inherit"></textarea></div><div class="modal-footer"><button class="btn" onclick="closeModal('paste-modal')">Cancel</button><button class="btn btn-p" onclick="addPastedWork()">Add</button></div></div></div>
 <div class="modal-bg" id="shortcuts-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div class="modal-title">Keyboard shortcuts</div><div id="shortcuts-body" style="font-size:13px"></div><div class="modal-footer"><button class="btn btn-p" onclick="closeModal('shortcuts-modal')">Got it</button></div></div></div>
 <div class="print-out" id="print-out"></div>
 <div id="toast-wrap" aria-live="polite" aria-atomic="false"></div>
@@ -1197,6 +1199,25 @@ function addFiles(list){
   if(bad)showToast(bad+' file'+(bad!==1?'s':'')+' skipped — supported: PDF, Word (.docx), text (.txt), JPG, PNG','warn');
 }
 
+function openPasteModal(){
+  var sel=document.getElementById('paste-stu');
+  sel.innerHTML='<option value="">— Select student —</option>'+CLASS_STUDENTS.map(function(s){return'<option value="'+esc(s.name)+'">'+esc(s.name)+'</option>'}).join('');
+  document.getElementById('paste-text').value='';
+  openModal('paste-modal');
+}
+function addPastedWork(){
+  var name=document.getElementById('paste-stu').value.trim();
+  var text=document.getElementById('paste-text').value;
+  if(!text.trim()){showToast('Paste the student\'s work first.','err');return}
+  if(!name){showToast('Select which student this work belongs to.','err');return}
+  var stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+  var fname=name+' — pasted-'+stamp+'.txt';
+  var file=new File([text],fname,{type:'text/plain'});
+  addFiles([file]);
+  closeModal('paste-modal');
+  showToast('Added '+name+'\'s pasted work — ready to mark.','ok');
+}
+document.getElementById('pastebtn').onclick=function(e){e.preventDefault();openPasteModal()};
 document.getElementById('pickbtn').onclick=function(e){e.preventDefault();document.getElementById('fileinput').click()};
 document.getElementById('fileinput').onchange=function(){if(this.files&&this.files.length)addFiles(Array.from(this.files));this.value=''};
 document.getElementById('camerabtn').onclick=function(e){e.preventDefault();document.getElementById('camerainput').click()};
