@@ -1441,16 +1441,48 @@ function makeLimiter(n){
   function pump(){while(active<n&&q.length){var job=q.shift();active++;Promise.resolve().then(job.fn).then(job.res,job.rej).then(function(){active--;pump()})}}
   return function(fn){return new Promise(function(res,rej){q.push({fn:fn,res:res,rej:rej});pump()})};
 }
+// ── Quote verification ───────────────────────────────────────────────────────
+// The AI is told every praiseQuote/improve[].quote must be verbatim from the student's work,
+// but nothing enforces that — a fabricated quote shown to a student as "you wrote this" is a
+// trust problem, not just a scoring one. Where we can get plain text cheaply (no extra API
+// call) — text/txt and Word files — we check quotes against it and drop any that don't
+// actually appear, rather than trust the model's own claim. PDFs/images have no client-side
+// text source (marking reads them via Gemini's own vision), so they're left unverified.
+async function getVerifiableText(file){
+  var t=file.type||'',n=(file.name||'').toLowerCase();
+  try{
+    if(t==='text/plain'||n.slice(-4)==='.txt')return await file.text();
+    if(n.slice(-5)==='.docx'||t.indexOf('officedocument.wordprocessingml')!==-1){
+      try{var x=await extractDocxText(file);if(x)return x}catch(e){}
+      try{return await extractDocxTextFallback(file)}catch(e){}
+    }
+  }catch(e){}
+  return null;
+}
+function normQuoteText(s){return String(s||'').toLowerCase().replace(/[’‘]/g,"'").replace(/[“”]/g,'"').replace(/\s+/g,' ').trim()}
+function quoteVerified(quote,plainNorm){
+  var q=normQuoteText(quote);
+  return!q||plainNorm.indexOf(q)!==-1;
+}
+function verifyQuotes(mm,plainText){
+  if(!plainText)return; // no cheap ground truth available (PDF/image) — leave as-is
+  var plainNorm=normQuoteText(plainText);
+  if(mm.praiseQuote&&!quoteVerified(mm.praiseQuote,plainNorm))mm.praiseQuote='';
+  if(Array.isArray(mm.improve))mm.improve.forEach(function(i){
+    if(i&&i.quote&&!quoteVerified(i.quote,plainNorm))i.quote='';
+  });
+}
 // Two-stage: marking and moderation are throttled independently, so a file entering
 // moderation immediately frees a marking slot for the next file (mark + moderate run in parallel).
 async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLimit,revCtx){
   var ml=markLimit||function(fn){return Promise.resolve().then(fn)};
   var md=modLimit||function(fn){return Promise.resolve().then(fn)};
-  var cparts,r,lv=levelInfo(level),onBusy=function(a,max){progressItems[idx].phase='Gemini busy — retrying ('+a+'/'+(max-1)+')…';renderProg()};
+  var cparts,r,plainText,lv=levelInfo(level),onBusy=function(a,max){progressItems[idx].phase='Gemini busy — retrying ('+a+'/'+(max-1)+')…';renderProg()};
   try{
     r=await ml(async function(){
     progressItems[idx].status='working';progressItems[idx].phase=revCtx?'Comparing…':'Marking…';renderProg();
     cparts=await getContentParts(file);
+    plainText=await getVerifiableText(file);
     var p1=[
       'You are a warm, encouraging NZ '+lv.years+' teacher marking student work against the refreshed New Zealand Curriculum.',
       'Learning area: '+area+'. NZC Level: '+level+' ('+lv.years+'). Task: '+(task||'General assessment')+'.',
@@ -1552,6 +1584,8 @@ async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLi
     if((!Array.isArray(mm.addressed)||!mm.addressed.length)&&Array.isArray(r.addressed))mm.addressed=r.addressed;
     // Integrity backstop: strip any ability/level-labelling language before it can be stored or shown.
     scrubResultLevelLanguage(mm);
+    // Integrity backstop: drop any quote that isn't actually verbatim in the source text (where checkable).
+    verifyQuotes(mm,plainText);
     // Grade total + band are computed in-app from the moderated scores — deterministic, no arithmetic slips.
     finaliseGrade(mm);
     attachRevision(mm,revCtx);
