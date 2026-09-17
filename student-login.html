@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Māka — Student Login</title>
+<script>
+(function(){try{
+  var t=localStorage.getItem('maka-theme');
+  if(!t)t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+  if(t==='dark')document.documentElement.setAttribute('data-theme','dark');
+}catch(e){}})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--bg2:#f7f6f3;--bg3:#f5f0e8;
+  --text:#1a1a1a;--text2:#6b6b6b;--text3:#9a9a9a;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.16);
+  --green:#2d5a27;--green-bg:#e8f0e6;
+  --danger-bg:#fcebeb;--danger-text:#a32d2d;
+  --gold:#c8840a;--gold-soft:rgba(200,132,10,0.12);
+  --r:16px;--rs:10px;
+  --sh-sm:0 1px 2px rgba(15,14,12,0.04),0 1px 3px rgba(15,14,12,0.04);
+  --sh-md:0 8px 28px -10px rgba(15,14,12,0.12);
+  --sh-lg:0 20px 50px -16px rgba(15,14,12,0.2);
+  --ease:cubic-bezier(.25,.8,.25,1);--ease-spring:cubic-bezier(.16,1,.3,1)}
+[data-theme="dark"]{
+  --bg:#1c1b19;--bg2:#242220;--bg3:#161513;
+  --text:#ece9e3;--text2:#a9a49b;--text3:#7d7972;
+  --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.16);
+  --green:#7fb87a;--green-bg:#23302180;
+  --danger-bg:#3a2020;--danger-text:#e89a9a;
+  --gold:#e0a52a;--gold-soft:rgba(224,165,42,0.16);
+  --sh-md:0 8px 28px -10px rgba(0,0,0,0.5);--sh-lg:0 24px 60px -18px rgba(0,0,0,0.6);--sh-sm:0 1px 2px rgba(0,0,0,0.3)}
+body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg3);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center;padding:1.5rem}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+@keyframes riseIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:2.25rem 2rem;width:100%;max-width:380px;box-shadow:var(--sh-lg);animation:riseIn .5s var(--ease-spring) backwards;text-align:center}
+.logo{font-family:'Fraunces',serif;font-size:24px;font-weight:800;letter-spacing:-.02em;color:#0f0e0c;display:inline-block;margin-bottom:6px}
+.logo span{color:var(--green)}
+[data-theme="dark"] .logo{color:#ece9e3}
+.sub{font-size:13.5px;color:var(--text2);margin-bottom:1.75rem;line-height:1.5}
+.field{margin-bottom:14px;text-align:left}
+.lbl{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;display:block}
+input[type=text]{width:100%;font-size:20px;font-family:monospace;letter-spacing:.12em;text-align:center;text-transform:uppercase;padding:13px 12px;border-radius:var(--rs);border:1px solid var(--border2);background:var(--bg2);color:var(--text)}
+input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-soft)}
+.btn-p{width:100%;margin-top:1.1rem;padding:12px;border-radius:var(--rs);border:1px solid var(--green);background:var(--green);color:#fff;font-size:14.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .2s var(--ease),transform .15s var(--ease-spring)}
+.btn-p:hover{background:#1e3d1a}.btn-p:active{transform:scale(.98)}.btn-p:disabled{opacity:.5;cursor:not-allowed}
+.err{font-size:12.5px;color:var(--danger-text);background:var(--danger-bg);padding:9px 12px;border-radius:var(--rs);margin-top:12px;text-align:left}
+.back{display:inline-block;margin-top:1.5rem;font-size:12.5px;color:var(--text2);text-decoration:none}
+.back:hover{color:var(--text)}
+.btn-p:focus-visible,input:focus-visible,.back:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">m<span>a</span>ka</div>
+  <div class="sub">Enter the login code your teacher gave you to see your marks and feedback.</div>
+  <form id="login-form">
+    <div class="field">
+      <label class="lbl" for="code">Login code</label>
+      <input type="text" id="code" maxlength="8" placeholder="ABC123" autocomplete="off" aria-label="Login code">
+    </div>
+    <button type="submit" class="btn-p" id="go-btn">View my marks</button>
+    <div id="login-err"></div>
+  </form>
+  <a class="back" href="index.html">← Back to Māka</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var SURL='https://agwqenhduoxxeemklmpr.supabase.co';
+var SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnd3FlbmhkdW94eGVlbWtsbXByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MzkxNDAsImV4cCI6MjA5NDAxNTE0MH0.TZkrRgForSDTzQ4vZ9j36WncEAVBx4reG-ADcoohY8o';
+var sb=window.supabase.createClient(SURL,SKEY);
+
+document.getElementById('login-form').addEventListener('submit',async function(e){
+  e.preventDefault();
+  var code=document.getElementById('code').value.trim();
+  var btn=document.getElementById('go-btn'),errEl=document.getElementById('login-err');
+  errEl.innerHTML='';
+  if(!code)return;
+  btn.disabled=true;btn.textContent='Checking…';
+  try{
+    var res=await sb.rpc('get_student_portal',{p_access_code:code});
+    if(res.error||!res.data||res.data.error){
+      errEl.innerHTML='<div class="err">That code wasn\'t recognised. Check with your teacher and try again.</div>';
+      btn.disabled=false;btn.textContent='View my marks';
+      return;
+    }
+    try{sessionStorage.setItem('maka-student-code',code.toUpperCase());}catch(err){}
+    window.location.href='student-portal.html';
+  }catch(err){
+    errEl.innerHTML='<div class="err">Something went wrong. Please try again.</div>';
+    btn.disabled=false;btn.textContent='View my marks';
+  }
+});
+</script>
+</body>
+</html>
