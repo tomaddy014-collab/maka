@@ -439,6 +439,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
     <div class="mode-seg" role="tablist" aria-label="Marking mode">
       <button class="mode-opt active" id="mode-writing" role="tab" aria-selected="true" onclick="setMarkMode('writing')"><span data-ic="edit"></span>Writing (rubric)</button>
       <button class="mode-opt" id="mode-test" role="tab" aria-selected="false" onclick="setMarkMode('test')"><span data-ic="check"></span>Test (comprehension)</button>
+      <button class="mode-opt" id="mode-glow" role="tab" aria-selected="false" onclick="setMarkMode('glow')"><span data-ic="sparkle"></span>Glow &amp; Grow</button>
     </div>
     <div class="resub-bar">
       <label class="resub-toggle"><input type="checkbox" id="resub-check" onchange="toggleResub()"> <span data-ic="refresh"></span> This is a resubmission</label>
@@ -728,16 +729,17 @@ function fbGet(r){
   return{praise:praise,tips:tips,goal:goal,summary:summary};
 }
 // summary + goal + accuracy are stored as JSON in the otherwise-unused nzc_reference column.
-function fbParseMeta(s){if(!s)return{goal:'',accuracy:[],summary:''};try{var o=JSON.parse(s);if(o&&typeof o==='object')return{goal:o.goal||'',accuracy:Array.isArray(o.accuracy)?o.accuracy:[],summary:o.summary||'',type:o.type||'',questions:Array.isArray(o.questions)?o.questions:[],total:o.total,score:o.score,percent:o.percent,rev:o.rev||null}}catch(e){}return{goal:'',accuracy:[],summary:''}}
+function fbParseMeta(s){if(!s)return{goal:'',accuracy:[],summary:''};try{var o=JSON.parse(s);if(o&&typeof o==='object')return{goal:o.goal||'',accuracy:Array.isArray(o.accuracy)?o.accuracy:[],summary:o.summary||'',type:o.type||'',questions:Array.isArray(o.questions)?o.questions:[],total:o.total,score:o.score,percent:o.percent,rev:o.rev||null,glows:Array.isArray(o.glows)?o.glows:[],grow:o.grow||null}}catch(e){}return{goal:'',accuracy:[],summary:''}}
 function fbMetaSave(r){
   var rev=r._rev||(getRev?getRev(r):null);
+  if(r.type==='glow'||Array.isArray(r.glows))return JSON.stringify({type:'glow',summary:(r.summary||'').trim(),glows:r.glows||[],grow:r.grow||null});
   if(r.type==='test'||Array.isArray(r.questions)){var o={type:'test',questions:r.questions||[],total:r.total,score:r.score,percent:r.percent,summary:(r.summary||'').trim()};if(rev)o.rev=rev;return JSON.stringify(o)}
   var g=(r.goal||'').trim(),sm=(r.summary||'').trim();if(g||sm||rev){var o2={goal:g,summary:sm};if(rev)o2.rev=rev;return JSON.stringify(o2)}return r.nzc_reference||r.nzcReference||null}
 // Flatten one tip into a single readable line for storage / CSV / plain-text contexts.
 function fbTipToStr(t){if(t.text)return t.text;return(t.quote?('You wrote “'+t.quote+'”. '):'')+(t.suggestion||'')+(t.example?(' Try: “'+t.example+'”'):'')}
 // DB column mappers (praise -> strengths text, tips -> next_steps text[]).
-function fbStrengthsSave(r){var p=fbGet(r).praise;return p?withQuote(p.quote,p.text):''}
-function fbStepsSave(r){return fbGet(r).tips.map(fbTipToStr).filter(Boolean)}
+function fbStrengthsSave(r){if(r.type==='glow'||Array.isArray(r.glows))return(r.glows||[]).map(function(g){return withQuote(g.quote,g.comment)}).filter(Boolean).join('\n');var p=fbGet(r).praise;return p?withQuote(p.quote,p.text):''}
+function fbStepsSave(r){if(r.type==='glow'||Array.isArray(r.glows)){var g=r.grow;return g&&(g.suggestion||g.quote)?[fbTipToStr({quote:g.quote,suggestion:g.suggestion,example:g.example})]:[]}return fbGet(r).tips.map(fbTipToStr).filter(Boolean)}
 // Editable text span (teacher can click to edit). Falls back to plain escaped text when not editable.
 function ed(editable,ri,path,text){
   text=text||'';
@@ -1075,17 +1077,18 @@ function autoCollapseStep0(){var c=document.getElementById('step0-card');if(!c||
 var MARK_MODE='writing';
 function setMarkMode(m){
   MARK_MODE=m;
-  var writing=m==='writing';
-  document.getElementById('mode-writing').classList.toggle('active',writing);
-  document.getElementById('mode-writing').setAttribute('aria-selected',writing?'true':'false');
-  document.getElementById('mode-test').classList.toggle('active',!writing);
-  document.getElementById('mode-test').setAttribute('aria-selected',!writing?'true':'false');
-  document.getElementById('rubric-bits').style.display=writing?'':'none';
+  var writing=m==='writing',test=m==='test',glow=m==='glow';
+  [['writing',writing],['test',test],['glow',glow]].forEach(function(p){
+    var b=document.getElementById('mode-'+p[0]);
+    b.classList.toggle('active',p[1]);b.setAttribute('aria-selected',p[1]?'true':'false');
+  });
+  // Glow & Grow keeps level/task context but hides the rubric box (no scoring).
+  document.getElementById('rubric-bits').style.display=test?'none':'';
   document.getElementById('rubric-bits2').style.display=writing?'':'none';
-  document.getElementById('test-bits').style.display=writing?'none':'';
-  document.getElementById('setup-title').textContent=writing?'Marking criteria':'Test paper';
+  document.getElementById('test-bits').style.display=test?'':'none';
+  document.getElementById('setup-title').textContent=writing?'Marking criteria':test?'Test paper':'Focus (optional)';
   var mb=document.getElementById('markbtn');
-  if(mb)mb.innerHTML=ic('sparkle')+(writing?'Mark all uploaded files':'Mark all tests');
+  if(mb)mb.innerHTML=ic('sparkle')+(writing?'Mark all uploaded files':test?'Mark all tests':'Give Glow &amp; Grow feedback');
 }
 function okFileType(f){
   var t=f.type||'',n=(f.name||'').toLowerCase();
@@ -1655,6 +1658,7 @@ async function remarkStu(idx){
 var MARKING=false;
 async function runMarking(){
   if(MARK_MODE==='test')return runTestMarking();
+  if(MARK_MODE==='glow')return runGlowMarking();
   if(MARKING)return; // guard against double-submit during a long run
   var key=getKey();if(!key||!files.length)return;
   var mb=document.getElementById('markbtn'),mbHTML=mb?mb.innerHTML:'';
@@ -1967,6 +1971,99 @@ async function runTestMarking(){
     if(mb){mb.disabled=files.length===0;mb.removeAttribute('aria-busy');mb.innerHTML=mbHTML}
   }
 }
+// ── GLOW & GROW (no score): two genuine strengths + one thing to work on ────
+function verifyGlowQuotes(mm,plainText){
+  if(!plainText)return;
+  var plainNorm=normQuoteText(plainText);
+  if(Array.isArray(mm.glows))mm.glows.forEach(function(g){if(g&&g.quote&&!quoteVerified(g.quote,plainNorm))g.quote=''});
+  if(mm.grow&&mm.grow.quote&&!quoteVerified(mm.grow.quote,plainNorm))mm.grow.quote='';
+}
+function scrubGlowLevelLanguage(r){
+  if(!r)return;
+  if(r.summary)r.summary=scrubLevelLanguage(r.summary);
+  if(Array.isArray(r.glows))r.glows.forEach(function(g){if(g&&g.comment)g.comment=scrubLevelLanguage(g.comment)});
+  if(r.grow){if(r.grow.suggestion)r.grow.suggestion=scrubLevelLanguage(r.grow.suggestion);if(r.grow.example)r.grow.example=scrubLevelLanguage(r.grow.example)}
+}
+async function markGlowOne(key,file,area,level,task,style,idx,limit){
+  var lim=limit||function(fn){return Promise.resolve().then(fn)};
+  var lv=levelInfo(level),onBusy=function(a,max){progressItems[idx].phase='Gemini busy — retrying ('+a+'/'+(max-1)+')…';renderProg()};
+  try{
+    var mm=await lim(async function(){
+      progressItems[idx].status='working';progressItems[idx].phase='Reading…';renderProg();
+      var cparts=await getContentParts(file);
+      var plainText=await getVerifiableText(file);
+      var p=[
+        'You are a warm, encouraging NZ '+lv.years+' teacher giving "Glow and Grow" feedback on student work. There is NO score or grade — only focused feedback.',
+        'Learning area: '+area+'. NZC Level: '+level+' ('+lv.years+'). Task: '+(task||'General work')+'.',
+        '',
+        'IMPORTANT RULES:',
+        '1. Give exactly TWO genuine strengths ("glows") and exactly ONE thing to work on ("grow"). Never more, never fewer.',
+        '2. Everything must be grounded in THIS student\'s actual work. For each glow and the grow, include a SHORT exact quote copied word-for-word from the student\'s work. Never invent or paraphrase a quote — use "" (empty) if the work has no readable text to quote.',
+        '3. The two glows must be different and specific — name WHAT works and WHY (e.g. a strong word choice, a clear opening, a good example), not generic praise like "good job". If strengths are hard to find, look at effort, voice, ideas, organisation or small wins — but never invent a strength that is not really there.',
+        '4. The grow must be the SINGLE most useful next step for this student — specific and doable, not vague ("add more detail", "try harder"). Say concretely what to do, and give a short worked example of what it could look like in their own work.',
+        '5. Use warm, clear, age-appropriate language ('+lv.years+' students, aged '+lv.ages+'). Pitch the wording to suit THIS child: plainer and simpler if they are clearly struggling, richer and more challenging if they are a strong writer.',
+        '6. Protect the student\'s dignity: NEVER label, name, rank or hint at their ability or level ("beginner", "low", "basic", "for your level", "advanced"), never compare them to others, and never be condescending. Differentiate only the reading level and tone.',
+        '',
+        'OUTPUT FORMAT — return ONLY raw JSON, no markdown, no explanation:',
+        '{',
+        '  "fileName": "filename here",',
+        '  "studentName": "The student\'s name if it is written anywhere on the work, else empty \\"\\".",',
+        '  "summary": "A warm 1-2 sentence opening written directly to the student (you/your).",',
+        '  "glows": [',
+        '    {"quote": "short exact quote from the work, or empty", "comment": "Warm, specific praise to the student (you/your) — what works and why. One or two sentences."},',
+        '    {"quote": "a different short exact quote, or empty", "comment": "Warm, specific praise to the student (you/your) — what works and why. One or two sentences."}',
+        '  ],',
+        '  "grow": {"quote": "short exact quote from the work to work on, or empty", "suggestion": "Warm, specific, doable advice to the student (you/your) on the ONE thing to work on and how.", "example": "A short model rewrite or worked example showing what it could look like."}',
+        '}',
+        '',
+        'Teacher writing style to match: '+style,
+        'TONE: write everything directly TO the student (you/your), warm and encouraging, in short plain words a '+lv.ages+' year old reads easily. Never talk about the student in third person and never sound harsh.'
+      ].join('\n');
+      var rr=parseJSON(await gemini(key,cparts.concat([{text:'File: "'+file.name+'"\n\n'+p}]),onBusy));
+      rr.fileName=rr.fileName||file.name;
+      rr.type='glow';rr.overallScore='Glow & Grow';rr.criteriaTotal='—';rr.criteria=[];
+      if(!Array.isArray(rr.glows))rr.glows=[];
+      rr.glows=rr.glows.slice(0,2);
+      if(!rr.grow||typeof rr.grow!=='object')rr.grow={quote:'',suggestion:'',example:''};
+      scrubGlowLevelLanguage(rr);
+      verifyGlowQuotes(rr,plainText);
+      return rr;
+    });
+    progressItems[idx].status='done';progressItems[idx].phase='';renderProg();
+    return mm;
+  }catch(e){progressItems[idx].status='error';progressItems[idx].phase='';progressItems[idx].err=e.message;renderProg();return{fileName:file.name,_error:e.message}}
+}
+async function runGlowMarking(){
+  if(MARKING)return;
+  var key=getKey();if(!key||!files.length)return;
+  var mb=document.getElementById('markbtn'),mbHTML=mb?mb.innerHTML:'';
+  MARKING=true;
+  if(mb){mb.disabled=true;mb.setAttribute('aria-busy','true');mb.innerHTML='<span class="spinner" style="border-top-color:#fff"></span>Working…'}
+  try{
+    ensureNotifyPermission();
+    if(sb&&USER&&key!==(PROFILE.gemini_key||''))sb.from('profiles').update({gemini_key:key}).eq('id',USER.id).then(function(){PROFILE.gemini_key=key}).catch(function(){});
+    var area=document.getElementById('la').value,level=document.getElementById('cl').value,task=document.getElementById('task').value,style=getStyle();
+    var sname=document.getElementById('session-name').value.trim()||('Glow & Grow '+new Date().toLocaleDateString('en-NZ'));
+    document.getElementById('rsec').style.display='block';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='block';document.getElementById('save-status').innerHTML='';
+    progressItems=files.map(function(f){return{name:f.name,status:'pending',phase:'',err:''}});renderProg();
+    var out=new Array(files.length),limit=makeLimiter(3);
+    await Promise.all(files.map(function(f,i){return markGlowOne(key,f,area,level,task,style,i,limit).then(function(res){out[i]=res})}));
+    for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r&&r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(2500);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markGlowOne(key,files[i],area,level,task,style,i,null)}));fail.forEach(function(i,j){out[i]=ret[j]})}
+    out.forEach(function(r,i){r._file=files[i]});
+    results=out;document.getElementById('progress').style.display='none';renderResults(out);
+    var okCount=out.filter(function(r){return!r._error}).length,failCount=out.length-okCount;
+    if(failCount){var firstErr=(out.find(function(r){return r&&r._error})||{})._error||'';if(okCount===0&&firstErr)showToast(firstErr,'err',8000);else showToast(failCount+" file"+(failCount>1?"s":"")+" couldn't be done — open the red card"+(failCount>1?"s":"")+" to retry",'warn',7000)}
+    document.getElementById('session-label').textContent=sname+' · '+okCount+' students';
+    document.getElementById('rsec').scrollIntoView({behavior:'smooth',block:'start'});
+    document.getElementById('cmp-a').textContent=out.length+' students — '+sname;
+    persistResults();
+    notifyDone('Glow & Grow complete','Māka finished feedback for '+okCount+' piece'+(okCount!==1?'s':'')+' of work.');
+    if(sb&&USER)saveSess(sname,area,level,task||'Glow & Grow','',out);
+  }finally{
+    MARKING=false;
+    if(mb){mb.disabled=files.length===0;mb.removeAttribute('aria-busy');mb.innerHTML=mbHTML}
+  }
+}
 // Teacher override: flip a question right/wrong on the card.
 function toggleQ(idx,qi){
   var r=results[idx];if(!r||!r.questions||!r.questions[qi])return;
@@ -2168,8 +2265,48 @@ function remarkTest(idx){
   progressItems[idx]={name:files[idx].name,status:'pending',phase:'',err:''};
   markTest(key,files[idx],paper,TEST_PAPER_FILE,answerKey,area,level,idx,null,null,expectedTotal).then(function(res){res._file=files[idx];results[idx]=res;renderResults(results);persistResults();saveOneResult(idx)});
 }
+function renderGlowCard(r,idx,editable){
+  var remarkBtn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkGlow('+idx+')">'+ic('refresh')+(r._error?'Retry':'Re-do')+'</button>':'';
+  if(r._error)return'<div class="rcard"><div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span>'+remarkBtn+'</div><div class="err">'+ic('alert')+' '+esc(r._error)+'</div></div>';
+  var delBtn=editable?'<button class="remark-btn" onclick="delResult('+idx+')" aria-label="Remove this result" title="Remove">'+ic('trash')+'</button>':'';
+  var fileLabel=r.fileName||r.file_name||'';
+  var stuName=editable?(assignedStudentFor(r)||(r.studentName||'').trim()):'';
+  var nameHtml=stuName
+    ?'<span class="rname">'+esc(stuName)+'</span><span class="rfile">'+esc(fileLabel)+'</span>'
+    :'<span class="rname">'+esc(fileLabel)+'</span>';
+  var html='<div class="rcard">';
+  html+='<div class="rhead"><div style="min-width:0;display:flex;flex-direction:column;gap:2px">'+nameHtml+'</div><div style="display:flex;align-items:center;gap:6px"><span class="pill ph">Glow &amp; Grow</span>'+remarkBtn+delBtn+'</div></div>';
+  var summary=(r.summary||'').trim();
+  if(summary||editable)html+='<div class="summary-box">'+ed(editable,idx,'summary',summary)+'</div>';
+  var glows=r.glows||[];
+  if(glows.length){
+    html+='<div class="slbl">Glow — what\'s working well</div>';
+    glows.forEach(function(g,gi){
+      html+='<div class="sbox praise" style="margin-bottom:6px">'+ic('check')+'<div>'+(g.quote?'<div class="quote">'+esc(g.quote)+'</div>':'')+'<span>'+ed(editable,idx,'glows.'+gi+'.comment',g.comment||'')+'</span></div></div>';
+    });
+  }
+  var grow=r.grow;
+  if(grow&&(grow.suggestion||grow.quote)){
+    html+='<div class="slbl" style="margin-top:12px">Grow — one thing to work on</div>';
+    html+='<div class="sbox improve">'+ic('bulb')+'<div>'+(grow.quote?'<div class="quote">'+esc(grow.quote)+'</div>':'')+'<span>'+ed(editable,idx,'grow.suggestion',grow.suggestion||'')+'</span>'+(grow.example?'<div style="margin-top:6px;font-size:13px;color:var(--text2)"><strong>Try:</strong> '+ed(editable,idx,'grow.example',grow.example)+'</div>':'')+'</div></div>';
+  }
+  if(editable)html+=assignRowHTML(r,idx);
+  html+='</div>';
+  return html;
+}
+async function remarkGlow(idx){
+  var key=getKey();if(!key)return;
+  var area=document.getElementById('la').value,level=document.getElementById('cl').value,task=document.getElementById('task').value;
+  progressItems[idx]={name:files[idx].name,status:'pending',phase:'',err:''};
+  document.getElementById('progress').style.display='block';renderProg();
+  var prev=results[idx]||{};
+  var res=await markGlowOne(key,files[idx],area,level,task,getStyle(),idx);
+  res._file=files[idx];if(prev.assignTo)res.assignTo=prev.assignTo;
+  results[idx]=res;document.getElementById('progress').style.display='none';renderResults(results);persistResults();saveOneResult(idx);
+}
 function renderResultCard(r,idx,editable){
   if(r.type==='test'||Array.isArray(r.questions))return renderTestCard(r,idx,editable);
+  if(r.type==='glow'||Array.isArray(r.glows))return renderGlowCard(r,idx,editable);
   if(r._error){var btn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkStu('+idx+')">'+ic('refresh')+'Retry</button>':'';return'<div class="rcard"><div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span>'+btn+'</div><div class="err">'+ic('alert')+' '+esc(r._error)+'</div></div>'}
   var crit=r.criteria||[],tot=r.criteriaTotal||r.criteria_total||'';
   var sc=crit.map(function(c){return parseInt(c.score)||0}),total=sc.reduce(function(a,b){return a+b},0);
@@ -2336,6 +2473,7 @@ function normResult(r){
     base.type='test';base.questions=meta.questions||[];base.total=meta.total;base.score=meta.score;base.percent=meta.percent;base.summary=meta.summary||'';
     base.improve=(r.next_steps||[]).map(function(s){return{suggestion:String(s)}});
   }
+  if(meta&&meta.type==='glow'){base.type='glow';base.glows=meta.glows||[];base.grow=meta.grow||null;base.summary=meta.summary||''}
   if(meta&&meta.rev)base._rev=meta.rev;
   return base;
 }
@@ -2665,6 +2803,17 @@ function printTestSheet(r,i,arr,task){
   var tipsHtml=fb.tips.length?'<div style="background:#faf6ee;border-radius:8px;padding:12px 14px;margin-top:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8a5a06;margin-bottom:6px">How to improve</div>'+fb.tips.map(function(t){return'<div style="font-size:13px;line-height:1.6;color:#333;margin-bottom:6px">– '+esc(t.suggestion||t.text||'')+'</div>'}).join('')+'</div>':'';
   return'<div class="psheet" style="font-family:-apple-system,sans-serif"><div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;margin-bottom:20px;border-bottom:2px solid #1a1a1a"><div><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:6px">Māka · Comprehension test</div><div style="font-size:24px;font-weight:700;margin-bottom:3px">'+esc(firstNameOf(r.fileName||r.file_name||''))+'</div><div style="font-size:13px;color:#666">'+esc(task||'')+'</div></div><div style="text-align:right"><div style="font-size:32px;font-weight:800;color:#2d5a27;line-height:1">'+fmtMark(score)+'/'+total+'</div><div style="font-size:12px;font-weight:600;color:#2d5a27;margin-top:4px">'+pct+'% · '+esc(r.overallScore||testBand(pct))+'</div></div></div>'+summaryHtml+'<table style="width:100%;border-collapse:collapse">'+rows+'</table>'+tipsHtml+'</div>'+(i<arr.length-1?'<div style="page-break-after:always"></div>':'');
 }
+function printGlowSheet(r,task){
+  var lbl='font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;';
+  var q=function(t){return t?'<div style="font-style:italic;color:#555;border-left:2px solid #ccc;padding-left:8px;margin-bottom:5px">&ldquo;'+esc(t)+'&rdquo;</div>':''};
+  var summary=(r.summary||'').trim();
+  var glows=(r.glows||[]).map(function(g){return'<div style="background:#f0f7ee;border-radius:8px;padding:12px 14px;margin-bottom:8px;font-size:13.5px;line-height:1.6">'+q(g.quote)+esc(g.comment||'')+'</div>'}).join('');
+  var gr=r.grow,grow=(gr&&(gr.suggestion||gr.quote))?'<div style="background:#faf6ee;border-radius:8px;padding:12px 14px;font-size:13.5px;line-height:1.6">'+q(gr.quote)+esc(gr.suggestion||'')+(gr.example?'<div style="margin-top:8px;color:#555"><strong>Try:</strong> '+esc(gr.example)+'</div>':'')+'</div>':'';
+  return'<div class="psheet" style="font-family:-apple-system,sans-serif"><div style="padding-bottom:18px;margin-bottom:24px;border-bottom:2px solid #1a1a1a"><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:6px">Māka · Glow &amp; Grow</div><div style="font-size:24px;font-weight:700;margin-bottom:3px">'+esc(firstNameOf(r.fileName))+'</div><div style="font-size:13px;color:#666">'+esc(task)+'</div></div>'
+    +(summary?'<div style="font-size:13.5px;line-height:1.6;color:#333;background:#f6f5f2;border-radius:8px;padding:12px 14px;margin-bottom:16px">'+esc(summary)+'</div>':'')
+    +(glows?'<div style="'+lbl+'color:#2d5a27">Glow</div>'+glows:'')
+    +(grow?'<div style="'+lbl+'color:#8a5a06;margin-top:14px">Grow</div>'+grow:'')+'</div>';
+}
 function printSheets(){
   if(!results.length){alert('No results to print.');return}
   var task=document.getElementById('task').value||'Assessment';
@@ -2673,6 +2822,7 @@ function printSheets(){
   out.className='print-out'+(per==='2'?' two-up':'');
   out.innerHTML=results.filter(function(r){return!r._error}).map(function(r,i,arr){
     if(r.type==='test'||Array.isArray(r.questions))return printTestSheet(r,i,arr,task);
+    if(r.type==='glow'||Array.isArray(r.glows))return printGlowSheet(r,task);
     var sc=(r.criteria||[]).map(function(c){return parseInt(c.score)||0}),tot=sc.reduce(function(a,b){return a+b},0);
     var trows=(r.criteria||[]).map(function(c){var s=parseInt(c.score)||0,d='';for(var x=1;x<=5;x++)d+='<span style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:3px;background:'+(x<=s?'#2d5a27':'#ddd')+'"></span>';return'<tr><td style="padding:8px 4px 8px 0;border-bottom:1px solid #eee;width:35%;font-size:13px">'+esc(c.name||'')+'</td><td style="padding:8px 4px;border-bottom:1px solid #eee;width:20%;white-space:nowrap">'+d+' '+s+'/5</td><td style="padding:8px 0;border-bottom:1px solid #eee;font-size:12px;color:#555;line-height:1.5">'+esc(c.comment||'')+'</td></tr>'}).join('');
     var fb=fbGet(r);
