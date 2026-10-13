@@ -691,7 +691,7 @@ html.tour-on .main{padding-bottom:calc(var(--tour-pad,0px) + 1.5rem)}
       <div class="step-row collapse-head" id="step0-head" role="button" tabindex="0" aria-expanded="true" aria-controls="step0-body" onclick="toggleStep0()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleStep0()}"><span class="step-n" id="step-n-0" data-n="0">0</span><span class="step-title">Gemini API key</span><span class="step-summary" id="step0-summary"></span><span class="collapse-chev"><span data-ic="chevron"></span></span></div>
       <div class="field collapse-body" id="step0-body">
         <div class="key-row"><input type="password" id="apikey" name="maka-gemini-key-nofill" placeholder="AIza…" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" aria-label="Gemini API key"><button class="eye-btn" aria-label="Show or hide key" onclick="var f=document.getElementById('apikey');f.type=f.type=='password'?'text':'password'"><span data-ic="eye"></span></button></div>
-        <div class="hint">Free at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com</a> — saved to your account when signed in.</div>
+        <div class="hint">Get a key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a> — saved to your account when signed in. <strong>For student work, use a paid-tier key</strong> (billing enabled): Google may use free-tier content to improve its products. <a href="privacy.html" target="_blank" rel="noopener">Why this matters</a></div>
         <div class="key-test"><button type="button" class="btn btn-sm" id="testkeybtn" onclick="testKey('apikey','key-test-out','testkeybtn')"><span data-ic="check"></span>Test key</button><span class="key-test-hint">Sends one tiny request to Gemini.</span></div>
         <div id="key-test-out" class="key-test-out" role="status" aria-live="polite"></div>
       </div>
@@ -3505,7 +3505,7 @@ function parentCard(id){var e=$(id);return e?e.closest('.card'):null}
 var STEPS=[
   {title:'Your Gemini key',target:function(){return $('step0-card')},
    before:function(){goTab('mark');openKeyCard()},
-   body:'<p>Māka marks with Google’s Gemini. Get a free key at <strong>aistudio.google.com</strong> and paste it here. It is your own key, so you only paste it once and can change or remove it in Settings. Press <strong>Test key</strong> to check it works.</p>'},
+   body:'<p>Māka marks with Google’s Gemini. Get a key at <strong>aistudio.google.com</strong> and paste it here. It is your own key, so you only paste it once and can change or remove it in Settings. <strong>For real student work, use a paid-tier key</strong> (billing enabled) — Google may use work sent through a free-tier key to improve its products. Press <strong>Test key</strong> to check it works.</p>'},
   {title:'Three ways to mark',target:function(){return document.querySelector('.mode-seg')},
    before:function(){goTab('mark');goMode('writing')},
    body:'<ul class="tour-list"><li>'+ic('edit')+'<span><strong>Writing</strong> scores against a rubric, out of 25.</span></li><li>'+ic('check')+'<span><strong>Test</strong> marks answers against your answer key.</span></li><li>'+ic('sparkle')+'<span><strong>Glow &amp; Grow</strong> gives feedback with no score.</span></li></ul>'},
@@ -3854,7 +3854,7 @@ async function testKey(inputId,outId,btnId){
     out.className='key-test-out '+(ok?'ok':'err');
     out.innerHTML=(ok?ic('check'):ic('alert'))+'<div><strong>'+esc(head)+'</strong>'+(fix?'<div class="kt-fix">'+esc(fix)+'</div>':'')+'</div>';
   }
-  if(!key){show(false,'Paste your key first.','Get a free one at aistudio.google.com/apikey, then press Test key.');var i=$(inputId);if(i){i.removeAttribute('readonly');i.focus()}return}
+  if(!key){show(false,'Paste your key first.','Get one at aistudio.google.com/apikey, then press Test key.');var i=$(inputId);if(i){i.removeAttribute('readonly');i.focus()}return}
   testing=true;
   var html=btn?btn.innerHTML:'';
   if(btn){btn.disabled=true;btn.setAttribute('aria-busy','true');btn.innerHTML='<span class="spinner"></span>Testing…'}

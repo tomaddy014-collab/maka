@@ -100,7 +100,8 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;bac
   <li><strong>Signed-in teachers have results saved.</strong> If you are signed in, marked results and a PDF copy of each piece of work are saved to your Māka account, which is stored with a service called Supabase. If you are not signed in, nothing is saved to that database.</li>
   <li><strong>Your account, plus students with their code.</strong> Only your account can open your saved work in Māka. A student can see their own results only if they have the login code you gave them. The person who runs Māka can technically reach what is stored in the database, as with any hosted service.</li>
   <li><strong>Deleting removes the data it names.</strong> Deleting a result, a session or your account removes the saved results <em>and</em> the stored PDF copies. Two things stay by design or limitation: removing a student from the class list keeps their marking history, and your sign-in login itself can only be removed by the person who runs Māka. Details are below.</li>
-  <li><strong>Google’s and Supabase’s own terms also apply.</strong> What they do with data depends on your Gemini plan and Supabase’s settings and terms. Māka cannot promise anything about that. Check your school’s policy before uploading student work.</li>
+  <li><strong>Use a paid-tier Gemini key for student work.</strong> As we understand Google’s terms, content sent through a <em>free</em> key may be used by Google to improve its products and may be read by people, while content sent through a key on a <em>billing-enabled (paid)</em> project is not used that way. Check Google’s current terms yourself — they change and can differ by region.</li>
+  <li><strong>Supabase’s and your school’s rules also apply.</strong> What Supabase does with stored data depends on your project’s settings and terms. Māka cannot promise anything about that. Check your school’s policy before uploading student work.</li>
 </ul>
 
 <h2 id="stored">What Māka stores and where</h2>
@@ -129,6 +130,10 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;bac
 
 <h2 id="gemini">What is sent to Google Gemini</h2>
 <p>Marking is done by Google’s Gemini model, not by Māka. Your browser sends the request straight to Google using <strong>your own Gemini API key</strong>. Māka does not have a server in the middle that passes it on; the pages themselves are hosted on Netlify, which is not part of that request.</p>
+<div class="note" style="border-left:3px solid var(--gold,#c8840a);background:var(--gold-soft,rgba(200,132,10,.12));padding:12px 14px;border-radius:8px;margin:14px 0">
+  <p style="margin:0 0 6px"><strong>Free key vs paid key matters.</strong> Google’s Gemini API terms treat free (“unpaid”) and paid usage differently. As we understand them, work sent through a <em>free</em> key can be used by Google to improve its products and may be reviewed by people; work sent through a key on a project with <em>billing enabled</em> is not used to improve its products. Google’s terms change and can differ by region, so please read the current version at <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener">ai.google.dev/gemini-api/terms</a>.</p>
+  <p style="margin:0"><strong>Our advice:</strong> for identifiable student work, use a paid-tier key (turn on billing in the Google AI Studio / Google Cloud project the key belongs to), and use the free tier only for your own test material or fully anonymised work. Māka cannot check which kind of key you have.</p>
+</div>
 <h3>What is included in those requests</h3>
 <ul>
   <li><strong>The student’s work</strong>, converted to a PDF in your browser. If the student wrote their name on it, that goes too, and Māka asks Gemini to read the name off the work so it can label the result.</li>
