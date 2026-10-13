@@ -22,7 +22,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#fff;--bg2:#f7f6f3;--bg3:#f5f0e8;
-  --text:#1a1a1a;--text2:#6b6b6b;--text3:#9a9a9a;
+  --text:#1a1a1a;--text2:#5f5f5f;--text3:#737373;
   --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.18);
   --green:#2d5a27;--green-bg:#e8f0e6;
   --warn-bg:#faeeda;--warn-text:#854f0b;
@@ -34,7 +34,7 @@
 }
 [data-theme="dark"]{
   --bg:#1c1b19;--bg2:#242220;--bg3:#161513;
-  --text:#ece9e3;--text2:#a9a49b;--text3:#7d7972;
+  --text:#ece9e3;--text2:#b3aea5;--text3:#9a958c;
   --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.18);
   --green:#7fb87a;--green-bg:#23302180;
   --warn-bg:#3a2e1a;--warn-text:#e0b878;
@@ -466,11 +466,32 @@ input[type=text],input[type=password],input[type=email],select{min-height:44px}
 .chk-sm .chk-box{width:18px;height:18px;border-radius:5px}
 .chk-sm .chk-box svg{width:12px;height:12px}
 /* Compact selects inside toolbars keep their natural width */
-.btn-row select,#print-per{width:auto;min-height:34px;font-size:12px;padding:6px 30px 6px 10px;background-position:right 9px center}
+.btn-row select,.print-per,#print-per{width:auto;min-height:34px;font-size:12px;padding:6px 30px 6px 10px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239a9a9a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;background-size:15px}
 #rubric-bits2{margin-bottom:12px}
 [data-theme="dark"] .ntab.active{color:#161513}
 @media(max-width:600px){.mode-seg{display:flex;width:100%}.mode-opt{flex:1;justify-content:center;text-align:center;padding:8px 6px;font-size:12px;line-height:1.25;gap:5px}}
 @media(max-width:768px){[data-theme="dark"] .ntab.active{color:var(--green)}}
+/* Audit fixes */
+.rhead>div:last-child{flex-wrap:wrap;justify-content:flex-end;min-width:0}
+.rhead .remark-btn{margin-left:0}
+.upload-box .btn-row,.upload-box>div[style*="flex"]{justify-content:center}
+@media(max-width:768px){
+  nav{backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--bg3)}
+  [data-theme="dark"] .nav-tabs{background:rgba(28,27,25,0.92)}
+}
+/* Touch devices & phones: every control reaches the 44px minimum */
+@media(pointer:coarse),(max-width:768px){
+  .btn,.btn-sm,.remark-btn,.chk-sm,.copy-btn{min-height:44px}
+  .btn-sm{padding-top:8px;padding-bottom:8px}
+  .remark-btn{padding:8px 14px;font-size:12.5px}
+  .mode-opt{min-height:44px}
+  select,.print-per,#print-per,.btn-row select{min-height:44px}
+  .xbtn{width:44px;height:44px;margin:-6px -8px -6px 0}
+  .eye-btn{min-width:44px;min-height:44px}
+  .chk-sm{padding:6px 14px 6px 10px}
+  .qmark{width:36px;height:36px}
+  .btn-row{gap:10px}
+}
 @media(prefers-reduced-motion:reduce){.chk-box svg,.step-n.done .ico path,.qmark.qok .ico path,.plist .tick .ico path{stroke-dashoffset:0}}
 </style>
 </head>

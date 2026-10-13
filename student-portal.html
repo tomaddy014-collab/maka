@@ -16,7 +16,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#fff;--bg2:#f7f6f3;--bg3:#f5f0e8;
-  --text:#1a1a1a;--text2:#6b6b6b;--text3:#9a9a9a;
+  --text:#1a1a1a;--text2:#5f5f5f;--text3:#737373;
   --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.16);
   --green:#2d5a27;--green-bg:#e8f0e6;
   --warn-bg:#faeeda;--warn-text:#854f0b;
@@ -31,7 +31,7 @@
   --ease:cubic-bezier(.25,.8,.25,1);--ease-spring:cubic-bezier(.16,1,.3,1)}
 [data-theme="dark"]{
   --bg:#1c1b19;--bg2:#242220;--bg3:#161513;
-  --text:#ece9e3;--text2:#a9a49b;--text3:#7d7972;
+  --text:#ece9e3;--text2:#b3aea5;--text3:#9a958c;
   --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.16);
   --green:#7fb87a;--green-bg:#23302180;
   --warn-bg:#3a2e1a;--warn-text:#e0b878;
@@ -173,6 +173,7 @@ canvas{width:100%!important}
 .meter.m2 .meter-seg.on,.meter.m1 .meter-seg.on{background:var(--danger-text,#a32d2d)}
 .meter-num{font-size:11.5px;font-weight:600;color:var(--text2);font-variant-numeric:tabular-nums}
 @keyframes segIn{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media(pointer:coarse),(max-width:768px){.btn,.btn-sm,.copy-btn{min-height:44px}select{min-height:44px}}
 </style>
 </head>
 <body>
