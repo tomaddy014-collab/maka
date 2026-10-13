@@ -464,7 +464,7 @@ async function loadAll(){
   ALL_RESULTS=raw.filter(function(r){
     var fn=(' '+(r.file_name||'').toLowerCase()+' ').replace(/[\s\-_.]+/g,' ');
     if(fn.indexOf(fullL)!==-1)return true;            // exact full name — always keep
-    if(!collision)return true;                         // unique first name — first-name match is safe
+    if(!collision)return fn.indexOf(' '+fl+' ')!==-1;  // unique first name — but as a WHOLE word (Jo must not match Joshua)
     return ll&&fn.indexOf(' '+ll+' ')!==-1;            // ambiguous — require surname to disambiguate
   });
 
