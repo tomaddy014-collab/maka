@@ -254,6 +254,15 @@ textarea{resize:vertical;min-height:60px;line-height:1.5}
 .d-eq{background:var(--bg2);color:var(--text3)}
 .btn:focus-visible,.copy-btn:focus-visible,.eye-btn:focus-visible,.icon-btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.sess-hd:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 @media(max-width:600px){.kpi-grid{grid-template-columns:1fr 1fr}.main{padding:1rem .85rem 3rem}.bar-lbl{width:110px}}
+.meter{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.meter-segs{display:inline-flex;gap:3px}
+.meter-seg{width:10px;height:7px;border-radius:3px;background:var(--bg2,#f7f6f3);box-shadow:inset 0 0 0 1px var(--border,rgba(0,0,0,0.1))}
+.meter-seg.on{box-shadow:none;transform-origin:left;animation:segIn .3s cubic-bezier(.16,1,.3,1) backwards}
+.meter.m5 .meter-seg.on,.meter.m4 .meter-seg.on{background:var(--green)}
+.meter.m3 .meter-seg.on{background:var(--gold,#c8840a)}
+.meter.m2 .meter-seg.on,.meter.m1 .meter-seg.on{background:var(--danger-text,#a32d2d)}
+.meter-num{font-size:11.5px;font-weight:600;color:var(--text2);font-variant-numeric:tabular-nums}
+@keyframes segIn{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 </style>
 </head>
 <body>
@@ -406,7 +415,7 @@ function isGlow(r){return parseMeta(r.nzc_reference).type==='glow'}
 function stripExt(n){return String(n).replace(/\.[^.]+$/,'')}
 function fmtDate(d){return new Date(d).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'})}
 function pillCls(pct){return pct>=75?'ph':pct>=50?'pm':'pl'}
-function dots(sc){var h='';for(var i=1;i<=5;i++)h+='<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:3px;background:'+(i<=sc?'var(--green)':'var(--border2)')+'"></span>';return h+'<span style="font-size:11px;color:var(--text2);margin-left:3px;font-variant-numeric:tabular-nums">'+sc+'/5</span>'}
+function dots(sc){sc=Math.max(0,Math.min(5,sc||0));var h='<span class="meter m'+sc+'" role="img" aria-label="'+sc+' out of 5"><span class="meter-segs">';for(var i=1;i<=5;i++)h+='<span class="meter-seg'+(i<=sc?' on':'')+'"'+(i<=sc?' style="animation-delay:'+((i-1)*40)+'ms"':'')+'></span>';return h+'</span><span class="meter-num">'+sc+'/5</span></span>'}
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function showErr(msg){document.getElementById('main').innerHTML='<div class="card" style="max-width:860px;margin:2rem auto"><div class="err">'+esc(msg)+'</div><div style="margin-top:1rem"><a href="tool.html" class="btn">← Back to Māka</a></div></div>'}
 function closeModal(){document.getElementById('edit-modal').classList.remove('open')}

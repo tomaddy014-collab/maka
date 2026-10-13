@@ -102,12 +102,9 @@ nav.scrolled{box-shadow:0 8px 30px -12px rgba(15,14,12,0.12)}
 .mode-seg{display:inline-flex;gap:3px;background:var(--bg2);border:1px solid var(--border);border-radius:100px;padding:4px;margin-bottom:1.25rem}
 .mode-opt{display:inline-flex;align-items:center;gap:7px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:500;color:var(--text2);padding:8px 16px;border-radius:100px;cursor:pointer;transition:background .2s var(--ease),color .2s var(--ease)}
 .mode-opt .ico{font-size:14px}
-.mode-opt.active{background:var(--bg);color:var(--text);box-shadow:var(--sh-sm)}
+.mode-opt.active{background:var(--bg);color:var(--text);box-shadow:0 1px 2px rgba(15,14,12,0.08),0 4px 12px -4px rgba(15,14,12,0.14)}
 .mode-opt:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-.resub-bar{margin:-0.5rem 0 1.25rem;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.resub-toggle{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--text2);cursor:pointer}
-.resub-toggle input{width:16px;height:16px;accent-color:var(--green)}
-.resub-toggle .ico{font-size:14px}
+.resub-bar{margin:-0.25rem 0 1.25rem;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .resub-pick{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .resub-pick select{font-size:13px;padding:6px 10px;max-width:320px}
 .rev-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 9px;border-radius:100px;background:var(--info-bg,#e6f1fb);color:var(--info-text,#185fa5)}
@@ -374,6 +371,104 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .hm-name{text-align:left!important;font-weight:500;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
 .hm-head{font-weight:600;color:var(--text2);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hm-cell{color:#fff;font-weight:700;font-size:11px}
+
+/* ── Design refresh: premium controls ─────────────────────────────────────── */
+@keyframes drawCheck{from{stroke-dashoffset:24}to{stroke-dashoffset:0}}
+@keyframes tickPop{0%{transform:scale(.6)}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+@keyframes segIn{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+/* Custom checkbox: native input kept for a11y, visual box drawn alongside it */
+.chk{position:relative;display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:6px 14px 6px 10px;border-radius:100px;border:1px solid var(--border);background:var(--bg);font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;user-select:none;transition:border-color .2s var(--ease),background .2s var(--ease),color .2s var(--ease),box-shadow .2s var(--ease)}
+.chk:hover{border-color:var(--border2);color:var(--text)}
+.chk-input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.chk-box{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--border2);background:var(--bg);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s var(--ease),border-color .2s var(--ease),transform .25s var(--ease-spring),box-shadow .2s var(--ease)}
+.chk-box svg{width:13px;height:13px;stroke:#fff;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:24;stroke-dashoffset:24}
+.chk:active .chk-box{transform:scale(.88)}
+.chk-input:checked+.chk-box{background:var(--green);border-color:var(--green);box-shadow:0 2px 8px -2px rgba(45,90,39,0.5);animation:tickPop .3s var(--ease-spring)}
+.chk-input:checked+.chk-box svg{animation:drawCheck .28s .05s var(--ease) forwards}
+.chk:has(.chk-input:checked){border-color:var(--green);background:var(--green-bg);color:var(--green)}
+.chk-input:focus-visible+.chk-box{outline:2px solid var(--gold);outline-offset:3px}
+.chk .ico{font-size:14px}
+
+/* Step numbers: completed steps get a drawn tick and a soft ring */
+.step-n{width:26px;height:26px;font-size:12px;border:1px solid var(--border)}
+.step-n.done{border-color:var(--green);box-shadow:0 0 0 4px var(--green-bg);animation:tickPop .35s var(--ease-spring);transform:none}
+.step-n.done .ico path{stroke-dasharray:24;stroke-dashoffset:24;animation:drawCheck .3s .08s var(--ease) forwards}
+.step-n.done .ico{stroke-width:2.6}
+
+/* Test question ticks: larger, tactile, with drawn checks */
+.qmark{width:30px;height:30px;font-size:15px;border:1px solid transparent;transition:transform .2s var(--ease-spring),box-shadow .2s var(--ease),filter .2s var(--ease)}
+.qmark .ico{stroke-width:2.6}
+.qmark.qok{border-color:rgba(45,90,39,0.25)}
+.qmark.qok .ico path{stroke-dasharray:24;stroke-dashoffset:24;animation:drawCheck .3s var(--ease) forwards}
+.qmark.qpart{border-color:rgba(133,79,11,0.25)}
+.qmark.qno{border-color:rgba(163,45,45,0.22)}
+.qmark[role=button]{position:relative}
+.qmark[role=button]::before{content:'';position:absolute;inset:-7px}
+.qmark[role=button]:hover{filter:none;transform:scale(1.08);box-shadow:0 3px 10px -3px var(--shadow)}
+.qmark[role=button]:active{transform:scale(.92)}
+
+/* Progress list: ticks in filled badges */
+.plist .tick{width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.plist .tick .ico{font-size:12px;stroke-width:3}
+.plist .tick .ico path{stroke-dasharray:24;stroke-dashoffset:24;animation:drawCheck .3s .05s var(--ease) forwards}
+.batch-track{height:8px;box-shadow:inset 0 1px 2px rgba(0,0,0,0.06)}
+.batch-fill{background:linear-gradient(90deg,var(--green),#4b8a43)}
+.batch-lbl{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;font-variant-numeric:tabular-nums}
+
+/* Score meter: segmented bar instead of plain dots */
+.meter{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.meter-segs{display:inline-flex;gap:3px}
+.meter-seg{width:10px;height:7px;border-radius:3px;background:var(--bg2);box-shadow:inset 0 0 0 1px var(--border)}
+.meter-seg.on{box-shadow:none;transform-origin:left;animation:segIn .3s var(--ease-spring) backwards}
+.meter.m5 .meter-seg.on,.meter.m4 .meter-seg.on{background:var(--green)}
+.meter.m3 .meter-seg.on{background:var(--gold)}
+.meter.m2 .meter-seg.on,.meter.m1 .meter-seg.on{background:var(--danger-text)}
+.meter-num{font-size:11.5px;font-weight:600;color:var(--text2);font-variant-numeric:tabular-nums}
+
+/* Selects: custom chevron, consistent with inputs */
+select{appearance:none;-webkit-appearance:none;padding-right:34px;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239a9a9a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;background-size:15px}
+select:hover{border-color:var(--text3)}
+input[type=text],input[type=password],input[type=email],select{min-height:44px}
+
+/* Upload area: warmer, clearer target */
+.upload-box{background:linear-gradient(180deg,var(--bg),var(--bg2));border-width:1.5px}
+.upload-ico{width:56px;height:56px;border-radius:16px;background:var(--bg);border:1px solid var(--border);box-shadow:0 4px 14px -6px var(--shadow);display:inline-flex;align-items:center;justify-content:center}
+.upload-ico .ico{font-size:24px;color:var(--gold)}
+.upload-box.dragover .upload-ico{transform:translateY(-3px) scale(1.05);transition:transform .25s var(--ease-spring)}
+
+/* File list rows */
+.fitem{padding:9px 8px;margin:0 -8px;border-radius:8px;transition:background .15s var(--ease)}
+.fitem:hover{background:var(--bg2)}
+.xbtn{width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;padding:0;transition:background .15s var(--ease),color .15s var(--ease)}
+.xbtn:hover{background:var(--danger-bg)}
+
+/* Card action buttons: comfortable targets */
+.remark-btn{display:inline-flex;align-items:center;gap:5px;min-height:34px;padding:6px 12px;font-size:12px;font-weight:500;transition:background .15s var(--ease),border-color .15s var(--ease),color .15s var(--ease),transform .15s var(--ease)}
+.remark-btn:hover{border-color:var(--text3);color:var(--text)}
+.remark-btn:active{transform:scale(.95)}
+.remark-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+/* Mode switcher: icons pick up the brand colour when active */
+.mode-opt{min-height:40px}
+.mode-opt.active .ico{color:var(--green)}
+.mode-opt:hover:not(.active){color:var(--text)}
+
+/* Primary button: a touch of depth */
+.btn-p{box-shadow:0 1px 0 rgba(255,255,255,0.08) inset,0 4px 14px -6px rgba(15,14,12,0.45)}
+[data-theme="dark"] .btn-p{background:#ece9e3;color:#1a1a1a;border-color:#ece9e3}
+[data-theme="dark"] .btn-p:hover{background:#fff}
+[data-theme="dark"] .chk-box svg{stroke:#161513}
+[data-theme="dark"] .btn-p .spinner{border-color:rgba(0,0,0,0.2)!important;border-top-color:#1a1a1a!important}
+[data-theme="dark"] .qmark.qok,[data-theme="dark"] .qmark.qpart,[data-theme="dark"] .qmark.qno{border-color:var(--border2)}
+
+/* Compact selects inside toolbars keep their natural width */
+.btn-row select,#print-per{width:auto;min-height:34px;font-size:12px;padding:6px 30px 6px 10px;background-position:right 9px center}
+#rubric-bits2{margin-bottom:12px}
+[data-theme="dark"] .ntab.active{color:#161513}
+@media(max-width:600px){.mode-seg{display:flex;width:100%}.mode-opt{flex:1;justify-content:center;text-align:center;padding:8px 6px;font-size:12px;line-height:1.25;gap:5px}}
+@media(max-width:768px){[data-theme="dark"] .ntab.active{color:var(--green)}}
+@media(prefers-reduced-motion:reduce){.chk-box svg,.step-n.done .ico path,.qmark.qok .ico path,.plist .tick .ico path{stroke-dashoffset:0}}
 </style>
 </head>
 <body>
@@ -442,7 +537,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <button class="mode-opt" id="mode-glow" role="tab" aria-selected="false" onclick="setMarkMode('glow')"><span data-ic="sparkle"></span>Glow &amp; Grow</button>
     </div>
     <div class="resub-bar">
-      <label class="resub-toggle"><input type="checkbox" id="resub-check" onchange="toggleResub()"> <span data-ic="refresh"></span> This is a resubmission</label>
+      <label class="chk"><input type="checkbox" class="chk-input" id="resub-check" onchange="toggleResub()"><span class="chk-box" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><span data-ic="refresh"></span>This is a resubmission</label>
       <div class="resub-pick" id="resub-pick" style="display:none">
         <span style="font-size:12.5px;color:var(--text2)">Compare against:</span>
         <select id="resub-sess" onchange="loadResubSession()"><option value="">— Choose the original session —</option></select>
@@ -462,7 +557,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <div class="step-row"><span class="step-n" id="step-n-1" data-n="1">1</span><span class="step-title" id="setup-title">Marking criteria</span></div>
       <div id="rubric-bits">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-        <select id="rubric-select" style="width:auto;font-size:13px;padding:6px 10px;flex:1;max-width:280px" onchange="loadRubric()"><option value="">— Load a saved rubric —</option></select>
+        <select id="rubric-select" style="width:auto;font-size:13px;padding:6px 34px 6px 10px;flex:1;max-width:280px" onchange="loadRubric()"><option value="">— Load a saved rubric —</option></select>
         <button class="btn btn-sm" onclick="saveRubric()"><span data-ic="save"></span>Save current</button>
       </div>
       </div>
@@ -553,7 +648,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
       <div style="font-weight:600;font-size:14px" id="dash-sess-label">Current session</div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <button class="btn btn-sm" id="dash-export-btn" onclick="exportAllReportCards()"><span data-ic="download"></span>Download all report cards</button>
-        <select id="dash-sess-sel" style="font-size:13px;padding:6px 10px;width:auto" onchange="loadDashSess()"><option value="current">Current session</option></select>
+        <select id="dash-sess-sel" style="font-size:13px;padding:6px 34px 6px 10px;width:auto" onchange="loadDashSess()"><option value="current">Current session</option></select>
       </div>
     </div>
     <div id="dash-empty" class="card" style="text-align:center;padding:3rem;color:var(--text2)"><div class="empty-ico" style="margin-bottom:12px"><span data-ic="chart"></span></div><div style="font-weight:500;margin-bottom:6px">No results yet</div><div style="font-size:13px">Mark some student work first.</div></div>
@@ -2169,7 +2264,7 @@ function saveAllToProfiles(){
 }
 
 function pillCls(pct){return pct>=75?'ph':pct>=50?'pm':'pl'}
-function dots(sc){var h='';for(var i=1;i<=5;i++)h+='<span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:2px;background:'+(i<=sc?'#2d5a27':'#d8d5cf')+'"></span>';return h+'<span style="font-size:11px;color:var(--text2);margin-left:2px">'+sc+'/5</span>'}
+function dots(sc){sc=Math.max(0,Math.min(5,sc||0));var h='<span class="meter m'+sc+'" role="img" aria-label="'+sc+' out of 5"><span class="meter-segs">';for(var i=1;i<=5;i++)h+='<span class="meter-seg'+(i<=sc?' on':'')+'"'+(i<=sc?' style="animation-delay:'+((i-1)*40)+'ms"':'')+'></span>';return h+'</span><span class="meter-num">'+sc+'/5</span></span>'}
 function makeEditable(el,onSave){
   el.classList.add('editable');el.title='Click or press Enter to edit';
   if(!el.hasAttribute('tabindex'))el.setAttribute('tabindex','0');
@@ -2540,7 +2635,7 @@ function loadHistory(){
     var areas=HIST_SESSIONS.map(function(s){return s.learning_area||''}).filter(function(a,i,arr){return a&&arr.indexOf(a)===i}).sort();
     el.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">'
       +'<input type="text" id="hist-search" placeholder="Search sessions…" oninput="renderHistList()" aria-label="Search sessions" style="flex:1;min-width:160px;font-size:13px;padding:8px 11px">'
-      +'<select id="hist-area" onchange="renderHistList()" aria-label="Filter by learning area" style="width:auto;font-size:13px;padding:8px 10px"><option value="">All learning areas</option>'+areas.map(function(a){return'<option value="'+esc(a)+'">'+esc(a)+'</option>'}).join('')+'</select>'
+      +'<select id="hist-area" onchange="renderHistList()" aria-label="Filter by learning area" style="width:auto;font-size:13px;padding:8px 34px 8px 10px"><option value="">All learning areas</option>'+areas.map(function(a){return'<option value="'+esc(a)+'">'+esc(a)+'</option>'}).join('')+'</select>'
       +'</div><div id="hist-rows"></div>';
     renderHistList();
   }).catch(function(e){el.innerHTML='<div class="err">'+esc(e.message)+'</div>'});
