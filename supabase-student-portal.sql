@@ -9,7 +9,7 @@ alter table students add column if not exists access_code text unique;
 
 create or replace function maka_gen_access_code() returns text
 language sql as $$
-  select upper(substr(md5(random()::text || clock_timestamp()::text), 1, 6))
+  select upper(substr(md5(random()::text || clock_timestamp()::text || gen_random_uuid()::text), 1, 8))
 $$;
 
 -- Backfill any existing students that don't have a code yet
@@ -30,6 +30,10 @@ drop trigger if exists maka_students_access_code on students;
 create trigger maka_students_access_code
   before insert on students
   for each row execute function maka_set_access_code();
+
+-- NOTE (re-run safe): this version matches results by the student's FULL name as whole words, and by
+-- first name only when it is unique among your students — so students who share a first name (or
+-- Jo/Joshua) can no longer see each other's results. Re-running this file updates the function.
 
 -- 2. Portal data function — SECURITY DEFINER so it can read the tables
 -- itself, but it never exposes more than the single matching student's
@@ -63,7 +67,20 @@ begin
     from student_results sr
     join sessions s on s.id = sr.session_id
     where sr.teacher_id = v_student.teacher_id
-      and sr.file_name ilike '%' || split_part(trim(v_student.name), ' ', 1) || '%'
+      and (
+        -- the student's FULL name appears as whole words in the saved file name
+        sr.file_name ~* ('(^|[^[:alnum:]])' || regexp_replace(trim(v_student.name), '([.^$*+?()\[\]{}|\\])', '\\\1', 'g') || '([^[:alnum:]]|$)')
+        or (
+          -- legacy files named with a first name only: match ONLY when no other student of
+          -- this teacher shares that first name, and only as a whole word (Jo never matches Joshua)
+          not exists (
+            select 1 from students o
+            where o.teacher_id = v_student.teacher_id and o.id <> v_student.id
+              and lower(split_part(trim(o.name), ' ', 1)) = lower(split_part(trim(v_student.name), ' ', 1))
+          )
+          and sr.file_name ~* ('(^|[^[:alnum:]])' || regexp_replace(split_part(trim(v_student.name), ' ', 1), '([.^$*+?()\[\]{}|\\])', '\\\1', 'g') || '([^[:alnum:]]|$)')
+        )
+      )
     order by sr.created_at asc
   ) r;
 

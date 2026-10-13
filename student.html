@@ -905,10 +905,10 @@ async function genReport(){
   ].filter(Boolean).join('\n');
 
   try{
-    var d=await(await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:2048,thinkingConfig:{thinkingBudget:0}}})
-    })).json();
+    var gbody=JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:2048,thinkingConfig:{thinkingBudget:0}}}),gbase='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',gresp;
+    try{gresp=await fetch(gbase,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:gbody})}
+    catch(e){gresp=await fetch(gbase+'?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:gbody})}
+    var d=await gresp.json();
     if(d.error)throw new Error(d.error.message||'Gemini error');
     var ps=((d.candidates||[])[0]||{content:{parts:[]}}).content.parts||[];
     var text=ps.filter(function(p){return p.text&&!p.thought}).map(function(p){return p.text}).join('').trim();

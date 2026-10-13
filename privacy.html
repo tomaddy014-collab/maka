@@ -99,7 +99,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;bac
   <li><strong>Marking happens at Google.</strong> When you mark, the student work you upload is sent from your browser to Google’s Gemini service, using <em>your own</em> Gemini API key. Māka cannot mark work without sending it there.</li>
   <li><strong>Signed-in teachers have results saved.</strong> If you are signed in, marked results and a PDF copy of each piece of work are saved to your Māka account, which is stored with a service called Supabase. If you are not signed in, nothing is saved to that database.</li>
   <li><strong>Your account, plus students with their code.</strong> Only your account can open your saved work in Māka. A student can see their own results only if they have the login code you gave them. The person who runs Māka can technically reach what is stored in the database, as with any hosted service.</li>
-  <li><strong>Deleting has limits.</strong> Some delete buttons remove everything they should; others do not (for example, deleting a whole session leaves the stored PDFs, and “Delete account” does not remove everything). Details are below.</li>
+  <li><strong>Deleting removes the data it names.</strong> Deleting a result, a session or your account removes the saved results <em>and</em> the stored PDF copies. Two things stay by design or limitation: removing a student from the class list keeps their marking history, and your sign-in login itself can only be removed by the person who runs Māka. Details are below.</li>
   <li><strong>Google’s and Supabase’s own terms also apply.</strong> What they do with data depends on your Gemini plan and Supabase’s settings and terms. Māka cannot promise anything about that. Check your school’s policy before uploading student work.</li>
 </ul>
 
@@ -152,26 +152,26 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;bac
 </ul>
 <div class="note">
   <p><strong>Two things to know about student login codes.</strong></p>
-  <p>First, the portal finds a student’s results by looking for their <em>first name</em> inside the saved file names. If two students share a first name, or one first name appears inside another (for example Jo and Joshua), a student could see the other’s results. Check your class for this before giving out codes, and use full names in file names where you can.</p>
-  <p>Second, a code is short and does not expire, so treat it like a password. You can generate a new code for a student in the Class tab at any time.</p>
+  <p>First, the portal finds a student’s results by their <em>full name</em> in the saved file name (matched as whole words). Older files saved with a first name only are matched by first name <em>only when no other student in your class shares that first name</em>, and only as a whole word, so Jo never matches Joshua. If two students share a first name and a file only has that first name, it is not shown to either of them. This matching lives in the Supabase database function, so it only applies once the updated <code>supabase-student-portal.sql</code> has been run on the project — ask the person who runs Māka to confirm. Using full names in file names (the Class-list assignment does this automatically) keeps results attached to the right student.</p>
+  <p>Second, a code does not expire, so treat it like a password. New codes are 8 characters long (older 6-character codes still work until you regenerate them). You can generate a new code for a student in the Class tab at any time. Māka does not add its own limit on repeated guesses.</p>
 </div>
 
 <h2 id="deleting">Deleting data</h2>
 <p>What the buttons currently do:</p>
 <ul>
   <li><strong>Removing one student’s result</strong> (from the Mark tab after the 4-second undo, or from a past session in History): deletes the saved result row and the stored PDF copy.</li>
-  <li><strong>Deleting a whole session</strong> (History): deletes the session record only. It does <strong>not</strong> delete the stored PDF copies, and whether the result rows go with it depends on database settings that are not part of Māka’s page code. To remove everything, remove each result first, then delete the session.</li>
+  <li><strong>Deleting a whole session</strong> (History): removes every result in the session, their stored PDF copies, and then the session itself (after the 4-second undo window).</li>
   <li><strong>Removing a student from the class list</strong> (Class tab or student hub): deletes the class-list entry (name, year level, setting, login code, so the student’s code stops working). Their results, stored PDFs and any saved report comments stay.</li>
-  <li><strong>Saved report comments</strong> cannot currently be deleted from inside Māka.</li>
-  <li><strong>Delete account</strong> (Settings): deletes your profile record (email, display name, API key, writing style) and signs you out. It does <strong>not</strong> itself delete your sessions, results, class list, stored PDFs or your sign-in login. Do not rely on it to erase student data.</li>
+  <li><strong>Saved report comments</strong> have no delete button of their own; they are removed by Delete account.</li>
+  <li><strong>Delete account</strong> (Settings): removes your sessions, results, stored PDFs, class list, saved rubrics, report comments and your profile record (email, display name, API key, writing style), clears the cached results in your browser, and signs you out. It does <strong>not</strong> remove your sign-in login itself — only the person who runs Māka can do that. If anything fails part-way you are told, and you can run it again.</li>
   <li><strong>Data already sent to Google</strong> cannot be deleted from Māka. That is governed by Google’s terms.</li>
 </ul>
-<p>If you need student data fully removed, delete results and sessions as above first, then ask the person who runs Māka to remove the rest (contact details below).</p>
+<p>If you need a student’s data fully removed, delete their results (and the student from the class list) as above. To remove your sign-in login as well, ask the person who runs Māka (contact details below).</p>
 
 <h2 id="browser">What stays in your browser</h2>
 <p>Māka saves a few things on the device you use. None of it is sent anywhere by these features.</p>
 <ul>
-  <li><strong>Your latest marking results</strong> (<code>maka-results</code>): file names, scores, feedback and short quotes from the work, kept so a refresh does not lose your marking. Kept for up to 24 hours, replaced when you mark again, and removed by the Clear button. Signing out does <em>not</em> remove it, so on a shared computer press Clear before you leave.</li>
+  <li><strong>Your latest marking results</strong> (<code>maka-results</code>): file names, scores, feedback and short quotes from the work, kept so a refresh does not lose your marking. Kept for up to 24 hours, replaced when you mark again, and removed by the Clear button. Signing out now clears it too, and Clear removes it at any time.</li>
   <li><strong>Preferences</strong>: light or dark mode, your last learning area and level, Classroom-comment options and print layout.</li>
   <li><strong>Your sign-in session</strong>, stored by the Supabase library until you sign out.</li>
   <li><strong>A student’s login code</strong> is held for that browser tab only and is cleared on log out or when the tab closes.</li>

@@ -1027,7 +1027,7 @@ function updateNavForUser(){
   document.getElementById('settings-signed-out').style.display='none';
   document.getElementById('settings-signed-in').style.display='block';
 }
-function handleAuthBtn(){if(USER){sb.auth.signOut().then(function(){window.location.href='login.html'})}else{window.location.href='login.html'}toggleDD()}
+function handleAuthBtn(){if(USER){try{localStorage.removeItem('maka-results')}catch(e){}sb.auth.signOut().then(function(){window.location.href='login.html'})}else{window.location.href='login.html'}toggleDD()}
 function loadProfileBg(){
   if(!sb||!USER)return;
   sb.from('profiles').select('*').eq('id',USER.id).maybeSingle().then(function(res){
@@ -1082,7 +1082,32 @@ document.addEventListener('click',function(e){if(document.getElementById('avatar
 function saveName(){if(!sb||!USER)return;var n=document.getElementById('set-name').value.trim();if(!n)return;sb.from('profiles').update({display_name:n}).eq('id',USER.id).then(function(){PROFILE.display_name=n;document.getElementById('dd-name').textContent=n;document.getElementById('av-init').textContent=n[0].toUpperCase();showStatus('name-status','Saved','ok')}).catch(function(){})}
 function saveKey(){if(!sb||!USER)return;var k=document.getElementById('set-key').value.trim();if(!k)return;sb.from('profiles').update({gemini_key:k}).eq('id',USER.id).then(function(){PROFILE.gemini_key=k;document.getElementById('apikey').value=k;showStatus('key-status','Saved','ok')}).catch(function(){})}
 function saveStyle(){if(!sb||!USER)return;var s=document.getElementById('set-style').value.trim();sb.from('profiles').update({writing_style:s||null}).eq('id',USER.id).then(function(){PROFILE.writing_style=s;showStatus('style-status','Saved','ok')}).catch(function(){})}
-function deleteAcct(){if(!sb||!USER||!confirm('Delete your account and ALL data? Cannot be undone.'))return;sb.from('profiles').delete().eq('id',USER.id).then(function(){sb.auth.signOut().then(function(){window.location.href='login.html'})}).catch(function(){})}
+// Remove stored PDFs + result rows (+ optionally the session rows) so deleting never leaves student files behind.
+async function purgeResults(filter){
+  // filter: {session_id:id} or {teacher_id:id}
+  var q=sb.from('student_results').select('pdf_path');
+  Object.keys(filter).forEach(function(k){q=q.eq(k,filter[k])});
+  var got=await q,paths=((got&&got.data)||[]).map(function(r){return r.pdf_path}).filter(Boolean);
+  for(var i=0;i<paths.length;i+=100){try{await sb.storage.from('student-pdfs').remove(paths.slice(i,i+100))}catch(e){}}
+  var d=sb.from('student_results').delete();
+  Object.keys(filter).forEach(function(k){d=d.eq(k,filter[k])});
+  var res=await d;if(res&&res.error)throw new Error(res.error.message);
+}
+async function deleteAccountData(uid){
+  await purgeResults({teacher_id:uid});
+  var tables=['sessions','report_comments','rubrics','students'];
+  for(var i=0;i<tables.length;i++){var r=await sb.from(tables[i]).delete().eq('teacher_id',uid);if(r&&r.error)throw new Error(tables[i]+': '+r.error.message)}
+  var pr=await sb.from('profiles').delete().eq('id',uid);if(pr&&pr.error)throw new Error('profile: '+pr.error.message);
+}
+function deleteAcct(){
+  if(!sb||!USER)return;
+  if(!confirm('Delete ALL your students, marking history, stored student PDFs, saved rubrics and report comments, and your profile (including your saved Gemini key)? This cannot be undone.\n\nYour sign-in login itself stays and can be removed by the person who runs Māka.'))return;
+  showToast('Deleting your data…','',4000);
+  deleteAccountData(USER.id).then(function(){
+    try{localStorage.removeItem('maka-results');localStorage.removeItem('maka-settings')}catch(e){}
+    sb.auth.signOut().then(function(){window.location.href='login.html'});
+  }).catch(function(e){showToast('Could not delete everything: '+(e.message||e)+' — nothing further was removed. Try again, or ask the person who runs Māka.','err',9000)});
+}
 
 function loadRubrics(){
   if(!sb||!USER)return Promise.resolve([]);
@@ -1502,8 +1527,18 @@ function friendlyGeminiError(status,msg){
   if(status===400)return'Gemini could not read this file (400). Try a clearer scan, or re-save it as a PDF/JPG and re-upload.';
   return msg||('Gemini error '+status);
 }
+// Send the API key in a request header (not the URL, which ends up in logs/histories). If the browser
+// blocks the custom header for any reason, fall back once to the URL form so marking never breaks.
+var GEMINI_HDR_OK=true;
+async function geminiFetch(key,body){
+  var base='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+  if(GEMINI_HDR_OK){
+    try{return await fetch(base,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:body})}
+    catch(e){GEMINI_HDR_OK=false}
+  }
+  return fetch(base+'?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:body});
+}
 async function gemini(key,parts,onRetry){
-  var url='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key;
   // thinkingBudget:0 disables Gemini 2.5's hidden "thinking" tokens, which otherwise eat into
   // maxOutputTokens and can cut off the visible answer (most noticeable on short outputs like
   // report comments). Also faster and cheaper since no reasoning tokens are spent.
@@ -1515,7 +1550,7 @@ async function gemini(key,parts,onRetry){
   var maxTries=10,delay=2000,lastErr='Gemini unavailable';
   for(var attempt=1;attempt<=maxTries;attempt++){
     try{
-      var resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:body});
+      var resp=await geminiFetch(key,body);
       // Hard client errors (bad key, bad request) — surface immediately, no point retrying
       if(resp.status===400||resp.status===401||resp.status===403||resp.status===404){
         var ed=await resp.json().catch(function(){return{}});
@@ -2936,7 +2971,7 @@ function delSession(id,name){
   var undone=false;
   var timer=setTimeout(function(){
     if(undone)return;
-    sb.from('sessions').delete().eq('id',id).then(function(){loadHistory()}).catch(function(){if(el)el.style.opacity='';});
+    purgeResults({session_id:id}).then(function(){return sb.from('sessions').delete().eq('id',id)}).then(function(r){if(r&&r.error)throw new Error(r.error.message);loadHistory()}).catch(function(e){if(el)el.style.opacity='';showToast('Could not delete the session: '+(e.message||e),'err',7000)});
   },4000);
   showToast(ic('trash')+'Deleted "'+esc(name||'Session')+'"','',5000,'Undo',function(){undone=true;clearTimeout(timer);if(el)el.style.opacity='';});
 }
@@ -3050,7 +3085,7 @@ function copyCode(code,el){
 }
 function regenCode(id){
   if(!sb||!USER)return;
-  var newCode=Math.random().toString(36).slice(2,8).toUpperCase();
+  var al='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',buf=new Uint32Array(8),newCode='';crypto.getRandomValues(buf);for(var ci=0;ci<8;ci++)newCode+=al[buf[ci]%al.length];
   sb.from('students').update({access_code:newCode}).eq('id',id).then(function(res){
     if(res.error){showToast('Could not generate code: '+res.error.message,'err');return}
     loadClassList();showToast('New student login code generated','ok');
