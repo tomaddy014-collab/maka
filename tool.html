@@ -500,6 +500,78 @@ input[type=text],input[type=password],input[type=email],select{min-height:44px}
 }
 @media(prefers-reduced-motion:reduce){.chk-box svg,.step-n.done .ico path,.qmark.qok .ico path,.plist .tick .ico path{stroke-dashoffset:0}}
 </style>
+<style id="tour-css">
+/* ── First-run guided tour ─────────────────────────────────────────────────────
+   z-index scale: nav 10 · tab bar 50 · dropdown 200 · modals 500 · TOUR 1000 · toasts 2000.
+   Only transform/opacity are animated. Reduced motion is handled by the global rule above. */
+:root{--tour-dim:rgba(12,11,9,.56)}
+[data-theme="dark"]{--tour-dim:rgba(0,0,0,.66)}
+.tour-root{position:fixed;inset:0;z-index:1000;pointer-events:none}
+.tour-block{position:absolute;inset:0;pointer-events:auto;background:transparent;transition:background-color .22s var(--ease)}
+.tour-root.nospot .tour-block{background:var(--tour-dim)}
+.tour-spot{position:absolute;left:0;top:0;border-radius:14px;pointer-events:none;opacity:0;transform-origin:0 0;will-change:transform;box-shadow:0 0 0 2px var(--gold),0 0 0 9999px var(--tour-dim);transition:transform .3s var(--ease-spring),opacity .2s var(--ease)}
+.tour-spot.on{opacity:1}
+.tour-spot.nofx,.tour-card.nofx{transition:none!important}
+.tour-card{position:absolute;left:0;top:0;width:min(360px,calc(100vw - 32px));max-height:calc(100vh - 24px);overflow:auto;overscroll-behavior:contain;background:var(--bg);color:var(--text);border:1px solid var(--border2);border-radius:16px;padding:18px 18px 14px;box-shadow:0 22px 60px -14px rgba(0,0,0,.5);pointer-events:auto;opacity:0;transition:transform .3s var(--ease-spring),opacity .2s var(--ease)}
+.tour-card.on{opacity:1}
+.tour-card:focus{outline:none}
+.tour-card:focus-visible{box-shadow:0 22px 60px -14px rgba(0,0,0,.5),0 0 0 2px var(--gold)}
+.tour-swap{animation:tourSwap .26s var(--ease-spring)}
+@keyframes tourSwap{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.tour-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.tour-count{font-size:12px;font-weight:600;color:var(--green);letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.tour-dots{display:flex;gap:5px;list-style:none;align-items:center}
+.tour-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);opacity:.4;transition:transform .25s var(--ease-spring),opacity .2s var(--ease),background-color .2s var(--ease)}
+.tour-dot.done{background:var(--green);opacity:.7}
+.tour-dot.cur{background:var(--green);opacity:1;transform:scale(1.55)}
+.tour-title{font-family:'Fraunces',Georgia,serif;font-weight:800;font-size:19px;line-height:1.25;letter-spacing:-.01em;margin-bottom:6px;color:var(--text)}
+.tour-body{font-size:14px;line-height:1.55;color:var(--text2)}
+.tour-body p+p{margin-top:6px}
+.tour-body strong{color:var(--text);font-weight:600}
+.tour-list{list-style:none;display:flex;flex-direction:column;gap:7px;margin-top:2px}
+.tour-list li{display:flex;gap:9px;align-items:flex-start}
+.tour-list .ico{font-size:15px;margin-top:3px;color:var(--green)}
+.tour-extra{margin-top:12px}
+.tour-foot{display:flex;align-items:center;gap:8px;margin-top:14px}
+.tour-foot .tour-btn.skip{margin-right:auto}
+.tour-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;min-width:44px;padding:0 16px;border-radius:var(--rs);border:1px solid var(--border2);background:var(--bg);color:var(--text);font:500 13.5px 'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;touch-action:manipulation;transition:background-color .2s var(--ease),transform .2s var(--ease-spring)}
+.tour-btn:hover{background:var(--bg2)}
+.tour-btn:active{transform:scale(.97)}
+.tour-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.tour-btn.skip{border-color:transparent;background:none;color:var(--text2);padding:0 8px;text-decoration:underline;text-underline-offset:3px}
+.tour-btn.skip:hover{color:var(--text);background:none}
+.tour-btn[hidden]{display:none}
+.tour-cta,.tour-btn.pri{background:var(--green);border-color:var(--green);color:#fff}
+.tour-cta:hover,.tour-btn.pri:hover{background:#1e3d1a;color:#fff}
+[data-theme="dark"] .tour-cta,[data-theme="dark"] .tour-btn.pri{color:#10200e}
+[data-theme="dark"] .tour-cta:hover,[data-theme="dark"] .tour-btn.pri:hover{background:#9ccd97;color:#10200e}
+.tour-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+html.tour-on .main{padding-bottom:calc(var(--tour-pad,0px) + 1.5rem)}
+@media(max-width:768px){
+  html.tour-on .main{padding-bottom:calc(var(--tour-pad,0px) + 96px)}
+  .tour-card{left:8px;right:8px;top:auto;bottom:calc(var(--tour-bottom,0px) + 8px);width:auto;max-height:min(56vh,440px);transform:none!important;padding:16px 16px 12px}
+  .tour-card.on{animation:sheetUp .32s var(--ease-spring)}
+  .tour-title{font-size:18px}
+}
+@keyframes sheetUp{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+/* Welcome modal */
+.tour-wel{max-width:420px;text-align:left}
+.tour-wel-ico{width:44px;height:44px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.tour-wel-ico .ico{font-size:22px}
+.tour-wel-title{font-family:'Fraunces',Georgia,serif;font-weight:800;font-size:21px;line-height:1.25;letter-spacing:-.01em;margin-bottom:8px}
+.tour-wel p{font-size:14px;line-height:1.55;color:var(--text2)}
+.tour-wel .modal-footer{margin-top:1.25rem}
+@media(max-width:480px){.tour-wel .modal-footer{flex-direction:column-reverse}.tour-wel .modal-footer .btn{width:100%;justify-content:center}}
+/* Example (never saved) results shown during the tour */
+.tour-sample{margin-top:1.5rem}
+.tour-sample .rcard,.tour-sample .rcard:hover{animation:none;transform:none;box-shadow:none;margin-bottom:0}
+.tour-sample .pill,.tour-sample .meter *{animation:none}
+.ts-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:1rem}
+.ts-title{font-weight:600;font-size:16px}
+.ts-sub{font-size:12px;color:var(--text2);margin-top:2px}
+.ts-bar{margin-bottom:1rem}
+.tour-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:4px 11px;border-radius:100px;background:var(--warn-bg);color:var(--warn-text)}
+</style>
 </head>
 <body>
 
@@ -550,6 +622,7 @@ input[type=text],input[type=password],input[type=email],select{min-height:44px}
         <button class="dd-btn" onclick="showTab('settings');toggleDD()"><span data-ic="settings"></span>Settings</button>
         <button class="dd-btn" id="theme-btn" onclick="toggleTheme()" aria-label="Toggle dark mode"><span data-ic="moon"></span>Dark mode</button>
         <button class="dd-btn" onclick="openShortcuts();toggleDD()"><span data-ic="keyboard"></span>Keyboard shortcuts</button>
+        <button class="dd-btn" id="dd-tour-btn" onclick="event.stopPropagation();startTour({manual:true})"><span data-ic="sparkle"></span>Take the tour</button>
         <button class="dd-btn" onclick="window.open('privacy.html','_blank','noopener');toggleDD()"><span data-ic="file"></span>Privacy</button>
         <div class="dd-sep"></div>
         <button class="dd-btn" id="dd-auth-btn" onclick="handleAuthBtn()">Sign in / Sign up</button>
@@ -785,6 +858,7 @@ input[type=text],input[type=password],input[type=email],select{min-height:44px}
         <div><div class="lbl" style="color:var(--danger-text)">Danger zone</div><button class="btn btn-danger" onclick="deleteAcct()">Delete my account and all data</button></div>
       </div>
     </div>
+    <div class="card" id="settings-tour-card"><div class="card-title">Guided tour</div><p style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.5">A 90-second walk through Māka: your key, marking, results, and your class list. Nothing in it is saved.</p><button class="btn" id="settings-tour-btn" onclick="startTour({manual:true})"><span data-ic="sparkle"></span>Take the tour</button></div>
     <div class="card"><div class="card-title">Saved rubrics</div><div id="rubrics-list"><div style="font-size:13px;color:var(--text2)">Sign in to save rubrics.</div></div><div style="margin-top:12px;font-size:13px;color:var(--text2)">Save rubrics from the Mark tab.</div></div>
   </div>
 
@@ -794,6 +868,7 @@ input[type=text],input[type=password],input[type=email],select{min-height:44px}
 <div class="modal-bg" id="add-stu-modal"><div class="modal"><div class="modal-title">Add student</div><div class="field"><label class="lbl">Name</label><input type="text" id="new-stu-name" placeholder="Student name"></div><div class="grid2" style="margin-bottom:0"><div class="field"><label class="lbl">Year level</label><select id="new-stu-year"><option value="">Select</option><option>Year 3</option><option>Year 4</option><option>Year 5</option><option>Year 6</option><option>Year 7</option><option>Year 8</option></select></div><div class="field"><label class="lbl">Gender</label><select id="new-stu-gender"><option value="">Select</option><option value="boy">Boy (he/him)</option><option value="girl">Girl (she/her)</option><option value="nonbinary">Non-binary (they/them)</option></select></div></div><div class="modal-footer"><button class="btn" onclick="closeModal('add-stu-modal')">Cancel</button><button class="btn btn-p" onclick="addStu()">Add</button></div></div></div>
 <div class="modal-bg" id="paste-modal"><div class="modal"><div class="modal-title">Paste student work</div><div class="field"><label class="lbl">Student</label><select id="paste-stu"><option value="">— Select student —</option></select></div><div class="field"><label class="lbl">Work</label><textarea id="paste-text" rows="10" placeholder="Paste the student's writing or answers here…" style="width:100%;resize:vertical;font-family:inherit"></textarea></div><div class="modal-footer"><button class="btn" onclick="closeModal('paste-modal')">Cancel</button><button class="btn btn-p" onclick="addPastedWork()">Add</button></div></div></div>
 <div class="modal-bg" id="shortcuts-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div class="modal-title">Keyboard shortcuts</div><div id="shortcuts-body" style="font-size:13px"></div><div class="modal-footer"><button class="btn btn-p" onclick="closeModal('shortcuts-modal')">Got it</button></div></div></div>
+<div class="modal-bg" id="tour-welcome"><div class="modal tour-wel" role="dialog" aria-modal="true" aria-labelledby="tour-wel-title" aria-describedby="tour-wel-desc"><div class="tour-wel-ico" aria-hidden="true"><span data-ic="sparkle"></span></div><h2 class="tour-wel-title" id="tour-wel-title">Kia ora — a 90-second tour of Māka</h2><p id="tour-wel-desc">We will show you where to add your key, how to mark a piece of work, and how to share the feedback. You can skip it now and take it any time from the account menu.</p><div class="modal-footer"><button class="btn" id="tour-wel-skip">Skip for now</button><button class="btn tour-cta" id="tour-wel-go">Start tour</button></div></div></div>
 <div class="print-out" id="print-out"></div>
 <div id="toast-wrap" aria-live="polite" aria-atomic="false"></div>
 
@@ -1040,7 +1115,7 @@ function loadProfileBg(){
         if(PROFILE.writing_style)document.getElementById('set-style').value=PROFILE.writing_style;
         updateNavForUser();
       }else{sb.from('profiles').upsert({id:USER.id,email:USER.email,display_name:''}).then(function(){}).catch(function(){})}
-      loadRubrics();loadDashSessions();loadCompareSessions();loadClassStudents();updateStepState();autoCollapseStep0();
+      loadRubrics();loadDashSessions();loadCompareSessions();loadClassStudents();updateStepState();autoCollapseStep0();if(window.makaTourMaybeOffer)makaTourMaybeOffer('profile');
     }catch(e){}
   }).catch(function(){});
 }
@@ -1051,6 +1126,7 @@ function loadClassStudents(){
   sb.from('students').select('id,name').eq('teacher_id',USER.id).order('name').then(function(res){
     CLASS_STUDENTS=(res&&res.data)||[];
     if(results.length)renderResults(results);
+    if(res&&!res.error&&window.makaTourMaybeOffer)makaTourMaybeOffer('students');
   }).catch(function(){});
 }
 
@@ -3319,6 +3395,379 @@ if('serviceWorker' in navigator){
   });
   try{if(navigator.serviceWorker.controller)sessionStorage.setItem('maka-sw-seen','1')}catch(e){}
 }
+</script>
+<script id="tour-js">
+/* ── First-run guided tour (hand-written, no library) ───────────────────────────
+   Spotlight + tooltip card (bottom sheet on phones). Example results are rendered from hard-coded
+   sample objects into a temporary container and are never written to results, localStorage or Supabase. */
+(function(){
+'use strict';
+var SEEN_KEY='maka-tour-seen';
+function $(id){return document.getElementById(id)}
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function isMobile(){return window.matchMedia('(max-width:768px)').matches}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function firstName(){var n=((window.PROFILE&&PROFILE.display_name)||'').trim();return n?n.split(/\s+/)[0]:''}
+function curTab(){var p=document.querySelector('.panel.active');return p?p.id.replace('panel-',''):'mark'}
+
+/* ── Sample data (in-memory only) ─────────────────────────────────────────────── */
+var SAMPLE_TEXT='School uniforms should be compulsory because they make school a fairer place. Firstly, when everyone wears the same clothes nobody gets teased for what they own, so students can focus on learning instead of fashion. Secondly, a uniform saves families money because parents do not have to buy a new outfit every time fashions change, which is definately a big relief. Some people say uniforms stop students from expressing themselves, but we can still show our personality through our hobbies and friends. In conclusion, uniforms are fairer, cheaper and help us feel like a team, so every school should have them.';
+function sampleResult(){
+  return {fileName:'Aria — School uniforms.docx',overallScore:'Achieved',criteriaTotal:'18/25',
+    summary:'Aria, you have argued your position clearly and backed it with two sensible reasons. A little more variety in your persuasive language will make it even stronger.',
+    criteria:[
+      {name:'Ideas and content',score:4,comment:'A clear position, two reasons, and you answered the other side.'},
+      {name:'Structure',score:4,comment:'Opening, reasons and conclusion are in a logical order. A linking word between reasons would help it flow.'},
+      {name:'Persuasive language',score:3,comment:'Good use of “fairer” and “cheaper”. Try a rhetorical question or an emotive word.'},
+      {name:'Conventions',score:4,comment:'Mostly accurate punctuation and grammar, with one spelling slip.'},
+      {name:'Clarity',score:3,comment:'Easy to follow. Some sentences could be shorter and punchier.'}],
+    praiseQuote:'Some people say uniforms stop students from expressing themselves, but we can still show our personality through our hobbies and friends.',
+    praise:'You thought about the other side and answered it. That is exactly what strong persuasive writers do.',
+    improve:[{quote:'uniforms are fairer, cheaper and help us feel like a team',suggestion:'Your conclusion pulls your reasons together well. Finish with a call to action so the reader knows what to do.',example:'So when we vote on school rules, please choose uniforms.'}],
+    goal:'Next time, try one emotive or rhetorical device to really persuade your reader.',
+    spelling:[{wrong:'definately',right:'definitely',tip:'There is “finite” hiding in the middle.'}]};
+}
+window.MAKA_SAMPLE={text:SAMPLE_TEXT,task:'Persuasive writing — should school uniforms be compulsory?',result:sampleResult};
+// Strip hooks that the live results editor looks for, so an example card can never be edited or saved.
+function inertCardHTML(html){return html.replace(/ data-ci="\d+" data-ri="\d+"/g,'').replace(/ onclick="[^"]*"/g,'')}
+
+/* ── Example container shown at the results step ──────────────────────────────── */
+function mountSample(){
+  if($('tour-sample'))return;
+  var anchor=$('rsec');if(!anchor||!anchor.parentNode)return;
+  var r=sampleResult();
+  var card=inertCardHTML(renderResultCard(r,0,false));
+  card=card.replace(/<\/div>\s*$/,spellHTML(r.spelling)+'</div>');
+  var el=document.createElement('section');
+  el.id='tour-sample';el.className='tour-sample';el.setAttribute('inert','');el.setAttribute('aria-hidden','true');
+  el.innerHTML='<div class="divider"></div>'
+    +'<div class="ts-head"><div><div class="ts-title">Marking results</div><div class="ts-sub">Year 7 persuasive writing · 1 student</div></div><span class="tour-badge">Example — not saved</span></div>'
+    +'<div class="btn-row ts-bar" id="tour-sample-bar"><span class="btn btn-sm btn-p">'+ic('save')+'Save all to profiles</span><span class="btn btn-sm">'+ic('download')+'CSV</span><span class="btn btn-sm">'+ic('printer')+'Print</span><span class="btn btn-sm">'+ic('clipboard')+'Classroom comments</span></div>'
+    +'<div id="tour-sample-card">'+card+'</div>';
+  anchor.parentNode.insertBefore(el,anchor);
+}
+function unmountSample(){var el=$('tour-sample');if(el&&el.parentNode)el.parentNode.removeChild(el)}
+
+/* ── Tour state ───────────────────────────────────────────────────────────────── */
+var S=null;
+function goTab(id){if(curTab()!==id){showTab(id);window.scrollTo({top:0,behavior:'auto'});S&&(S.settle=Math.max(S.settle,340))}}
+function goMode(m){if(window.MARK_MODE!==m){setMarkMode(m)}}
+function openKeyCard(){
+  var c=$('step0-card');if(!c)return;
+  if(c.classList.contains('collapsed')){c.classList.remove('collapsed');var h=$('step0-head');if(h)h.setAttribute('aria-expanded','true');S&&(S.settle=Math.max(S.settle,400))}
+}
+function parentCard(id){var e=$(id);return e?e.closest('.card'):null}
+
+var STEPS=[
+  {title:'Your Gemini key',target:function(){return $('step0-card')},
+   before:function(){goTab('mark');openKeyCard()},
+   body:'<p>Māka marks with Google’s Gemini. Get a free key at <strong>aistudio.google.com</strong> and paste it here. It is your own key, so you only paste it once and can change or remove it in Settings.</p>'},
+  {title:'Three ways to mark',target:function(){return document.querySelector('.mode-seg')},
+   before:function(){goTab('mark');goMode('writing')},
+   body:'<ul class="tour-list"><li>'+ic('edit')+'<span><strong>Writing</strong> scores against a rubric, out of 25.</span></li><li>'+ic('check')+'<span><strong>Test</strong> marks answers against your answer key.</span></li><li>'+ic('sparkle')+'<span><strong>Glow &amp; Grow</strong> gives feedback with no score.</span></li></ul>'},
+  {title:'Set the task',target:function(){return parentCard('setup-title')},
+   before:function(){goTab('mark');goMode('writing')},
+   body:'<p>Choose the learning area and curriculum level, then describe the task. No rubric? Tap <strong>Build rubric with AI</strong>, or leave it blank and Māka uses NZ Curriculum defaults.</p>'},
+  {title:'Add the work',target:function(){return $('dropzone')},
+   before:function(){goTab('mark')},
+   body:'<p>Drag and drop files, tap <strong>Browse</strong>, <strong>Take a photo</strong> of handwriting, or <strong>Paste work</strong>. Name each file after the student, like “Aria Smith.pdf”, so it matches your class list.</p>'},
+  {title:'Press Mark',target:function(){return parentCard('markbtn')},
+   before:function(){goTab('mark')},
+   body:'<p>Māka marks every file at once and shows progress as it goes. When it is done you can click any score or comment to change it before you share anything.</p>'},
+  {title:'Your results',target:function(){return $('tour-sample-card')},
+   before:function(){goTab('mark');mountSample()},
+   body:'<p>Each student gets a card: scores and comments for every criterion, what they did well, what to improve, a goal, and any spelling to check.</p><p><strong>This is an example. It is not saved.</strong></p>'},
+  {title:'Share the feedback',target:function(){return $('tour-sample-bar')},
+   before:function(){goTab('mark');mountSample()},
+   body:'<p><strong>Classroom comments</strong> copies a ready-to-paste comment for every student. You can also print report sheets, export a CSV, or <strong>save everything to student profiles</strong>.</p>'},
+  {title:'Your class list',target:function(){return [parentCard('class-list-content'),parentCard('class-csv')]},
+   before:function(){goTab('class')},
+   body:'<p>Add students one at a time or import a CSV. <strong>Pronouns</strong> are used in comments automatically, and <strong>year level</strong> keeps feedback pitched right.</p>'},
+  {title:'Everywhere else',target:function(){return document.querySelector('.nav-tabs')},
+   before:function(){goTab('mark')},
+   body:'<ul class="tour-list"><li>'+ic('chart')+'<span><strong>Dashboard</strong> shows class patterns and who needs support.</span></li><li>'+ic('layers')+'<span><strong>History</strong> keeps every past session.</span></li><li>'+ic('message')+'<span><strong>Comments</strong> writes report comments and weekly posts.</span></li></ul>'},
+  {title:'You are ready',centered:true,
+   target:function(){return $('gs-card')},
+   before:function(){goTab('mark')},
+   body:function(){return '<p>Want to see Māka mark something first? <strong>Try a sample</strong> marks a short Year 7 paragraph with your key. It is never saved.</p>'+(document.getElementById('gs-card')?'<p>Your <strong>Getting started</strong> checklist is just here, and ticks itself off as you go.</p>':'')},
+   extra:function(){return typeof window.trySample==='function'?{label:'Try a sample',fn:function(){end('done');setTimeout(window.trySample,60)}}:null}}
+];
+
+/* ── Geometry ─────────────────────────────────────────────────────────────────── */
+function rectOf(t){
+  var els=Array.isArray(t)?t:[t],L=1e9,T=1e9,R=-1e9,B=-1e9,any=false;
+  els.forEach(function(e){
+    if(!e||!e.getBoundingClientRect)return;
+    var r=e.getBoundingClientRect();if(!r.width&&!r.height)return;
+    any=true;L=Math.min(L,r.left);T=Math.min(T,r.top);R=Math.max(R,r.right);B=Math.max(B,r.bottom);
+  });
+  return any?{left:L,top:T,right:R,bottom:B,width:R-L,height:B-T}:null;
+}
+function resolveTarget(step){
+  var t=null;try{t=step.target?step.target():null}catch(e){}
+  if(Array.isArray(t)){t=t.filter(Boolean);if(!t.length)t=null}
+  return t&&rectOf(t)?t:null;
+}
+function pinned(el){var e=Array.isArray(el)?el[0]:el;if(!e)return false;return !!(e.closest&&e.closest('nav'))||getComputedStyle(e).position==='fixed'}
+function sheetOffset(){ // distance from the viewport bottom to the top of the fixed tab bar (phones)
+  var bar=document.querySelector('.nav-tabs');if(!bar||!isMobile())return 0;
+  return Math.max(0,window.innerHeight-bar.getBoundingClientRect().top);
+}
+
+/* ── Build / teardown ─────────────────────────────────────────────────────────── */
+function build(){
+  var root=document.createElement('div');root.className='tour-root nospot';root.id='tour-root';
+  root.innerHTML='<div class="tour-block"></div><div class="tour-spot nofx"></div>'
+    +'<div class="tour-card nofx" id="tour-card" role="dialog" aria-modal="true" aria-labelledby="tour-title" aria-describedby="tour-body" tabindex="-1">'
+    +'<div class="tour-swap" id="tour-swap">'
+    +'<div class="tour-top"><span class="tour-count" id="tour-count"></span><ol class="tour-dots" id="tour-dots" aria-hidden="true"></ol></div>'
+    +'<h2 class="tour-title" id="tour-title"></h2><div class="tour-body" id="tour-body"></div><div class="tour-extra" id="tour-extra" hidden></div>'
+    +'</div>'
+    +'<div class="tour-foot"><button type="button" class="tour-btn skip" id="tour-skip">Skip tour</button><button type="button" class="tour-btn" id="tour-back">Back</button><button type="button" class="tour-btn pri" id="tour-next">Next</button></div>'
+    +'</div><div class="tour-sr" id="tour-live" role="status" aria-live="polite"></div>';
+  document.body.appendChild(root);
+  S.root=root;S.block=root.firstChild;S.spot=root.children[1];S.card=$('tour-card');S.live=$('tour-live');
+  var dots=$('tour-dots');for(var i=0;i<STEPS.length;i++){var li=document.createElement('li');li.className='tour-dot';dots.appendChild(li)}
+  $('tour-skip').addEventListener('click',function(){end('skip')});
+  $('tour-back').addEventListener('click',function(){go(S.i-1,-1)});
+  $('tour-next').addEventListener('click',function(){go(S.i+1,1)});
+  S.block.addEventListener('mousedown',function(e){e.preventDefault();S.card.focus()});
+}
+
+function start(opts){
+  if(S)return;
+  var from=W.open&&W.prev?W.prev:document.activeElement;
+  closeWelcome(true);
+  document.querySelectorAll('.modal-bg.open').forEach(function(m){if(m.id!=='tour-welcome')m.classList.remove('open')});
+  var dd=$('dropdown');if(dd&&dd.classList.contains('open')){dd.classList.remove('open');var ab=$('avatar-btn');if(ab)ab.setAttribute('aria-expanded','false')}
+  S={i:-1,settle:0,geo:null,focusEl:from,origTab:curTab(),origScroll:window.scrollY,origMode:window.MARK_MODE,
+     origCollapsed:!!($('step0-card')&&$('step0-card').classList.contains('collapsed')),manual:!!(opts&&opts.manual)};
+  lsSet(SEEN_KEY,'1');
+  build();
+  document.documentElement.classList.add('tour-on');
+  window.addEventListener('keydown',onKey,true);
+  document.addEventListener('focusin',onFocusIn,true);
+  window.addEventListener('resize',onMove);
+  window.addEventListener('scroll',onMove,{passive:true});
+  go(0,1);
+}
+
+function end(reason){
+  if(!S)return;
+  var s=S;S=null;
+  clearTimeout(s.t);clearTimeout(s.t2);cancelAnimationFrame(s.raf);
+  window.removeEventListener('keydown',onKey,true);
+  document.removeEventListener('focusin',onFocusIn,true);
+  window.removeEventListener('resize',onMove);
+  window.removeEventListener('scroll',onMove);
+  if(s.root&&s.root.parentNode)s.root.parentNode.removeChild(s.root);
+  document.documentElement.classList.remove('tour-on');
+  document.documentElement.style.removeProperty('--tour-pad');
+  unmountSample();
+  // Put everything back exactly as the teacher left it.
+  if(window.MARK_MODE!==s.origMode)setMarkMode(s.origMode);
+  var c=$('step0-card');
+  if(c){var now=c.classList.contains('collapsed');if(now!==s.origCollapsed){c.classList.toggle('collapsed',s.origCollapsed);var h=$('step0-head');if(h)h.setAttribute('aria-expanded',s.origCollapsed?'false':'true')}}
+  if(curTab()!==s.origTab)showTab(s.origTab);
+  window.scrollTo({top:s.origScroll,behavior:'auto'});
+  var f=s.focusEl;
+  if(!f||!f.isConnected||!f.getClientRects().length||f.id==='dd-tour-btn')f=$('avatar-btn')||document.body;
+  try{f.focus({preventScroll:true})}catch(e){}
+}
+
+/* ── Stepping ─────────────────────────────────────────────────────────────────── */
+function go(i,dir){
+  if(!S)return;
+  var step,el=null;
+  S.settle=0;
+  while(i>=0&&i<STEPS.length){
+    step=STEPS[i];
+    try{if(step.before)step.before()}catch(e){}
+    el=resolveTarget(step);
+    if(el||step.centered)break;
+    i+=dir;
+  }
+  if(i>=STEPS.length){end('done');return}
+  if(i<0)i=0,step=STEPS[0],el=resolveTarget(step);
+  var first=S.i===-1;
+  S.i=i;S.step=step;S.el=el;
+  renderCard(step,i,first);
+  clearTimeout(S.t);
+  var card=S.card;
+  if(S.settle>0){card.classList.remove('on');S.t=setTimeout(function(){reveal(first)},S.settle)}
+  else reveal(first);
+}
+function renderCard(step,i,first){
+  var n=STEPS.length,last=i===n-1;
+  $('tour-count').textContent=(i+1)+' of '+n;
+  $('tour-title').textContent=step.title;
+  var body=typeof step.body==='function'?step.body():step.body;
+  $('tour-body').innerHTML=body;
+  var ex=step.extra?step.extra():null,exEl=$('tour-extra');
+  exEl.innerHTML='';exEl.hidden=!ex;
+  if(ex){var b=document.createElement('button');b.type='button';b.className='tour-btn pri';b.innerHTML=ic('sparkle')+ex.label;b.addEventListener('click',ex.fn);exEl.appendChild(b)}
+  document.querySelectorAll('#tour-dots .tour-dot').forEach(function(d,k){d.className='tour-dot'+(k<i?' done':k===i?' cur':'')});
+  var back=$('tour-back'),next=$('tour-next'),skip=$('tour-skip');
+  var act=document.activeElement;
+  back.hidden=i===0;skip.hidden=last;
+  next.textContent=last?'Done':'Next';
+  if((act===back&&back.hidden)||(act===skip&&skip.hidden))next.focus();
+  // Re-trigger the content swap animation.
+  var sw=$('tour-swap');sw.classList.remove('tour-swap');void sw.offsetWidth;if(!first)sw.classList.add('tour-swap');
+  S.live.textContent=first?'':('Step '+(i+1)+' of '+n+'. '+step.title+'. '+$('tour-body').textContent);
+}
+function reveal(first){
+  if(!S)return;
+  var el=S.el;
+  if(first)S.card.classList.add('nofx');
+  if(el&&!pinned(el))scrollToTarget(el);
+  position(!first);
+  void S.card.offsetWidth;
+  S.card.classList.remove('nofx');
+  S.card.classList.add('on');
+  if(first){S.card.focus({preventScroll:true})}
+  // Track layout for a moment in case panels/animations are still settling.
+  var until=Date.now()+500;
+  (function tick(){if(!S)return;position(false);if(Date.now()<until)S.raf=requestAnimationFrame(tick)})();
+}
+function scrollToTarget(el){
+  var r=rectOf(el);if(!r)return;
+  var vh=window.innerHeight,vw=window.innerWidth,top=68,mob=isMobile(),ch=S.card.offsetHeight,cw=S.card.offsetWidth;
+  var regionBottom=mob?vh-(sheetOffset()+ch+20):vh-16,region=regionBottom-top,h=r.height,want;
+  if(mob||Math.max(r.left,vw-r.right)>=cw+40){want=h<=region?top+(region-h)/2:top}
+  else{var total=h+ch+16;want=total<=region?top+(region-total)/2:top}
+  var dy=r.top-want;
+  if(Math.abs(dy)>1)window.scrollTo({top:Math.max(0,window.scrollY+dy),behavior:'auto'});
+}
+
+function position(animate){
+  if(!S||!S.card)return;
+  var mob=isMobile(),card=S.card,vw=window.innerWidth,vh=window.innerHeight,G=14,M=12,pad=6;
+  var off=sheetOffset(),ch=card.offsetHeight,cw=card.offsetWidth;
+  S.root.style.setProperty('--tour-bottom',off+'px');
+  document.documentElement.style.setProperty('--tour-pad',(ch+24)+'px');
+  var r=S.el?rectOf(S.el):null;
+  var spot=S.spot;
+  if(!r){
+    S.root.classList.add('nospot');spot.classList.remove('on');
+    if(!mob){card.style.transform='translate('+Math.round((vw-cw)/2)+'px,'+Math.round((vh-ch)/2)+'px)'}
+    else card.style.transform='';
+    S.geo=null;return;
+  }
+  S.root.classList.remove('nospot');
+  var x=r.left-pad,y=r.top-pad,w=r.width+2*pad,h=r.height+2*pad;
+  if(mob){var sheetTop=vh-off-8-ch;if(y<sheetTop-40&&y+h>sheetTop)h=sheetTop-y;setSpot(x,y,w,h,animate);card.style.transform='';return}
+  var sp={l:x,t:y,r:x+w,b:y+h};
+  var cands=[
+    function(){var X=clamp(sp.l+(sp.r-sp.l-cw)/2,M,vw-cw-M),Y=sp.b+G;return Y+ch<=vh-M?[X,Y]:null},
+    function(){var Y=clamp(sp.t+(sp.b-sp.t-ch)/2,M,vh-ch-M),X=sp.r+G;return X+cw<=vw-M?[X,Y]:null},
+    function(){var Y=clamp(sp.t+(sp.b-sp.t-ch)/2,M,vh-ch-M),X=sp.l-G-cw;return X>=M?[X,Y]:null},
+    function(){var X=clamp(sp.l+(sp.r-sp.l-cw)/2,M,vw-cw-M),Y=sp.t-G-ch;return Y>=M?[X,Y]:null}
+  ],pos=null;
+  for(var k=0;k<cands.length&&!pos;k++)pos=cands[k]();
+  if(!pos){
+    // Target taller than the room: light only the part that fits above the tooltip so the card never covers what is lit.
+    var avail=vh-M-ch-G-y;
+    if(avail>=140){h=Math.min(h,avail);sp.b=y+h;pos=[clamp(sp.l+(sp.r-sp.l-cw)/2,M,vw-cw-M),sp.b+G]}
+    else pos=[clamp(sp.l+(sp.r-sp.l-cw)/2,M,vw-cw-M),vh-ch-M]; // last resort: dock to the bottom edge
+  }
+  setSpot(x,y,w,h,animate);
+  card.style.transform='translate('+Math.round(pos[0])+'px,'+Math.round(pos[1])+'px)';
+}
+function setSpot(x,y,w,h,animate){
+  var s=S.spot,p=S.geo;
+  if(p&&s.classList.contains('on')&&Math.abs(p.x-x)<.5&&Math.abs(p.y-y)<.5&&Math.abs(p.w-w)<.5&&Math.abs(p.h-h)<.5)return;
+  var rm=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function put(){s.classList.add('nofx');s.style.width=w+'px';s.style.height=h+'px';s.style.transform='translate('+x+'px,'+y+'px)';void s.offsetWidth;s.classList.remove('nofx')}
+  var wasOn=s.classList.contains('on');
+  if(!animate||!p||!wasOn||rm){put();s.classList.add('on')}
+  else{
+    var sx=p.w/w,sy=p.h/h;
+    if(sx<.4||sx>2.5||sy<.4||sy>2.5){ // very different size: dip out and back in rather than stretching
+      if(!S.dip){S.dip=true;s.classList.remove('on');S.t2=setTimeout(function(){S.dip=false;if(!S)return;put();s.classList.add('on')},150)}
+      else{put()}
+    }else{
+      s.classList.add('nofx');s.style.width=w+'px';s.style.height=h+'px';
+      s.style.transform='translate('+p.x+'px,'+p.y+'px) scale('+sx+','+sy+')';
+      void s.offsetWidth;s.classList.remove('nofx');
+      s.style.transform='translate('+x+'px,'+y+'px)';
+    }
+  }
+  S.geo={x:x,y:y,w:w,h:h};
+}
+function onMove(){if(!S||S.raf2)return;S.raf2=requestAnimationFrame(function(){if(!S)return;S.raf2=0;S.card.classList.add('nofx');position(false);void S.card.offsetWidth;S.card.classList.remove('nofx')})}
+
+/* ── Keyboard + focus ─────────────────────────────────────────────────────────── */
+function focusables(root){return Array.prototype.filter.call(root.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'),function(e){return !e.disabled&&!e.hidden&&e.getClientRects().length})}
+function onKey(e){
+  if(!S)return;
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  var k=e.key;
+  if(k==='Escape'){e.preventDefault();e.stopPropagation();end('skip');return}
+  if(k==='ArrowRight'){e.preventDefault();e.stopPropagation();go(S.i+1,1);return}
+  if(k==='ArrowLeft'){e.preventDefault();e.stopPropagation();if(S.i>0)go(S.i-1,-1);return}
+  if(k==='Tab'){
+    var f=focusables(S.card),a=document.activeElement;if(!f.length)return;
+    if(!S.card.contains(a)){e.preventDefault();f[0].focus()}
+    else if(e.shiftKey&&(a===f[0]||a===S.card)){e.preventDefault();f[f.length-1].focus()}
+    else if(!e.shiftKey&&a===f[f.length-1]){e.preventDefault();f[0].focus()}
+    e.stopPropagation();return;
+  }
+  // Keep the app's single-key shortcuts (1-6, m, g, ?) from firing behind the tour.
+  if(k!=='Enter'&&k!==' ')e.stopPropagation();
+}
+function onFocusIn(e){if(S&&S.card&&!S.card.contains(e.target))S.card.focus({preventScroll:true})}
+
+/* ── Welcome modal + auto-offer ───────────────────────────────────────────────── */
+var W={prev:null,open:false};
+function openWelcome(){
+  var m=$('tour-welcome');if(!m||W.open)return;
+  var nm=firstName();
+  $('tour-wel-title').textContent='Kia ora'+(nm?' '+nm:'')+' — a 90-second tour of Māka';
+  W.prev=document.activeElement;W.open=true;m.classList.add('open');
+  lsSet(SEEN_KEY,'1');
+  setTimeout(function(){var g=$('tour-wel-go');if(g)g.focus()},60);
+}
+function closeWelcome(silent){
+  var m=$('tour-welcome');if(!m||!W.open)return;
+  W.open=false;m.classList.remove('open');
+  if(!silent){
+    if(W.prev&&W.prev.isConnected)try{W.prev.focus()}catch(e){}
+    showToast('No problem. You can take the tour any time from the account menu.','ok',4500);
+  }
+}
+(function(){
+  var m=$('tour-welcome');if(!m)return;
+  $('tour-wel-go').addEventListener('click',function(){start({})});
+  $('tour-wel-skip').addEventListener('click',function(){closeWelcome(false)});
+  m.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeWelcome(false);return}
+    if(e.key==='Tab'){
+      var f=focusables(m);if(!f.length)return;
+      if(e.shiftKey&&document.activeElement===f[0]){e.preventDefault();f[f.length-1].focus()}
+      else if(!e.shiftKey&&document.activeElement===f[f.length-1]){e.preventDefault();f[0].focus()}
+    }
+  });
+})();
+var offered=false;
+// Called once the profile / class list have loaded. Offers the tour once per device, only to signed-in new-looking accounts.
+function maybeOffer(src){
+  if(offered||S||lsGet(SEEN_KEY)||!window.USER)return;
+  var noKey=!(window.PROFILE&&PROFILE.gemini_key),noClass=!(window.CLASS_STUDENTS&&CLASS_STUDENTS.length);
+  var looksNew=src==='profile'?noKey:src==='students'?noClass:(noKey||noClass);
+  if(!looksNew)return;
+  offered=true;
+  setTimeout(function(){
+    if(S||W.open||lsGet(SEEN_KEY)||!window.USER||window.MARKING||document.querySelector('.modal-bg.open')){offered=false;return}
+    openWelcome();
+  },900);
+}
+window.startTour=start;
+window.endTour=end;
+window.makaTourMaybeOffer=maybeOffer;
+window.makaTourActive=function(){return !!S};
+})();
 </script>
 </body>
 </html>
