@@ -666,7 +666,7 @@ input[type=text],input[type=password],input[type=email],select{min-height:44px}
       <div class="divider"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:1rem">
         <div><div style="font-weight:600;font-size:16px">Marking results</div><div style="font-size:12px;color:var(--text2);margin-top:2px" id="session-label"></div></div>
-        <div class="btn-row"><button class="btn btn-sm btn-p" id="saveallbtn" onclick="saveAllToProfiles()"><span data-ic="save"></span>Save all to profiles</button><button class="btn btn-sm" id="csvbtn"><span data-ic="download"></span>CSV</button><button class="btn btn-sm" id="printbtn"><span data-ic="printer"></span>Print</button><button class="btn btn-sm" id="gcbtn" onclick="copyAllClassroom()" title="Copy a short comment for every student to paste into Google Classroom"><span data-ic="clipboard"></span>Classroom comments</button><select class="print-per" id="gc-style" aria-label="Classroom comment length" title="Classroom comment length" onchange="setGcOpt()"><option value="short">Short comment</option><option value="standard">Standard comment</option></select><label class="chk chk-sm" title="Include the score in the Classroom comment"><input type="checkbox" class="chk-input" id="gc-score" onchange="setGcOpt()" checked><span class="chk-box" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>Score</label><select class="print-per" id="print-per" aria-label="Report cards per printed page" title="How many students per printed page"><option value="1">1 per page</option><option value="2">2 per page</option></select><button class="btn btn-sm btn-green" onclick="showTab('dashboard')"><span data-ic="chart"></span>Dashboard</button></div>
+        <div class="btn-row"><button class="btn btn-sm btn-p" id="saveallbtn" onclick="saveAllToProfiles()"><span data-ic="save"></span>Save all to profiles</button><button class="btn btn-sm" id="csvbtn"><span data-ic="download"></span>CSV</button><button class="btn btn-sm" id="printbtn"><span data-ic="printer"></span>Print</button><button class="btn btn-sm" id="gcbtn" onclick="copyAllClassroom()" title="Copy a short comment for every student to paste into Google Classroom"><span data-ic="clipboard"></span>Classroom comments</button><select class="print-per" id="gc-style" aria-label="Classroom comment length" title="Classroom comment length" onchange="setGcOpt()"><option value="full">Full comment</option><option value="short">Short comment</option></select><label class="chk chk-sm" title="Include the score in the Classroom comment"><input type="checkbox" class="chk-input" id="gc-score" onchange="setGcOpt()" checked><span class="chk-box" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>Score</label><select class="print-per" id="print-per" aria-label="Report cards per printed page" title="How many students per printed page"><option value="1">1 per page</option><option value="2">2 per page</option></select><button class="btn btn-sm btn-green" onclick="showTab('dashboard')"><span data-ic="chart"></span>Dashboard</button></div>
       </div>
       <div id="results"></div>
     </div>
@@ -2413,11 +2413,11 @@ function remarkTest(idx){
   markTest(key,files[idx],paper,TEST_PAPER_FILE,answerKey,area,level,idx,null,null,expectedTotal).then(function(res){res._file=files[idx];results[idx]=res;renderResults(results);persistResults();saveOneResult(idx)});
 }
 // ── Google Classroom: short copy-and-paste comments (no Google sign-in needed) ──
-var GC_OPT={style:'short',score:true};
-try{var _gc=JSON.parse(localStorage.getItem('maka-gc')||'null');if(_gc){GC_OPT.style=_gc.style==='standard'?'standard':'short';GC_OPT.score=_gc.score!==false}}catch(e){}
+var GC_OPT={style:'full',score:true};
+try{var _gc=JSON.parse(localStorage.getItem('maka-gc')||'null');if(_gc){GC_OPT.style=_gc.style==='short'?'short':'full';GC_OPT.score=_gc.score!==false}}catch(e){}
 function setGcOpt(){
   var st=document.getElementById('gc-style'),sc=document.getElementById('gc-score');
-  GC_OPT.style=st&&st.value==='standard'?'standard':'short';GC_OPT.score=!sc||sc.checked;
+  GC_OPT.style=st&&st.value==='short'?'short':'full';GC_OPT.score=!sc||sc.checked;
   try{localStorage.setItem('maka-gc',JSON.stringify(GC_OPT))}catch(e){}
 }
 function syncGcControls(){var st=document.getElementById('gc-style'),sc=document.getElementById('gc-score');if(st)st.value=GC_OPT.style;if(sc)sc.checked=GC_OPT.score}
@@ -2438,25 +2438,23 @@ function classroomComment(r,opt){
     (short?g.slice(0,1):g).forEach(function(x){parts.push('Glow: '+x)});
     if(gr.suggestion)parts.push('Grow: '+gcSentence(gr.suggestion));
     if(!short&&gr.example)parts.push('Try: '+gcSentence(gr.example));
-    if(!short&&(r.spelling||[]).length)parts.push('Spelling: '+r.spelling.map(function(x){return x.wrong+' → '+x.right}).join(', ')+'.');
+    if(!short&&(r.spelling||[]).length)parts.push('Spelling: '+r.spelling.map(function(x){return x.wrong+' → '+x.right+(x.tip?' ('+x.tip+')':'')}).join('; ')+'.');
   }else if(r.type==='test'||Array.isArray(r.questions)){
     var qs=r.questions||[],sc=r.score!=null?r.score:qs.reduce(function(a,q){return a+qMark(q)},0),tot=r.total!=null?r.total:qs.length;
     if(tot)score=fmtMark(sc)+'/'+tot;
     var fbT=fbGet(r),sum=gcSentence(fbT.summary);
     if(sum)parts.push(sum);
-    var tip=(fbT.tips[0]||{});var ts=tip.suggestion||tip.text;
-    if(ts)parts.push('Next step: '+gcSentence(ts));
+    (short?fbT.tips.slice(0,1):fbT.tips).forEach(function(t){var ts=t.suggestion||t.text;if(ts)parts.push('Next step: '+gcSentence(ts))});
   }else{
     var fb=fbGet(r),tot2=r.criteriaTotal||r.criteria_total||'';
     if(tot2&&tot2!=='—')score=String(tot2);
     if(fb.praise&&fb.praise.text)parts.push('Glow: '+gcSentence(fb.praise.text));
-    var t0=(fb.tips[0]||{}),ts0=t0.suggestion||t0.text;
-    if(ts0)parts.push('Grow: '+gcSentence(ts0));
+    (short?fb.tips.slice(0,1):fb.tips).forEach(function(t){var ts=t.suggestion||t.text;if(ts){parts.push('Grow: '+gcSentence(ts));if(!short&&t.example)parts.push('Try: '+gcSentence(t.example))}});
     if(!short&&fb.goal)parts.push(gcSentence(fb.goal));
   }
   var head='Kia ora'+(who?' '+who:'')+(opt.score&&score?' — '+score:'')+'.';
-  var body=parts.join(' ');
-  return head+' '+gcTrim(body,short?300:700);
+  // Short: one tidy paragraph, trimmed at a sentence. Full: nothing dropped or cut, one point per line.
+  return short?head+' '+gcTrim(parts.join(' '),300):head+'\n'+parts.join('\n');
 }
 function gcCopyText(text,okMsg){
   function done(){showToast(okMsg,'ok')}
@@ -2472,7 +2470,7 @@ function copyAllClassroom(){
   var lines=results.map(function(r){
     var c=classroomComment(r);if(!c)return'';
     var nm=assignedStudentFor(r)||(r.studentName||'').trim()||stripExt(r.fileName||r.file_name||'');
-    return nm+'\t'+c;
+    return nm+'\t'+c.replace(/\s*\n\s*/g,' ');
   }).filter(Boolean);
   if(!lines.length){showToast('Nothing to copy yet','warn');return}
   gcCopyText(lines.join('\n'),lines.length+' Classroom comment'+(lines.length!==1?'s':'')+' copied (name, then comment)');
