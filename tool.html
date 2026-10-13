@@ -462,6 +462,9 @@ input[type=text],input[type=password],input[type=email],select{min-height:44px}
 [data-theme="dark"] .btn-p .spinner{border-color:rgba(0,0,0,0.2)!important;border-top-color:#1a1a1a!important}
 [data-theme="dark"] .qmark.qok,[data-theme="dark"] .qmark.qpart,[data-theme="dark"] .qmark.qno{border-color:var(--border2)}
 
+.chk-sm{min-height:34px;padding:3px 12px 3px 8px;font-size:12px;gap:8px}
+.chk-sm .chk-box{width:18px;height:18px;border-radius:5px}
+.chk-sm .chk-box svg{width:12px;height:12px}
 /* Compact selects inside toolbars keep their natural width */
 .btn-row select,#print-per{width:auto;min-height:34px;font-size:12px;padding:6px 30px 6px 10px;background-position:right 9px center}
 #rubric-bits2{margin-bottom:12px}
@@ -636,7 +639,7 @@ input[type=text],input[type=password],input[type=email],select{min-height:44px}
       <div class="divider"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:1rem">
         <div><div style="font-weight:600;font-size:16px">Marking results</div><div style="font-size:12px;color:var(--text2);margin-top:2px" id="session-label"></div></div>
-        <div class="btn-row"><button class="btn btn-sm btn-p" id="saveallbtn" onclick="saveAllToProfiles()"><span data-ic="save"></span>Save all to profiles</button><button class="btn btn-sm" id="csvbtn"><span data-ic="download"></span>CSV</button><button class="btn btn-sm" id="printbtn"><span data-ic="printer"></span>Print</button><select class="print-per" id="print-per" aria-label="Report cards per printed page" title="How many students per printed page"><option value="1">1 per page</option><option value="2">2 per page</option></select><button class="btn btn-sm btn-green" onclick="showTab('dashboard')"><span data-ic="chart"></span>Dashboard</button></div>
+        <div class="btn-row"><button class="btn btn-sm btn-p" id="saveallbtn" onclick="saveAllToProfiles()"><span data-ic="save"></span>Save all to profiles</button><button class="btn btn-sm" id="csvbtn"><span data-ic="download"></span>CSV</button><button class="btn btn-sm" id="printbtn"><span data-ic="printer"></span>Print</button><button class="btn btn-sm" id="gcbtn" onclick="copyAllClassroom()" title="Copy a short comment for every student to paste into Google Classroom"><span data-ic="clipboard"></span>Classroom comments</button><select class="print-per" id="gc-style" aria-label="Classroom comment length" title="Classroom comment length" onchange="setGcOpt()"><option value="short">Short comment</option><option value="standard">Standard comment</option></select><label class="chk chk-sm" title="Include the score in the Classroom comment"><input type="checkbox" class="chk-input" id="gc-score" onchange="setGcOpt()" checked><span class="chk-box" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>Score</label><select class="print-per" id="print-per" aria-label="Report cards per printed page" title="How many students per printed page"><option value="1">1 per page</option><option value="2">2 per page</option></select><button class="btn btn-sm btn-green" onclick="showTab('dashboard')"><span data-ic="chart"></span>Dashboard</button></div>
       </div>
       <div id="results"></div>
     </div>
@@ -1338,6 +1341,7 @@ dz.ondragleave=function(){dz.classList.remove('dragover')};
 dz.ondrop=function(e){e.preventDefault();e.stopPropagation();dz.classList.remove('dragover');addFiles(e.dataTransfer.files)};
 document.getElementById('clearbtn').onclick=function(){files=[];results=[];currentSessId=null;try{localStorage.removeItem('maka-results')}catch(e){}renderFiles();updMark();document.getElementById('rsec').style.display='none';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='none';document.getElementById('save-status').innerHTML=''};
 document.getElementById('csvbtn').onclick=exportCSV;
+setTimeout(function(){if(typeof syncGcControls==='function')syncGcControls()},0);
 document.getElementById('printbtn').onclick=printSheets;
 (function(){var sel=document.getElementById('print-per');if(!sel)return;try{var v=localStorage.getItem('maka-print-per');if(v)sel.value=v}catch(e){}sel.addEventListener('change',function(){try{localStorage.setItem('maka-print-per',sel.value)}catch(e){}})})();
 document.getElementById('markbtn').onclick=runMarking;
@@ -2325,7 +2329,7 @@ function renderTestCard(r,idx,editable){
   var nameHtml=stuName?'<span class="rname">'+esc(stuName)+'</span><span class="rfile">'+esc(fileLabel)+'</span>':'<span class="rname">'+esc(fileLabel)+'</span>';
   var delBtn=editable?'<button class="remark-btn" onclick="delResult('+idx+')" aria-label="Remove this result" title="Remove">'+ic('trash')+'</button>':'';
   var html='<div class="rcard">';
-  html+='<div class="rhead"><div style="min-width:0;display:flex;flex-direction:column;gap:2px">'+nameHtml+'</div><div style="display:flex;align-items:center;gap:6px"><span class="pill '+pillCls(pct)+'">'+esc(overall)+' · '+fmtMark(score)+'/'+total+'</span>'+delBtn+'</div></div>';
+  html+='<div class="rhead"><div style="min-width:0;display:flex;flex-direction:column;gap:2px">'+nameHtml+'</div><div style="display:flex;align-items:center;gap:6px"><span class="pill '+pillCls(pct)+'">'+esc(overall)+' · '+fmtMark(score)+'/'+total+'</span>'+gcBtnFor(idx,editable)+delBtn+'</div></div>';
   var fbSummary=fbGet(r).summary;
   if(fbSummary||editable)html+='<div class="summary-box">'+ed(editable,idx,'summary',fbSummary)+'</div>';
   html+=revHTML(r,score,true);
@@ -2360,9 +2364,74 @@ function remarkTest(idx){
   progressItems[idx]={name:files[idx].name,status:'pending',phase:'',err:''};
   markTest(key,files[idx],paper,TEST_PAPER_FILE,answerKey,area,level,idx,null,null,expectedTotal).then(function(res){res._file=files[idx];results[idx]=res;renderResults(results);persistResults();saveOneResult(idx)});
 }
+// ── Google Classroom: short copy-and-paste comments (no Google sign-in needed) ──
+var GC_OPT={style:'short',score:true};
+try{var _gc=JSON.parse(localStorage.getItem('maka-gc')||'null');if(_gc){GC_OPT.style=_gc.style==='standard'?'standard':'short';GC_OPT.score=_gc.score!==false}}catch(e){}
+function setGcOpt(){
+  var st=document.getElementById('gc-style'),sc=document.getElementById('gc-score');
+  GC_OPT.style=st&&st.value==='standard'?'standard':'short';GC_OPT.score=!sc||sc.checked;
+  try{localStorage.setItem('maka-gc',JSON.stringify(GC_OPT))}catch(e){}
+}
+function syncGcControls(){var st=document.getElementById('gc-style'),sc=document.getElementById('gc-score');if(st)st.value=GC_OPT.style;if(sc)sc.checked=GC_OPT.score}
+function gcSentence(t){t=String(t||'').replace(/\s+/g,' ').trim();if(!t)return'';return/[.!?…]$/.test(t)?t:t+'.'}
+// Cut to a limit at a sentence boundary so the comment never ends mid-thought.
+function gcTrim(t,max){
+  if(t.length<=max)return t;
+  var cut=t.slice(0,max),i=Math.max(cut.lastIndexOf('. '),cut.lastIndexOf('! '),cut.lastIndexOf('? '));
+  return i>max*0.5?cut.slice(0,i+1):cut.replace(/\s+\S*$/,'')+'…';
+}
+function classroomComment(r,opt){
+  opt=opt||GC_OPT;if(!r||r._error)return'';
+  var who=firstNameOf(assignedStudentFor(r)||(r.studentName||'').trim()||r.fileName||r.file_name||'');
+  var short=opt.style==='short',parts=[],score='';
+  if(r.type==='glow'||Array.isArray(r.glows)){
+    var g=(r.glows||[]).map(function(x){return gcSentence(x.comment)}).filter(Boolean);
+    var gr=r.grow||{};
+    (short?g.slice(0,1):g).forEach(function(x){parts.push('Glow: '+x)});
+    if(gr.suggestion)parts.push('Grow: '+gcSentence(gr.suggestion));
+    if(!short&&gr.example)parts.push('Try: '+gcSentence(gr.example));
+  }else if(r.type==='test'||Array.isArray(r.questions)){
+    var qs=r.questions||[],sc=r.score!=null?r.score:qs.reduce(function(a,q){return a+qMark(q)},0),tot=r.total!=null?r.total:qs.length;
+    if(tot)score=fmtMark(sc)+'/'+tot;
+    var fbT=fbGet(r),sum=gcSentence(fbT.summary);
+    if(sum)parts.push(sum);
+    var tip=(fbT.tips[0]||{});var ts=tip.suggestion||tip.text;
+    if(ts)parts.push('Next step: '+gcSentence(ts));
+  }else{
+    var fb=fbGet(r),tot2=r.criteriaTotal||r.criteria_total||'';
+    if(tot2&&tot2!=='—')score=String(tot2);
+    if(fb.praise&&fb.praise.text)parts.push('Glow: '+gcSentence(fb.praise.text));
+    var t0=(fb.tips[0]||{}),ts0=t0.suggestion||t0.text;
+    if(ts0)parts.push('Grow: '+gcSentence(ts0));
+    if(!short&&fb.goal)parts.push(gcSentence(fb.goal));
+  }
+  var head='Kia ora'+(who?' '+who:'')+(opt.score&&score?' — '+score:'')+'.';
+  var body=parts.join(' ');
+  return head+' '+gcTrim(body,short?300:700);
+}
+function gcCopyText(text,okMsg){
+  function done(){showToast(okMsg,'ok')}
+  function fallback(){var ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done()}catch(e){showToast('Could not copy — select the text and copy manually','err')}document.body.removeChild(ta)}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(done).catch(fallback);else fallback();
+}
+function gcBtnFor(idx,editable){return editable?'<button class="remark-btn" onclick="copyClassroom('+idx+')" title="Copy a short comment for Google Classroom">'+ic('clipboard')+'Classroom</button>':''}
+function copyClassroom(idx){
+  var c=classroomComment(results[idx]);if(!c){showToast('Nothing to copy for this one yet','warn');return}
+  gcCopyText(c,'Classroom comment copied — paste it into the student\'s private comment');
+}
+function copyAllClassroom(){
+  var lines=results.map(function(r){
+    var c=classroomComment(r);if(!c)return'';
+    var nm=assignedStudentFor(r)||(r.studentName||'').trim()||stripExt(r.fileName||r.file_name||'');
+    return nm+'\t'+c;
+  }).filter(Boolean);
+  if(!lines.length){showToast('Nothing to copy yet','warn');return}
+  gcCopyText(lines.join('\n'),lines.length+' Classroom comment'+(lines.length!==1?'s':'')+' copied (name, then comment)');
+}
 function renderGlowCard(r,idx,editable){
   var remarkBtn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkGlow('+idx+')">'+ic('refresh')+(r._error?'Retry':'Re-do')+'</button>':'';
   if(r._error)return'<div class="rcard"><div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span>'+remarkBtn+'</div><div class="err">'+ic('alert')+' '+esc(r._error)+'</div></div>';
+  var gcBtn=editable?'<button class="remark-btn" onclick="copyClassroom('+idx+')" title="Copy a short comment for Google Classroom">'+ic('clipboard')+'Classroom</button>':'';
   var delBtn=editable?'<button class="remark-btn" onclick="delResult('+idx+')" aria-label="Remove this result" title="Remove">'+ic('trash')+'</button>':'';
   var fileLabel=r.fileName||r.file_name||'';
   var stuName=editable?(assignedStudentFor(r)||(r.studentName||'').trim()):'';
@@ -2370,7 +2439,7 @@ function renderGlowCard(r,idx,editable){
     ?'<span class="rname">'+esc(stuName)+'</span><span class="rfile">'+esc(fileLabel)+'</span>'
     :'<span class="rname">'+esc(fileLabel)+'</span>';
   var html='<div class="rcard">';
-  html+='<div class="rhead"><div style="min-width:0;display:flex;flex-direction:column;gap:2px">'+nameHtml+'</div><div style="display:flex;align-items:center;gap:6px"><span class="pill ph">Glow &amp; Grow</span>'+remarkBtn+delBtn+'</div></div>';
+  html+='<div class="rhead"><div style="min-width:0;display:flex;flex-direction:column;gap:2px">'+nameHtml+'</div><div style="display:flex;align-items:center;gap:6px"><span class="pill ph">Glow &amp; Grow</span>'+remarkBtn+gcBtn+delBtn+'</div></div>';
   var summary=(r.summary||'').trim();
   if(summary||editable)html+='<div class="summary-box">'+ed(editable,idx,'summary',summary)+'</div>';
   var glows=r.glows||[];
@@ -2415,7 +2484,7 @@ function renderResultCard(r,idx,editable){
     ?'<span class="rname">'+esc(stuName)+'</span><span class="rfile">'+esc(fileLabel)+'</span>'
     :'<span class="rname">'+esc(fileLabel)+'</span>';
   var html='<div class="rcard">';
-  html+='<div class="rhead"><div style="min-width:0;display:flex;flex-direction:column;gap:2px">'+nameHtml+'</div><div style="display:flex;align-items:center;gap:6px"><span class="pill '+pillCls(pct)+'">'+esc(overall)+' · '+esc(tot)+'</span>'+remarkBtn+delBtn+'</div></div>';
+  html+='<div class="rhead"><div style="min-width:0;display:flex;flex-direction:column;gap:2px">'+nameHtml+'</div><div style="display:flex;align-items:center;gap:6px"><span class="pill '+pillCls(pct)+'">'+esc(overall)+' · '+esc(tot)+'</span>'+remarkBtn+gcBtnFor(idx,editable)+delBtn+'</div></div>';
   var fbSummary=fbGet(r).summary;
   if(fbSummary||editable)html+='<div class="summary-box">'+ed(editable,idx,'summary',fbSummary)+'</div>';
   html+=revHTML(r,total,false);
