@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Māka — AI marking for NZ teachers</title>
-<meta name="description" content="Upload your students' work. Gemini AI reads, marks and moderates each piece against the refreshed NZC — then rewrites feedback in your own voice.">
+<meta name="description" content="Upload your students' work. Gemini AI marks writing against a rubric, marks comprehension tests, or gives score-free Glow &amp; Grow feedback — in your own voice, aligned to the refreshed NZC.">
 <meta name="theme-color" content="#2d5a27">
 <script>
 // Set no-splash before first paint to avoid a flash when the splash should be skipped
@@ -285,7 +285,7 @@ nav.scrolled{border-color:var(--line);box-shadow:0 1px 0 var(--line)}
 .bento-title{font-weight:600;font-size:16px;margin-bottom:8px}
 .bento-desc{font-size:13.5px;color:var(--ink-2);line-height:1.65}
 .bento-big .bento-title{font-family:'Fraunces',serif;font-size:1.55rem;font-weight:800;letter-spacing:-.01em}
-.b1{grid-column:span 5}.b2{grid-column:span 7}.b3{grid-column:span 4}.b4{grid-column:span 4}.b5{grid-column:span 4}.b6{grid-column:span 6}.b7{grid-column:span 6}
+.b1{grid-column:span 5}.b2{grid-column:span 7}.b3{grid-column:span 4}.b4{grid-column:span 4}.b5{grid-column:span 4}.b6{grid-column:span 6}.b7{grid-column:span 6}.b8{grid-column:span 7}.b9{grid-column:span 5}
 
 .mini-card{margin-top:1.4rem;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);padding:1.1rem}
 .mini-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
@@ -294,6 +294,11 @@ nav.scrolled{border-color:var(--line);box-shadow:0 1px 0 var(--line)}
 .mini-pill{font-size:11px;font-weight:600;padding:3px 10px;border-radius:100px;background:var(--green-soft);color:var(--green);font-variant-numeric:tabular-nums}
 .mini-crit{display:flex;align-items:center;justify-content:space-between;font-size:11.5px;padding:5px 0;border-bottom:1px solid var(--line);color:var(--ink-2)}
 .mini-crit:last-child{border-bottom:none}
+.gg-row{display:flex;align-items:flex-start;gap:9px;font-size:11.5px;line-height:1.5;padding:6px 0;border-bottom:1px solid var(--line);color:var(--ink-2)}
+.gg-row:last-child{border-bottom:none}
+.gg-tag{flex-shrink:0;font-size:10px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;padding:2px 8px;border-radius:100px;margin-top:1px}
+.gg-glow{background:rgba(200,132,10,.14);color:#8a5a06}
+.gg-grow{background:var(--green-soft);color:var(--green)}
 .mini-dots{display:flex;gap:2px}
 .md-on{width:7px;height:7px;border-radius:50%;background:var(--green)}
 .md-off{width:7px;height:7px;border-radius:50%;background:#dcd8d0}
@@ -375,8 +380,8 @@ html:not(.no-splash) #page.ready{opacity:1;transform:none;transition:opacity .9s
   nav{padding:1rem 1.5rem}
   .steps-grid{grid-template-columns:repeat(2,1fr)}
   .bento-grid{grid-template-columns:repeat(2,1fr)}
-  .b1,.b2,.b3,.b4,.b5,.b6,.b7{grid-column:span 1}
-  .b1,.b2{grid-column:span 2}
+  .b1,.b2,.b3,.b4,.b5,.b6,.b7,.b8,.b9{grid-column:span 1}
+  .b1,.b2,.b8{grid-column:span 2}
   .stats{grid-template-columns:repeat(2,1fr);gap:1.25rem 0}
   .stat:nth-child(2)::after{display:none}
   .stat{padding:1.25rem 1rem}
@@ -386,7 +391,7 @@ html:not(.no-splash) #page.ready{opacity:1;transform:none;transition:opacity .9s
   .nav-links{gap:1.1rem}
   .steps-grid{grid-template-columns:1fr}
   .bento-grid{grid-template-columns:1fr}
-  .b1,.b2{grid-column:span 1}
+  .b1,.b2,.b8{grid-column:span 1}
   footer{flex-direction:column;align-items:flex-start}
 }
 </style>
@@ -504,7 +509,7 @@ html:not(.no-splash) #page.ready{opacity:1;transform:none;transition:opacity .9s
     <span class="hw italic">not</span> <span class="hw italic">longer</span>
   </h1>
 
-  <p class="hero-sub">Upload your students' work. Gemini reads, marks and moderates each piece against the NZC — then rewrites every comment in your own voice.</p>
+  <p class="hero-sub">Upload your students' work. Mark writing against a rubric, mark comprehension tests, or give score-free Glow &amp; Grow feedback — all in your own voice.</p>
 
   <div class="hero-actions">
     <a href="tool.html" class="btn-primary">Start marking free <svg class="ico" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></a>
@@ -538,8 +543,8 @@ html:not(.no-splash) #page.ready{opacity:1;transform:none;transition:opacity .9s
 <!-- STATS -->
 <div class="stats-wrap reveal">
   <div class="stats">
-    <div class="stat"><span class="stat-n">2×</span><span class="stat-l">passes per student</span></div>
-    <div class="stat"><span class="stat-n">25</span><span class="stat-l">point consistent rubric</span></div>
+    <div class="stat"><span class="stat-n">3</span><span class="stat-l">marking modes</span></div>
+    <div class="stat"><span class="stat-n">2×</span><span class="stat-l">passes on rubric marking</span></div>
     <div class="stat"><span class="stat-n">~3min</span><span class="stat-l">per class set</span></div>
   </div>
 </div>
@@ -613,10 +618,31 @@ html:not(.no-splash) #page.ready{opacity:1;transform:none;transition:opacity .9s
         </div>
       </div>
 
+      <div class="bento b8 reveal">
+        <div class="bento-ic ic-gold"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z"/><path d="M19 3v4"/><path d="M17 5h4"/></svg></div>
+        <div class="bento-title">Glow &amp; Grow, no score</div>
+        <div class="bento-desc">Every piece of typed or uploaded work gets exactly two glows and one grow, tied to the student's own words — plus a few spelling suggestions for typed work. No score, no grade.</div>
+        <div class="mini-card">
+          <div class="mini-row">
+            <span class="mini-name"><span class="fileic"><svg class="ico" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg></span>Billy Bob</span>
+            <span class="mini-pill">Example</span>
+          </div>
+          <div class="gg-row"><span class="gg-tag gg-glow">Glow</span><span>Your opening question hooks the reader straight away.</span></div>
+          <div class="gg-row"><span class="gg-tag gg-glow">Glow</span><span>Great word choice in &ldquo;crashed against the rocks&rdquo;.</span></div>
+          <div class="gg-row"><span class="gg-tag gg-grow">Grow</span><span>Add one more detail to your middle paragraph to back up your point.</span></div>
+        </div>
+      </div>
+
+      <div class="bento b9 reveal reveal-1">
+        <div class="bento-ic ic-green"><svg class="ico" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></div>
+        <div class="bento-title">Copy for Google Classroom</div>
+        <div class="bento-desc">One click copies a ready-to-paste comment for a student, or for the whole class. Choose full or short. It's copy and paste — Māka doesn't connect to your Classroom account.</div>
+      </div>
+
       <div class="bento b3 reveal">
         <div class="bento-ic ic-green"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></div>
         <div class="bento-title">Consistent scoring</div>
-        <div class="bento-desc">Always 5 criteria, always out of 25. No more students getting 13/20 while others get 9/15.</div>
+        <div class="bento-desc">Writing is always marked on 5 criteria, out of 25. No more students getting 13/20 while others get 9/15.</div>
       </div>
 
       <div class="bento b4 reveal reveal-1">

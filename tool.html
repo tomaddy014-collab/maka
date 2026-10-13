@@ -566,7 +566,7 @@ input[type=text],input[type=password],input[type=email],select{min-height:44px}
       <button class="mode-opt" id="mode-test" role="tab" aria-selected="false" onclick="setMarkMode('test')"><span data-ic="check"></span>Test (comprehension)</button>
       <button class="mode-opt" id="mode-glow" role="tab" aria-selected="false" onclick="setMarkMode('glow')"><span data-ic="sparkle"></span>Glow &amp; Grow</button>
     </div>
-    <div class="resub-bar">
+    <div class="resub-bar" id="resub-bar">
       <label class="chk"><input type="checkbox" class="chk-input" id="resub-check" onchange="toggleResub()"><span class="chk-box" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><span data-ic="refresh"></span>This is a resubmission</label>
       <div class="resub-pick" id="resub-pick" style="display:none">
         <span style="font-size:12.5px;color:var(--text2)">Compare against:</span>
@@ -1207,6 +1207,7 @@ function setMarkMode(m){
     var b=document.getElementById('mode-'+p[0]);
     b.classList.toggle('active',p[1]);b.setAttribute('aria-selected',p[1]?'true':'false');
   });
+  syncResubForMode(m);
   // Glow & Grow keeps level/task context but hides the rubric box (no scoring).
   document.getElementById('rubric-bits').style.display=test?'none':'';
   document.getElementById('rubric-bits2').style.display=writing?'':'none';
@@ -1231,6 +1232,17 @@ function toggleResub(){
   RESUB.on=document.getElementById('resub-check').checked;
   document.getElementById('resub-pick').style.display=RESUB.on?'':'none';
   if(RESUB.on)loadResubSessions();else{RESUB.sessionId='';RESUB.results=[];document.getElementById('resub-status').textContent=''}
+}
+// Glow & Grow has no score, so resubmissions don't apply: hide the bar and clear any stale state.
+function syncResubForMode(m){
+  var bar=document.getElementById('resub-bar');if(!bar)return;
+  var glow=m==='glow';
+  bar.style.display=glow?'none':'';
+  if(glow){
+    var ck=document.getElementById('resub-check');
+    if(ck&&ck.checked)ck.checked=false;
+    if(RESUB.on||RESUB.sessionId||RESUB.results.length)toggleResub();
+  }
 }
 function loadResubSessions(){
   if(!sb||!USER){document.getElementById('resub-status').textContent='Sign in to use resubmissions';return}
