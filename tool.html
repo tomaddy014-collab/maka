@@ -571,6 +571,12 @@ html.tour-on .main{padding-bottom:calc(var(--tour-pad,0px) + 1.5rem)}
 .ts-sub{font-size:12px;color:var(--text2);margin-top:2px}
 .ts-bar{margin-bottom:1rem}
 .tour-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:4px 11px;border-radius:100px;background:var(--warn-bg);color:var(--warn-text)}
+/* Mode caption + empty-state actions */
+.mode-caption{margin:-.65rem 0 1.25rem;font-size:13px;line-height:1.5;color:var(--text2);max-width:60ch}
+.empty-act{margin-top:16px}
+.empty-state .empty-act .btn,#dash-empty .empty-act .btn{justify-content:center}
+.empty-state .empty-act .ico{font-size:15px;margin:0;color:inherit}
+#dash-empty .empty-act{margin-top:16px}
 /* Getting-started checklist */
 .gs-card{padding:1.25rem;transition:opacity .3s var(--ease),transform .3s var(--ease-spring)}
 .gs-card.gs-out{opacity:0;transform:translateY(-8px) scale(.985)}
@@ -669,6 +675,7 @@ html.tour-on .main{padding-bottom:calc(var(--tour-pad,0px) + 1.5rem)}
       <button class="mode-opt" id="mode-test" role="tab" aria-selected="false" onclick="setMarkMode('test')"><span data-ic="check"></span>Test (comprehension)</button>
       <button class="mode-opt" id="mode-glow" role="tab" aria-selected="false" onclick="setMarkMode('glow')"><span data-ic="sparkle"></span>Glow &amp; Grow</button>
     </div>
+    <p class="mode-caption" id="mode-caption">Scores each piece against a rubric, out of 25, with a comment on every criterion.</p>
     <div class="resub-bar" id="resub-bar">
       <label class="chk"><input type="checkbox" class="chk-input" id="resub-check" onchange="toggleResub()"><span class="chk-box" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><span data-ic="refresh"></span>This is a resubmission</label>
       <div class="resub-pick" id="resub-pick" style="display:none">
@@ -786,7 +793,7 @@ html.tour-on .main{padding-bottom:calc(var(--tour-pad,0px) + 1.5rem)}
         <select id="dash-sess-sel" style="font-size:13px;padding:6px 34px 6px 10px;width:auto" onchange="loadDashSess()"><option value="current">Current session</option></select>
       </div>
     </div>
-    <div id="dash-empty" class="card" style="text-align:center;padding:3rem;color:var(--text2)"><div class="empty-ico" style="margin-bottom:12px"><span data-ic="chart"></span></div><div style="font-weight:500;margin-bottom:6px">No results yet</div><div style="font-size:13px">Mark some student work first.</div></div>
+    <div id="dash-empty" class="card" style="text-align:center;padding:3rem;color:var(--text2)"><div class="empty-ico" style="margin-bottom:12px"><span data-ic="chart"></span></div><div style="font-weight:500;margin-bottom:6px">No results yet</div><div style="font-size:13px">Mark some student work and your class patterns will show up here.</div><div class="empty-act"><button class="btn btn-p" onclick="showTab('mark')"><span data-ic="edit"></span>Go to Mark</button></div></div>
     <div id="dash-content" style="display:none">
       <div id="dash-insight"></div>
       <div class="dash-grid" id="dash-stats"></div>
@@ -927,7 +934,7 @@ function fmt(b){return b>1048576?(b/1048576).toFixed(1)+' MB':Math.round(b/1024)
 // Shimmer placeholders while async lists load (uses .skel styles)
 function skeletonRows(n){var h='';for(var i=0;i<(n||4);i++)h+='<div class="skel skel-card"></div>';return h}
 // Consistent icon-led empty state
-function emptyState(icon,msg){return'<div class="empty-state">'+ic(icon)+'<div>'+msg+'</div></div>'}
+function emptyState(icon,msg,action){return'<div class="empty-state">'+ic(icon)+'<div>'+msg+'</div>'+(action?'<div class="empty-act">'+action+'</div>':'')+'</div>'}
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function stripExt(n){return String(n).replace(/\.[^.]+$/,'')}
 // First name only — used anywhere a name leaves the tool (report comments, weekly posts,
@@ -1334,6 +1341,7 @@ function toggleStep0(){_step0Touched=true;var c=document.getElementById('step0-c
 function autoCollapseStep0(){var c=document.getElementById('step0-card');if(!c||_step0Touched)return;var hasKey=!!((document.getElementById('apikey')||{}).value||(PROFILE&&PROFILE.gemini_key));if(hasKey&&!c.classList.contains('collapsed')){c.classList.add('collapsed');var h=document.getElementById('step0-head');if(h)h.setAttribute('aria-expanded','false')}}
 // ── Marking mode: writing (rubric) vs test (comprehension) ──────────────────
 var MARK_MODE='writing';
+var MODE_CAPTIONS={writing:'Scores each piece against a rubric, out of 25, with a comment on every criterion.',test:'Marks comprehension answers against your answer key, question by question.',glow:'Two glows and one grow for each student. No score, no grade.'};
 function setMarkMode(m){
   MARK_MODE=m;
   var writing=m==='writing',test=m==='test',glow=m==='glow';
@@ -1347,6 +1355,7 @@ function setMarkMode(m){
   document.getElementById('rubric-bits2').style.display=writing?'':'none';
   document.getElementById('test-bits').style.display=test?'':'none';
   document.getElementById('setup-title').textContent=writing?'Marking criteria':test?'Test paper':'Focus (optional)';
+  var cap=document.getElementById('mode-caption');if(cap)cap.textContent=MODE_CAPTIONS[m]||'';
   var mb=document.getElementById('markbtn');
   if(mb)mb.innerHTML=ic('sparkle')+(writing?'Mark all uploaded files':test?'Mark all tests':'Give Glow &amp; Grow feedback');
 }
@@ -3020,7 +3029,7 @@ function loadHistory(){
   el.innerHTML=skeletonRows(4);
   sb.from('sessions').select('*').eq('teacher_id',USER.id).order('created_at',{ascending:false}).then(function(res){
     HIST_SESSIONS=res.data||[];
-    if(!HIST_SESSIONS.length){el.innerHTML=emptyState('layers','No marking sessions yet. Head to the Mark tab to mark your first set of student work.');return}
+    if(!HIST_SESSIONS.length){el.innerHTML=emptyState('layers','No marking sessions yet. Mark your first set of student work and it will be kept here.','<button class="btn btn-p" onclick="showTab(\'mark\')">'+ic('edit')+'Go to Mark</button>');return}
     var areas=HIST_SESSIONS.map(function(s){return s.learning_area||''}).filter(function(a,i,arr){return a&&arr.indexOf(a)===i}).sort();
     el.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">'
       +'<input type="text" id="hist-search" placeholder="Search sessions…" oninput="renderHistList()" aria-label="Search sessions" style="flex:1;min-width:160px;font-size:13px;padding:8px 11px">'
@@ -3176,7 +3185,7 @@ function loadClassList(){
   el.innerHTML=skeletonRows(4);
   sb.from('students').select('*').eq('teacher_id',USER.id).order('name').then(function(res){
     var data=res.data||[];
-    if(!data.length){el.innerHTML=emptyState('users','No students yet. Add them above, or import a CSV — pronouns and year levels power your comments and student hubs.');return}
+    if(!data.length){el.innerHTML=emptyState('users','No students yet. Pronouns and year levels power your comments and student hubs. Add your first student, or import a whole class from a CSV just below.','<button class="btn btn-p" onclick="openAddStu()">'+ic('plus')+'Add a student</button>');return}
     var gC={boy:'background:#e6f1fb;color:#185fa5',girl:'background:#fce8f3;color:#8b1a5e',nonbinary:'background:#f0ede8;color:#5a564e'};
     var gL={boy:'He/him',girl:'She/her',nonbinary:'They/them'};
     el.innerHTML='<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+data.length+' students — click to open hub</div>'+data.map(function(s){var gb=s.gender&&gL[s.gender]?'<span style="font-size:10px;padding:2px 7px;border-radius:100px;font-weight:600;'+gC[s.gender]+'">'+gL[s.gender]+'</span>':'';var code=s.access_code||'';return'<div class="stu-item" id="stu-'+s.id+'" style="cursor:pointer" onclick="openHub(\''+s.id+'\',\''+escJs(s.name)+'\')"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0">'+esc(s.name[0].toUpperCase())+'</div><div style="flex:1;min-width:0"><div style="font-weight:500;font-size:14px">'+esc(s.name)+'</div><div style="font-size:12px;color:var(--text2);margin-top:1px">'+esc(s.year_level||'No year set')+'</div></div>'+gb+'<span class="code-chip" title="Student login code" onclick="event.stopPropagation();copyCode(\''+escJs(code)+'\',this)">'+(code?esc(code):'—')+'</span><button class="btn btn-sm" onclick="event.stopPropagation();regenCode(\''+s.id+'\')" aria-label="Generate new code for '+esc(s.name)+'">'+ic('refresh')+'</button><button class="btn btn-sm" onclick="event.stopPropagation();openHub(\''+s.id+'\',\''+escJs(s.name)+'\')" aria-label="Open hub for '+esc(s.name)+'">'+ic('external')+'Hub</button><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delStu(\''+s.id+'\',\''+escJs(s.name)+'\')" style="margin-left:4px" aria-label="Remove '+esc(s.name)+'">×</button></div>'}).join('');
