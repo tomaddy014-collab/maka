@@ -1506,7 +1506,11 @@ async function gemini(key,parts,onRetry){
   // thinkingBudget:0 disables Gemini 2.5's hidden "thinking" tokens, which otherwise eat into
   // maxOutputTokens and can cut off the visible answer (most noticeable on short outputs like
   // report comments). Also faster and cheaper since no reasoning tokens are spent.
-  var body=JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0.3,maxOutputTokens:8192,thinkingConfig:{thinkingBudget:0}}});
+  // Feedback JSON (many criteria / long tests) can be long: start generous, and if Gemini still reports
+  // finishReason MAX_TOKENS escalate once to the model's larger ceiling instead of using a cut-off reply.
+  var tokenSteps=[16384,32768],tokenIdx=0;
+  function makeBody(){return JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0.3,maxOutputTokens:tokenSteps[tokenIdx],thinkingConfig:{thinkingBudget:0}}})}
+  var body=makeBody();
   var maxTries=10,delay=2000,lastErr='Gemini unavailable';
   for(var attempt=1;attempt<=maxTries;attempt++){
     try{
@@ -1522,14 +1526,20 @@ async function gemini(key,parts,onRetry){
       }else{
         var d=await resp.json();
         if(d.error)throw new Error(d.error.message||'Gemini error');
-        var ps=((d.candidates||[])[0]||{content:{parts:[]}}).content.parts||[];
+        var cand0=(d.candidates||[])[0]||{content:{parts:[]}};
+        var ps=(cand0.content&&cand0.content.parts)||[];
         var raw=ps.map(function(p){return p.text||''}).join('');
+        if(cand0.finishReason==='MAX_TOKENS'){
+          // The reply was cut off mid-way — never hand half a JSON/sentence back as if it were complete.
+          if(tokenIdx<tokenSteps.length-1){tokenIdx++;body=makeBody();attempt--;continue}
+          throw new Error('Gemini’s reply was too long and got cut off — try fewer files or a shorter task and run it again.');
+        }
         if(!raw.trim())throw new Error('Empty response from Gemini');
         return raw.replace(/```json/g,'').replace(/```/g,'').trim();
       }
     }catch(e){
       // Re-throw clearly fatal errors; retry everything else (busy, network, parse, empty)
-      if(/error 40|api key|api_key|invalid|permission|not valid|unregistered|refused|usage limit/i.test(e.message||''))throw e;
+      if(/error 40|api key|api_key|invalid|permission|not valid|unregistered|refused|usage limit|got cut off/i.test(e.message||''))throw e;
       if(/failed to fetch|networkerror|network request failed/i.test(e.message||''))lastErr='network';
       else lastErr=e.message||'Gemini error';
     }
@@ -2433,59 +2443,159 @@ function setGcOpt(){
   try{localStorage.setItem('maka-gc',JSON.stringify(GC_OPT))}catch(e){}
 }
 function syncGcControls(){var st=document.getElementById('gc-style'),sc=document.getElementById('gc-score');if(st)st.value=GC_OPT.style;if(sc)sc.checked=GC_OPT.score}
-function gcSentence(t){t=String(t||'').replace(/\s+/g,' ').trim();if(!t)return'';return/[.!?…]$/.test(t)?t:t+'.'}
-// Cut to a limit at a sentence boundary so the comment never ends mid-thought.
-function gcTrim(t,max){
-  if(t.length<=max)return t;
-  var cut=t.slice(0,max),i=Math.max(cut.lastIndexOf('. '),cut.lastIndexOf('! '),cut.lastIndexOf('? '));
-  return i>max*0.5?cut.slice(0,i+1):cut.replace(/\s+\S*$/,'')+'…';
+// Add a full stop only when the text does not already end a sentence. Closing quotes/brackets after
+// the punctuation ("…done.” / (see below!)) and trailing emoji count as ended; nothing inside is touched.
+function gcSentence(t){
+  t=String(t||'').replace(/\s+/g,' ').trim();
+  t=t.replace(/[,;:]+$/,'').trim();
+  if(!t)return'';
+  if(/[.!?…]["'”’)\]»]*$/.test(t))return t;
+  if(/\p{Extended_Pictographic}️?$/u.test(t))return t;
+  return t+'.';
+}
+// Split into sentences (keeps closing quotes with their sentence; won't split after e.g./Mr./initials).
+function gcSplit(t){
+  var out=[],start=0,re=/[.!?…]+["'”’)\]»]*\s+/g,m;
+  while((m=re.exec(t))){
+    var end=m.index+m[0].length,nx=t.charAt(end);
+    if(!nx||!/[\p{Lu}\d“"‘'(\[]/u.test(nx))continue;
+    var head=t.slice(start,m.index+1);
+    if(/^\.$/.test(m[0].trim())&&(/(?:^|[\s(“"])(?:e\.g|i\.e|etc|vs|mr|mrs|ms|dr|st|no)\.$/i.test(head)||/(?:^|[\s(“"])\p{Lu}\.$/u.test(head)))continue;
+    out.push(t.slice(start,end).trim());start=end;
+  }
+  var rest=t.slice(start).trim();if(rest)out.push(rest);
+  return out;
+}
+// Short mode: pack WHOLE parts (then whole sentences) into the budget. Never cuts inside a sentence and
+// never adds an ellipsis. The first sentence of each part may run a little over so Glow and Grow both appear.
+function gcFit(parts,max){
+  var out='';
+  for(var i=0;i<parts.length;i++){
+    var cand=out?out+' '+parts[i]:parts[i];
+    if(cand.length<=max){out=cand;continue}
+    var sents=gcSplit(parts[i]),acc=out;
+    for(var j=0;j<sents.length;j++){
+      var c2=acc?acc+' '+sents[j]:sents[j];
+      var ok=c2.length<=max||(j===0&&(!out||c2.length<=max*1.5));
+      if(!ok)break;
+      acc=c2;
+    }
+    out=acc;break;
+  }
+  return out;
 }
 function classroomComment(r,opt){
   opt=opt||GC_OPT;if(!r||r._error)return'';
   var who=firstNameOf(assignedStudentFor(r)||(r.studentName||'').trim()||r.fileName||r.file_name||'');
-  var short=opt.style==='short',parts=[],score='';
+  var short=opt.style==='short',full=!short,parts=[],score='',band='';
+  function add(s){if(s)parts.push(s)}
+  function qt(q){q=String(q||'').replace(/\s+/g,' ').trim();return q?'“'+q+'”':''}
+  // Resubmission block (before/after + how the student acted on earlier feedback) — full only.
+  function revParts(newTotal,isTest){
+    var rev=getRev(r);if(!rev)return;
+    var prev=(isTest?rev.priorScore:rev.priorTotal)||0,unit=isTest?'':'/25';
+    if(opt.score)add('Resubmission: '+prev+unit+' → '+newTotal+unit+'.');
+    else add('Resubmission.');
+    (rev.addressed||[]).forEach(function(a){
+      var st=String(a.status||'').toLowerCase(),lbl=st.indexOf('address')===0?'addressed':st.indexOf('part')===0?'partly':'not yet';
+      add('Acted on feedback: '+gcSentence((a.feedback||'')+' — '+lbl+(a.note?': '+a.note:'')));
+    });
+  }
   if(r.type==='glow'||Array.isArray(r.glows)){
-    var g=(r.glows||[]).map(function(x){return gcSentence(x.comment)}).filter(Boolean);
+    var gl=(r.glows||[]).map(function(x){
+      var c=gcSentence(x.comment),q=full?qt(x.quote):'';
+      return q?(c?q+' — '+c:q):c;
+    }).filter(Boolean);
     var gr=r.grow||{};
-    (short?g.slice(0,1):g).forEach(function(x){parts.push('Glow: '+x)});
-    if(gr.suggestion)parts.push('Grow: '+gcSentence(gr.suggestion));
-    if(!short&&gr.example)parts.push('Try: '+gcSentence(gr.example));
-    if(!short&&(r.spelling||[]).length)parts.push('Spelling: '+r.spelling.map(function(x){return x.wrong+' → '+x.right+(x.tip?' ('+x.tip+')':'')}).join('; ')+'.');
+    if(full)add(gcSentence(r.summary));
+    (short?gl.slice(0,1):gl).forEach(function(x){add('Glow: '+x)});
+    var gq=full?qt(gr.quote):'';
+    if(gr.suggestion||gq)add('Grow: '+gcSentence((gq?'You wrote '+gq+'. ':'')+(gr.suggestion||'')));
+    if(full&&gr.example)add('Try: '+gcSentence(gr.example));
+    if(full&&(r.spelling||[]).length)add(gcSentence('Spelling: '+r.spelling.map(function(x){return x.wrong+' → '+x.right+(x.tip?' ('+String(x.tip).replace(/[.!?…]+$/,'')+')':'')}).join('; ')));
   }else if(r.type==='test'||Array.isArray(r.questions)){
     var qs=r.questions||[],sc=r.score!=null?r.score:qs.reduce(function(a,q){return a+qMark(q)},0),tot=r.total!=null?r.total:qs.length;
-    if(tot)score=fmtMark(sc)+'/'+tot;
-    var fbT=fbGet(r),sum=gcSentence(fbT.summary);
-    if(sum)parts.push(sum);
-    (short?fbT.tips.slice(0,1):fbT.tips).forEach(function(t){var ts=t.suggestion||t.text;if(ts)parts.push('Next step: '+gcSentence(ts))});
+    var pct=tot?Math.round(sc/tot*100):0;
+    if(tot)score=fmtMark(sc)+'/'+tot+(full?' ('+pct+'%)':'');
+    band=r.overallScore||r.overall_score||testBand(pct);
+    var fbT=fbGet(r);
+    add(gcSentence(fbT.summary));
+    if(full){
+      revParts(sc,true);
+      qs.forEach(function(q,qi){
+        var m=qMark(q),sym=m>=1?'✓':m>0?'½':'✗',segs=[];
+        var head2='Q'+String(q.n||qi+1)+' '+sym+(q.question?' '+String(q.question).replace(/\s+/g,' ').trim():'');
+        segs.push(head2);
+        segs.push('Answer: '+(String(q.studentAnswer||'').replace(/\s+/g,' ').trim()||'(blank)'));
+        if(m<1&&q.correctAnswer)segs.push('Correct: '+String(q.correctAnswer).replace(/\s+/g,' ').trim());
+        if(q.note)segs.push(String(q.note).replace(/\s+/g,' ').trim());
+        add(gcSentence(segs.join(' — ')));
+      });
+    }
+    (short?fbT.tips.slice(0,1):fbT.tips).forEach(function(t){var ts=t.suggestion||t.text;if(ts)add('Next step: '+gcSentence(ts))});
   }else{
     var fb=fbGet(r),tot2=r.criteriaTotal||r.criteria_total||'';
     if(tot2&&tot2!=='—')score=String(tot2);
-    if(fb.praise&&fb.praise.text)parts.push('Glow: '+gcSentence(fb.praise.text));
-    (short?fb.tips.slice(0,1):fb.tips).forEach(function(t){var ts=t.suggestion||t.text;if(ts){parts.push('Grow: '+gcSentence(ts));if(!short&&t.example)parts.push('Try: '+gcSentence(t.example))}});
-    if(!short&&fb.goal)parts.push(gcSentence(fb.goal));
+    band=r.overallScore||r.overall_score||'';
+    var crit=r.criteria||[];
+    if(full){
+      add(gcSentence(fb.summary));
+      revParts(crit.reduce(function(a,c){return a+(parseInt(c.score)||0)},0),false);
+      var rv=getRev(r),pc=rv&&rv.priorCrit;
+      crit.forEach(function(c){
+        var nm=String(c.name||'').split('—')[0].trim(),cm=String(c.comment||'').replace(/\s+/g,' ').trim(),sc5='';
+        if(opt.score){
+          var pv=pc&&pc[nm];
+          sc5=(parseInt(c.score)||0)+'/5'+(pv!=null?'; was '+pv:'');
+        }
+        if(!nm&&!cm)return;
+        var lead=nm?nm+(sc5?' ('+sc5+')':''):(sc5||'');
+        add(cm?lead+(lead?': ':'')+gcSentence(cm):(lead?gcSentence(lead):''));
+      });
+    }
+    if(fb.praise&&(fb.praise.text||fb.praise.quote)){
+      var pq=full?qt(fb.praise.quote):'',pt=gcSentence(fb.praise.text);
+      add('Glow: '+(pq?(pt?pq+' — '+pt:pq):pt));
+    }
+    (short?fb.tips.slice(0,1):fb.tips).forEach(function(t){
+      var ts=t.suggestion||t.text,tq=full?qt(t.quote):'';
+      if(ts||tq){add('Grow: '+gcSentence((tq?'You wrote '+tq+'. ':'')+(ts||'')));if(full&&t.example)add('Try: '+gcSentence(t.example))}
+    });
+    if(full&&fb.goal)add(gcSentence(fb.goal));
   }
-  var head='Kia ora'+(who?' '+who:'')+(opt.score&&score?' — '+score:'')+'.';
-  // Short: one tidy paragraph, trimmed at a sentence. Full: nothing dropped or cut, one point per line.
-  return short?head+' '+gcTrim(parts.join(' '),300):head+'\n'+parts.join('\n');
+  var scoreTxt=short?score:[band,score].filter(Boolean).join(' · ');
+  var head='Kia ora'+(who?' '+who:'')+(opt.score&&scoreTxt?' — '+scoreTxt:'')+'.';
+  // Short: one tidy paragraph of whole sentences. Full: nothing dropped or cut, one point per line.
+  return short?head+(parts.length?' '+gcFit(parts,300):''):head+(parts.length?'\n'+parts.join('\n'):'');
 }
 function gcCopyText(text,okMsg){
   function done(){showToast(okMsg,'ok')}
-  function fallback(){var ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done()}catch(e){showToast('Could not copy — select the text and copy manually','err')}document.body.removeChild(ta)}
-  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(done).catch(fallback);else fallback();
+  function fallback(){
+    var ta=document.createElement('textarea');ta.value=text;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta);ta.focus();ta.select();
+    var ok=false;try{ok=document.execCommand('copy')}catch(e){}
+    document.body.removeChild(ta);
+    if(ok)done();else showToast('Could not copy — select the text and copy manually','err');
+  }
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(done,fallback);else fallback();
 }
-function gcBtnFor(idx,editable){return editable?'<button class="remark-btn" onclick="copyClassroom('+idx+')" title="Copy a short comment for Google Classroom">'+ic('clipboard')+'Classroom</button>':''}
+function gcBtnFor(idx,editable){return editable?'<button class="remark-btn" onclick="copyClassroom('+idx+')" title="Copy a comment for Google Classroom">'+ic('clipboard')+'Classroom</button>':''}
+// Long comments are never trimmed in Full mode; just let the teacher know so they can check the paste.
+function gcLongNote(text){return text.length>3000?' — it is long ('+text.length+' characters), so check it pasted in full':''}
 function copyClassroom(idx){
   var c=classroomComment(results[idx]);if(!c){showToast('Nothing to copy for this one yet','warn');return}
-  gcCopyText(c,'Classroom comment copied — paste it into the student\'s private comment');
+  gcCopyText(c,'Classroom comment copied — paste it into the student\'s private comment'+gcLongNote(c));
 }
 function copyAllClassroom(){
   var lines=results.map(function(r){
     var c=classroomComment(r);if(!c)return'';
-    var nm=assignedStudentFor(r)||(r.studentName||'').trim()||stripExt(r.fileName||r.file_name||'');
-    return nm+'\t'+c.replace(/\s*\n\s*/g,' ');
+    var nm=(assignedStudentFor(r)||(r.studentName||'').trim()||stripExt(r.fileName||r.file_name||'')).replace(/[\t\r\n]+/g,' ');
+    // One line per student (tab-separated): newlines and tabs inside a comment become spaces, nothing is dropped.
+    return nm+'\t'+c.replace(/\s*[\r\n]+\s*/g,' ').replace(/\t+/g,' ');
   }).filter(Boolean);
   if(!lines.length){showToast('Nothing to copy yet','warn');return}
-  gcCopyText(lines.join('\n'),lines.length+' Classroom comment'+(lines.length!==1?'s':'')+' copied (name, then comment)');
+  var txt=lines.join('\n'),longest=lines.reduce(function(a,l){return Math.max(a,l.length)},0);
+  gcCopyText(txt,lines.length+' Classroom comment'+(lines.length!==1?'s':'')+' copied (name, then comment)'+(longest>3000?' — some are long, so check they pasted in full':''));
 }
 function spellHTML(sp){
   sp=Array.isArray(sp)?sp:[];if(!sp.length)return'';
@@ -2495,7 +2605,7 @@ function spellHTML(sp){
 function renderGlowCard(r,idx,editable){
   var remarkBtn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkGlow('+idx+')">'+ic('refresh')+(r._error?'Retry':'Re-do')+'</button>':'';
   if(r._error)return'<div class="rcard"><div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span>'+remarkBtn+'</div><div class="err">'+ic('alert')+' '+esc(r._error)+'</div></div>';
-  var gcBtn=editable?'<button class="remark-btn" onclick="copyClassroom('+idx+')" title="Copy a short comment for Google Classroom">'+ic('clipboard')+'Classroom</button>':'';
+  var gcBtn=gcBtnFor(idx,editable);
   var delBtn=editable?'<button class="remark-btn" onclick="delResult('+idx+')" aria-label="Remove this result" title="Remove">'+ic('trash')+'</button>':'';
   var fileLabel=r.fileName||r.file_name||'';
   var stuName=editable?(assignedStudentFor(r)||(r.studentName||'').trim()):'';
