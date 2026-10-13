@@ -532,7 +532,7 @@ input[type=text],input[type=password],input[type=email],select{min-height:44px}
 .tour-list li{display:flex;gap:9px;align-items:flex-start}
 .tour-list .ico{font-size:15px;margin-top:3px;color:var(--green)}
 .tour-extra{margin-top:12px}
-.tour-foot{display:flex;align-items:center;gap:8px;margin-top:14px}
+.tour-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:14px}
 .tour-foot .tour-btn.skip{margin-right:auto}
 .tour-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;min-width:44px;padding:0 16px;border-radius:var(--rs);border:1px solid var(--border2);background:var(--bg);color:var(--text);font:500 13.5px 'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;touch-action:manipulation;transition:background-color .2s var(--ease),transform .2s var(--ease-spring)}
 .tour-btn:hover{background:var(--bg2)}
@@ -571,6 +571,34 @@ html.tour-on .main{padding-bottom:calc(var(--tour-pad,0px) + 1.5rem)}
 .ts-sub{font-size:12px;color:var(--text2);margin-top:2px}
 .ts-bar{margin-bottom:1rem}
 .tour-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:4px 11px;border-radius:100px;background:var(--warn-bg);color:var(--warn-text)}
+/* Getting-started checklist */
+.gs-card{padding:1.25rem;transition:opacity .3s var(--ease),transform .3s var(--ease-spring)}
+.gs-card.gs-out{opacity:0;transform:translateY(-8px) scale(.985)}
+.gs-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.gs-title{font-family:'Fraunces',Georgia,serif;font-weight:800;font-size:18px;letter-spacing:-.01em;line-height:1.25}
+.gs-sub{font-size:12.5px;color:var(--text2);margin-top:2px;font-variant-numeric:tabular-nums}
+.gs-bar{height:6px;border-radius:100px;background:var(--bg2);overflow:hidden;margin-bottom:14px;box-shadow:inset 0 1px 2px rgba(0,0,0,.06)}
+.gs-bar span{display:block;height:100%;width:100%;border-radius:100px;background:linear-gradient(90deg,var(--green),#4b8a43);transform:scaleX(0);transform-origin:0 50%;transition:transform .5s var(--ease-spring)}
+.gs-list{list-style:none;display:flex;flex-direction:column;gap:8px}
+.gs-row{display:flex;align-items:center;gap:8px}
+.gs-chk{flex:1 1 0;min-width:0;cursor:default;border-radius:12px;min-height:46px}
+.gs-act{flex-shrink:0}
+.gs-chk:hover{border-color:var(--border);color:var(--text2)}
+.gs-row.done .gs-chk:hover{border-color:var(--green);color:var(--green)}
+.gs-act[hidden]{display:none}
+/* Key test + sample */
+.key-test{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+.key-test-hint{font-size:12px;color:var(--text2)}
+.key-test-out{display:none;gap:9px;align-items:flex-start;margin-top:10px;padding:10px 12px;border-radius:var(--rs);font-size:13px;line-height:1.5}
+.key-test-out.ok,.key-test-out.err{display:flex}
+.key-test-out:not(.ok):not(.err):not(:empty){display:flex;align-items:center;background:var(--bg2);color:var(--text2)}
+.key-test-out.ok{background:var(--green-bg);color:var(--green)}
+.key-test-out.err{background:var(--danger-bg);color:var(--danger-text)}
+.key-test-out .ico{font-size:16px;margin-top:2px}
+.key-test-out .kt-fix{margin-top:2px;color:var(--text);font-weight:400}
+.sample-out{margin-top:1.5rem}
+.sample-wait{display:flex;align-items:center;gap:10px;color:var(--text2);font-size:13.5px}
+.sample-note{font-size:12.5px;color:var(--text2);margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -635,6 +663,7 @@ html.tour-on .main{padding-bottom:calc(var(--tour-pad,0px) + 1.5rem)}
 
   <!-- MARK -->
   <div class="panel active" id="panel-mark">
+    <section class="card gs-card" id="gs-card" aria-labelledby="gs-title" hidden></section>
     <div class="mode-seg" role="tablist" aria-label="Marking mode">
       <button class="mode-opt active" id="mode-writing" role="tab" aria-selected="true" onclick="setMarkMode('writing')"><span data-ic="edit"></span>Writing (rubric)</button>
       <button class="mode-opt" id="mode-test" role="tab" aria-selected="false" onclick="setMarkMode('test')"><span data-ic="check"></span>Test (comprehension)</button>
@@ -655,6 +684,8 @@ html.tour-on .main{padding-bottom:calc(var(--tour-pad,0px) + 1.5rem)}
       <div class="field collapse-body" id="step0-body">
         <div class="key-row"><input type="password" id="apikey" name="maka-gemini-key-nofill" placeholder="AIza…" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" aria-label="Gemini API key"><button class="eye-btn" aria-label="Show or hide key" onclick="var f=document.getElementById('apikey');f.type=f.type=='password'?'text':'password'"><span data-ic="eye"></span></button></div>
         <div class="hint">Free at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com</a> — saved to your account when signed in.</div>
+        <div class="key-test"><button type="button" class="btn btn-sm" id="testkeybtn" onclick="testKey('apikey','key-test-out','testkeybtn')"><span data-ic="check"></span>Test key</button><span class="key-test-hint">Sends one tiny request to Gemini.</span></div>
+        <div id="key-test-out" class="key-test-out" role="status" aria-live="polite"></div>
       </div>
     </div>
     <div class="card">
@@ -845,8 +876,9 @@ html.tour-on .main{padding-bottom:calc(var(--tour-pad,0px) + 1.5rem)}
         </div>
         <div style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:.5px solid var(--border)">
           <div class="lbl">Gemini API key</div>
-          <div class="key-row"><input type="password" id="set-key" name="maka-gemini-key-nofill2" placeholder="AIza…" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other"><button class="eye-btn" onclick="var f=document.getElementById('set-key');f.type=f.type=='password'?'text':'password'"><span data-ic="eye"></span></button><button class="btn" onclick="saveKey()">Save</button></div>
+          <div class="key-row"><input type="password" id="set-key" name="maka-gemini-key-nofill2" placeholder="AIza…" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other"><button class="eye-btn" onclick="var f=document.getElementById('set-key');f.type=f.type=='password'?'text':'password'"><span data-ic="eye"></span></button><button class="btn" onclick="saveKey()">Save</button><button type="button" class="btn" id="settestkeybtn" onclick="testKey('set-key','set-key-test-out','settestkeybtn')">Test key</button></div>
           <div id="key-status"></div>
+          <div id="set-key-test-out" class="key-test-out" role="status" aria-live="polite"></div>
         </div>
         <div style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:.5px solid var(--border)">
           <div class="lbl">Writing style examples</div>
@@ -858,7 +890,7 @@ html.tour-on .main{padding-bottom:calc(var(--tour-pad,0px) + 1.5rem)}
         <div><div class="lbl" style="color:var(--danger-text)">Danger zone</div><button class="btn btn-danger" onclick="deleteAcct()">Delete my account and all data</button></div>
       </div>
     </div>
-    <div class="card" id="settings-tour-card"><div class="card-title">Guided tour</div><p style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.5">A 90-second walk through Māka: your key, marking, results, and your class list. Nothing in it is saved.</p><button class="btn" id="settings-tour-btn" onclick="startTour({manual:true})"><span data-ic="sparkle"></span>Take the tour</button></div>
+    <div class="card" id="settings-tour-card"><div class="card-title">Guided tour</div><p style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.5">A 90-second walk through Māka: your key, marking, results, and your class list. Nothing in it is saved.</p><div class="btn-row"><button class="btn" id="settings-tour-btn" onclick="startTour({manual:true})"><span data-ic="sparkle"></span>Take the tour</button><button class="btn" id="settings-gs-btn" onclick="gsReset()"><span data-ic="check"></span>Show Getting started checklist</button></div></div>
     <div class="card"><div class="card-title">Saved rubrics</div><div id="rubrics-list"><div style="font-size:13px;color:var(--text2)">Sign in to save rubrics.</div></div><div style="margin-top:12px;font-size:13px;color:var(--text2)">Save rubrics from the Mark tab.</div></div>
   </div>
 
@@ -1115,7 +1147,7 @@ function loadProfileBg(){
         if(PROFILE.writing_style)document.getElementById('set-style').value=PROFILE.writing_style;
         updateNavForUser();
       }else{sb.from('profiles').upsert({id:USER.id,email:USER.email,display_name:''}).then(function(){}).catch(function(){})}
-      loadRubrics();loadDashSessions();loadCompareSessions();loadClassStudents();updateStepState();autoCollapseStep0();if(window.makaTourMaybeOffer)makaTourMaybeOffer('profile');
+      loadRubrics();loadDashSessions();loadCompareSessions();loadClassStudents();updateStepState();autoCollapseStep0();if(window.makaTourMaybeOffer)makaTourMaybeOffer('profile');if(window.gsReady)gsReady('profile');
     }catch(e){}
   }).catch(function(){});
 }
@@ -1126,7 +1158,7 @@ function loadClassStudents(){
   sb.from('students').select('id,name').eq('teacher_id',USER.id).order('name').then(function(res){
     CLASS_STUDENTS=(res&&res.data)||[];
     if(results.length)renderResults(results);
-    if(res&&!res.error&&window.makaTourMaybeOffer)makaTourMaybeOffer('students');
+    if(res&&!res.error){if(window.makaTourMaybeOffer)makaTourMaybeOffer('students');if(window.gsReady)gsReady('students')}
   }).catch(function(){});
 }
 
@@ -2681,7 +2713,7 @@ function classroomComment(r,opt){
   return short?head+(parts.length?' '+gcFit(parts,300):''):head+(parts.length?'\n'+parts.join('\n'):'');
 }
 function gcCopyText(text,okMsg){
-  function done(){showToast(okMsg,'ok')}
+  function done(){showToast(okMsg,'ok');try{localStorage.setItem('maka-gs-copied','1')}catch(e){}if(window.gsUpdate)gsUpdate()}
   function fallback(){
     var ta=document.createElement('textarea');ta.value=text;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;top:0;left:0;opacity:0';
     document.body.appendChild(ta);ta.focus();ta.select();
@@ -2894,6 +2926,7 @@ function delResult(idx){
   showToast(ic('trash')+'Removed '+esc(label),'',5000,'Undo',function(){undone=true;clearTimeout(timer);if(card)card.style.opacity=''});
 }
 function renderResults(res){
+  if(window.gsUpdate)setTimeout(gsUpdate,0);
   document.getElementById('results').innerHTML=res.map(function(r,i){return renderResultCard(r,i,true)}).join('');
   document.querySelectorAll('#results .rcard').forEach(function(el,i){el.style.animationDelay=(i*0.05)+'s'});
   var rc=document.getElementById('results');
@@ -2931,7 +2964,7 @@ function normResult(r){
 
 function loadDashSessions(){
   if(!sb||!USER)return;
-  sb.from('sessions').select('id,name').eq('teacher_id',USER.id).order('created_at',{ascending:false}).then(function(res){var sel=document.getElementById('dash-sess-sel');sel.innerHTML='<option value="current">Current session</option>';(res.data||[]).forEach(function(s){var o=document.createElement('option');o.value=s.id;o.textContent=s.name||'Untitled';sel.appendChild(o)})}).catch(function(){});
+  sb.from('sessions').select('id,name').eq('teacher_id',USER.id).order('created_at',{ascending:false}).then(function(res){var sel=document.getElementById('dash-sess-sel');sel.innerHTML='<option value="current">Current session</option>';(res.data||[]).forEach(function(s){var o=document.createElement('option');o.value=s.id;o.textContent=s.name||'Untitled';sel.appendChild(o)});if(window.gsReady)gsReady('sessions')}).catch(function(){if(window.gsReady)gsReady('sessions')});
 }
 function loadDashSess(){
   var id=document.getElementById('dash-sess-sel').value;
@@ -3462,7 +3495,7 @@ function parentCard(id){var e=$(id);return e?e.closest('.card'):null}
 var STEPS=[
   {title:'Your Gemini key',target:function(){return $('step0-card')},
    before:function(){goTab('mark');openKeyCard()},
-   body:'<p>Māka marks with Google’s Gemini. Get a free key at <strong>aistudio.google.com</strong> and paste it here. It is your own key, so you only paste it once and can change or remove it in Settings.</p>'},
+   body:'<p>Māka marks with Google’s Gemini. Get a free key at <strong>aistudio.google.com</strong> and paste it here. It is your own key, so you only paste it once and can change or remove it in Settings. Press <strong>Test key</strong> to check it works.</p>'},
   {title:'Three ways to mark',target:function(){return document.querySelector('.mode-seg')},
    before:function(){goTab('mark');goMode('writing')},
    body:'<ul class="tour-list"><li>'+ic('edit')+'<span><strong>Writing</strong> scores against a rubric, out of 25.</span></li><li>'+ic('check')+'<span><strong>Test</strong> marks answers against your answer key.</span></li><li>'+ic('sparkle')+'<span><strong>Glow &amp; Grow</strong> gives feedback with no score.</span></li></ul>'},
@@ -3612,6 +3645,7 @@ function renderCard(step,i,first){
   var act=document.activeElement;
   back.hidden=i===0;skip.hidden=last;
   next.textContent=last?'Done':'Next';
+  next.classList.toggle('pri',!ex);
   if((act===back&&back.hidden)||(act===skip&&skip.hidden))next.focus();
   // Re-trigger the content swap animation.
   var sw=$('tour-swap');sw.classList.remove('tour-swap');void sw.offsetWidth;if(!first)sw.classList.add('tour-swap');
@@ -3767,6 +3801,184 @@ window.startTour=start;
 window.endTour=end;
 window.makaTourMaybeOffer=maybeOffer;
 window.makaTourActive=function(){return !!S};
+})();
+</script>
+<script id="gs-js">
+/* ── Getting-started checklist, key test, and "Try a sample" ─────────────────────
+   All progress is derived from real state (profile key, class list, results/sessions) plus two
+   per-device localStorage flags. Nothing here writes to Supabase, and the sample is never saved. */
+(function(){
+'use strict';
+var K_HIDE='maka-gs-hidden',K_DONE='maka-gs-done',K_MARKED='maka-gs-marked',K_COPIED='maka-gs-copied';
+function $(id){return document.getElementById(id)}
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function lsDel(k){try{localStorage.removeItem(k)}catch(e){}}
+var CHK='<span class="chk-box" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>';
+
+/* ── Test key ─────────────────────────────────────────────────────────────────── */
+var testing=false;
+function keyFrom(inputId){
+  var v=(($(inputId)||{}).value||'').trim();
+  return v||((window.PROFILE&&PROFILE.gemini_key)||'');
+}
+function keyProblem(msg){
+  msg=String(msg||'');
+  if(/invalid|not valid|looks invalid|api key/i.test(msg)&&!/refused/i.test(msg))
+    return {head:'That key was not accepted.',fix:'Copy it again from aistudio.google.com/apikey (it starts with “AIza”), paste it with no spaces, then press Test key.'};
+  if(/refused|permission|403/i.test(msg))
+    return {head:'Google refused that key.',fix:'Check the key is not restricted, and that the Gemini API is switched on for its project at aistudio.google.com/apikey. A fresh key usually fixes it.'};
+  if(/usage limit|quota|429|resource_exhausted/i.test(msg))
+    return {head:'The key works but has hit its free limit for now.',fix:'Wait a minute and try again, or check your quota at aistudio.google.com.'};
+  if(/reach gemini|network|failed to fetch/i.test(msg))
+    return {head:'Could not reach Google.',fix:'Check your internet connection (or school filter) and press Test key again.'};
+  if(/busy|__busy__/i.test(msg))
+    return {head:'Gemini is busy right now.',fix:'That is not a problem with your key. Try again in a minute.'};
+  return {head:'The test did not go through.',fix:msg||'Try again in a moment. If it keeps happening, paste a fresh key from aistudio.google.com/apikey.'};
+}
+async function testKey(inputId,outId,btnId){
+  if(testing)return;
+  var out=$(outId),btn=$(btnId),key=keyFrom(inputId);
+  function show(ok,head,fix){
+    if(!out)return;
+    out.className='key-test-out '+(ok?'ok':'err');
+    out.innerHTML=(ok?ic('check'):ic('alert'))+'<div><strong>'+esc(head)+'</strong>'+(fix?'<div class="kt-fix">'+esc(fix)+'</div>':'')+'</div>';
+  }
+  if(!key){show(false,'Paste your key first.','Get a free one at aistudio.google.com/apikey, then press Test key.');var i=$(inputId);if(i){i.removeAttribute('readonly');i.focus()}return}
+  testing=true;
+  var html=btn?btn.innerHTML:'';
+  if(btn){btn.disabled=true;btn.setAttribute('aria-busy','true');btn.innerHTML='<span class="spinner"></span>Testing…'}
+  if(out){out.className='key-test-out';out.innerHTML='<span class="spinner"></span><span>Asking Gemini a tiny question…</span>'}
+  try{
+    // One short question. Give up after a single retry so a busy Google never leaves the button spinning.
+    var reply=await gemini(key,[{text:'Reply with the single word: OK'}],function(a){if(a>=2)throw new Error('__busy__')});
+    show(true,'Your key works.','Gemini answered, so you are ready to mark.');
+  }catch(e){
+    var p=keyProblem(e&&e.message);show(false,p.head,p.fix);
+  }finally{
+    testing=false;
+    if(btn){btn.disabled=false;btn.removeAttribute('aria-busy');btn.innerHTML=html}
+  }
+}
+window.testKey=testKey;
+
+/* ── Try a sample (marked live with the teacher's key, never saved) ─────────────── */
+var sampling=false;
+function showKeyCard(){
+  if(typeof showTab==='function')showTab('mark');
+  var c=$('step0-card');
+  if(c&&c.classList.contains('collapsed')){c.classList.remove('collapsed');var h=$('step0-head');if(h)h.setAttribute('aria-expanded','true')}
+  setTimeout(function(){
+    if(c)c.scrollIntoView({behavior:'smooth',block:'center'});
+    var i=$('apikey');if(i){i.removeAttribute('readonly');i.focus({preventScroll:true})}
+  },360);
+}
+function sampleHost(){
+  var el=$('sample-out');if(el)return el;
+  var anchor=$('rsec');if(!anchor||!anchor.parentNode)return null;
+  el=document.createElement('section');el.id='sample-out';el.className='sample-out';
+  el.setAttribute('aria-live','polite');
+  anchor.parentNode.insertBefore(el,anchor);
+  return el;
+}
+function clearSample(){var el=$('sample-out');if(el&&el.parentNode)el.parentNode.removeChild(el)}
+window.dismissSample=clearSample;
+async function trySample(){
+  if(sampling)return;
+  if(window.MARKING){showToast('Marking is already running. Try the sample when it finishes.','warn');return}
+  var key=keyFrom('apikey');
+  if(!key){showKeyCard();showToast('Add your Gemini key first, then try the sample.','warn',4500);return}
+  if(typeof showTab==='function')showTab('mark');
+  if(window.endTour&&window.makaTourActive&&makaTourActive())endTour('done');
+  sampling=true;window.MARKING=true;
+  var host=sampleHost();if(!host){sampling=false;window.MARKING=false;return}
+  var S=window.MAKA_SAMPLE;
+  host.innerHTML='<div class="divider"></div><div class="ts-head"><div><div class="ts-title">Sample</div><div class="ts-sub">Year 7 persuasive writing · Glow &amp; Grow</div></div><span class="tour-badge">Sample — not saved</span></div><div class="card sample-wait"><span class="spinner"></span><span>Marking the sample paragraph with your key…</span></div>';
+  setTimeout(function(){host.scrollIntoView({behavior:'smooth',block:'start'})},60);
+  var pEl=$('progress'),pHtml=pEl.innerHTML,pDisp=pEl.style.display,savedItems=progressItems;
+  var file=new File([S.text],'Aria — School uniforms.txt',{type:'text/plain'});
+  var r=null;
+  try{
+    progressItems=[{name:file.name,status:'pending',phase:'',err:''}];
+    r=await markGlowOne(key,file,'English / Literacy','4',S.task,getStyle(),0,null);
+  }catch(e){r={fileName:file.name,_error:(e&&e.message)||'Something went wrong'}}
+  finally{progressItems=savedItems;pEl.innerHTML=pHtml;pEl.style.display=pDisp;sampling=false;window.MARKING=false}
+  host=$('sample-out');if(!host)return; // dismissed while marking
+  if(!r._error)r.fileName='Aria — School uniforms';
+  var body;
+  if(r._error){var p=keyProblem(r._error);body='<div class="err">'+ic('alert')+' <strong>'+esc(p.head)+'</strong> '+esc(p.fix)+'</div>'}
+  else body='<div class="sample-note">Marked live with your key. Nothing was saved to your account or this device.</div>'+inert(renderResultCard(r,0,false));
+  host.innerHTML='<div class="divider"></div><div class="ts-head"><div><div class="ts-title">Sample</div><div class="ts-sub">Year 7 persuasive writing · Glow &amp; Grow</div></div><span class="tour-badge">Sample — not saved</span></div>'+body+'<div class="btn-row" style="margin-top:12px"><button class="btn btn-sm" onclick="dismissSample()">'+ic('x')+'Hide sample</button></div>';
+  if(!r._error)showToast('Sample marked. It is not saved anywhere.','ok');
+}
+function inert(html){return html.replace(/ data-ci="\d+" data-ri="\d+"/g,'')}
+window.trySample=trySample;
+
+/* ── Checklist ────────────────────────────────────────────────────────────────── */
+var ITEMS=[
+  {k:'key',label:'Add your Gemini key',act:'Add key',go:function(){showKeyCard()}},
+  {k:'class',label:'Add your class',act:'Add students',go:function(){showTab('class')}},
+  {k:'mark',label:'Mark your first piece of work',act:'Try a sample',go:function(){trySample()}},
+  {k:'copy',label:'Copy a Classroom comment'}
+];
+var ready={profile:false,students:false,sessions:false},built=false,wasDone=null,outTimer=null,celebrating=false;
+function state(){
+  var hasRes=Array.isArray(window.results)&&results.some(function(r){return r&&!r._error});
+  if(hasRes)lsSet(K_MARKED,'1');
+  var sel=$('dash-sess-sel'),saved=(sel&&sel.options.length>1)||(window.HIST_SESSIONS&&HIST_SESSIONS.length>0);
+  if(saved)lsSet(K_MARKED,'1');
+  return {
+    key:!!(keyFrom('apikey')),
+    'class':!!(window.CLASS_STUDENTS&&CLASS_STUDENTS.length),
+    mark:hasRes||saved||lsGet(K_MARKED)==='1',
+    copy:lsGet(K_COPIED)==='1'
+  };
+}
+function build(card){
+  card.innerHTML='<div class="gs-head"><div><h2 class="gs-title" id="gs-title">Getting started</h2><div class="gs-sub" id="gs-sub" aria-live="polite"></div></div><button type="button" class="btn btn-sm" id="gs-hide" aria-label="Hide the Getting started checklist">Hide</button></div>'
+    +'<div class="gs-bar" aria-hidden="true"><span id="gs-fill"></span></div>'
+    +'<ol class="gs-list">'+ITEMS.map(function(it){
+      return '<li class="gs-row" data-k="'+it.k+'"><div class="chk gs-chk"><input type="checkbox" class="chk-input" tabindex="-1" aria-readonly="true" aria-labelledby="gs-t-'+it.k+'" onclick="return false">'+CHK+'<span id="gs-t-'+it.k+'">'+it.label+'</span></div>'
+        +(it.act?'<button type="button" class="btn btn-sm gs-act" data-k="'+it.k+'">'+it.act+'</button>':'')+'</li>';
+    }).join('')+'</ol>';
+  $('gs-hide').addEventListener('click',function(){lsSet(K_HIDE,'1');card.hidden=true;showToast('Checklist hidden. You can bring it back from Settings.','ok',4500)});
+  card.querySelectorAll('.gs-act').forEach(function(b){b.addEventListener('click',function(){var it=ITEMS.filter(function(x){return x.k===b.getAttribute('data-k')})[0];if(it&&it.go)it.go()})});
+  built=true;
+}
+function gsUpdate(){
+  var card=$('gs-card');if(!card||celebrating)return;
+  if(!window.USER||!ready.profile||!ready.students||!ready.sessions||lsGet(K_HIDE)==='1'||lsGet(K_DONE)==='1'){card.hidden=true;return}
+  var st=state(),n=0;
+  ITEMS.forEach(function(it){if(st[it.k])n++});
+  if(n===ITEMS.length&&wasDone===null){lsSet(K_DONE,'1');card.hidden=true;return} // already finished before this page load
+  if(!built)build(card);
+  card.hidden=false;card.classList.remove('gs-out');
+  ITEMS.forEach(function(it){
+    var row=card.querySelector('.gs-row[data-k="'+it.k+'"]'),inp=row.querySelector('.chk-input'),act=row.querySelector('.gs-act');
+    var done=!!st[it.k];
+    if(inp.checked!==done)inp.checked=done;
+    row.classList.toggle('done',done);
+    if(act)act.hidden=done;
+  });
+  $('gs-sub').textContent=n+' of '+ITEMS.length+' done';
+  $('gs-fill').style.transform='scaleX('+(n/ITEMS.length)+')';
+  if(n===ITEMS.length){
+    lsSet(K_DONE,'1');celebrating=true;
+    $('gs-sub').textContent='All done. Nice one!';
+    clearTimeout(outTimer);
+    outTimer=setTimeout(function(){card.classList.add('gs-out');setTimeout(function(){card.hidden=true;card.classList.remove('gs-out');celebrating=false},380)},1600);
+  }
+  wasDone=n===ITEMS.length;
+}
+window.gsUpdate=gsUpdate;
+window.gsReady=function(which){ready[which]=true;gsUpdate()};
+window.gsReset=function(){lsDel(K_HIDE);lsDel(K_DONE);wasDone=null;celebrating=false;gsUpdate();
+  var c=$('gs-card');
+  if(c&&c.hidden){showToast('Everything on the checklist is already ticked.','ok',3500)}
+  else{showTab('mark');setTimeout(function(){if(c)c.scrollIntoView({behavior:'smooth',block:'center'})},300)}
+};
+// Keep the ticks live as the key box and results change.
+document.addEventListener('input',function(e){if(e.target&&e.target.id==='apikey')gsUpdate()});
 })();
 </script>
 </body>
