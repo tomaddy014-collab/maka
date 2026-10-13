@@ -471,6 +471,12 @@ input[type=text],input[type=password],input[type=email],select{min-height:44px}
 [data-theme="dark"] .ntab.active{color:#161513}
 @media(max-width:600px){.mode-seg{display:flex;width:100%}.mode-opt{flex:1;justify-content:center;text-align:center;padding:8px 6px;font-size:12px;line-height:1.25;gap:5px}}
 @media(max-width:768px){[data-theme="dark"] .ntab.active{color:var(--green)}}
+.spell-list{list-style:none;display:flex;flex-direction:column;gap:6px}
+.spell-list li{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;font-size:13px;padding:8px 12px;background:var(--bg2);border-radius:var(--rs)}
+.spell-wrong{text-decoration:line-through;text-decoration-color:var(--danger-text);color:var(--text2)}
+.spell-arrow{color:var(--text3)}
+.spell-right{font-weight:600;color:var(--green)}
+.spell-tip{flex-basis:100%;font-size:12px;color:var(--text2)}
 /* Audit fixes */
 .rhead>div:last-child{flex-wrap:wrap;justify-content:flex-end;min-width:0}
 .rhead .remark-btn{margin-left:0}
@@ -848,10 +854,10 @@ function fbGet(r){
   return{praise:praise,tips:tips,goal:goal,summary:summary};
 }
 // summary + goal + accuracy are stored as JSON in the otherwise-unused nzc_reference column.
-function fbParseMeta(s){if(!s)return{goal:'',accuracy:[],summary:''};try{var o=JSON.parse(s);if(o&&typeof o==='object')return{goal:o.goal||'',accuracy:Array.isArray(o.accuracy)?o.accuracy:[],summary:o.summary||'',type:o.type||'',questions:Array.isArray(o.questions)?o.questions:[],total:o.total,score:o.score,percent:o.percent,rev:o.rev||null,glows:Array.isArray(o.glows)?o.glows:[],grow:o.grow||null}}catch(e){}return{goal:'',accuracy:[],summary:''}}
+function fbParseMeta(s){if(!s)return{goal:'',accuracy:[],summary:''};try{var o=JSON.parse(s);if(o&&typeof o==='object')return{goal:o.goal||'',accuracy:Array.isArray(o.accuracy)?o.accuracy:[],summary:o.summary||'',type:o.type||'',questions:Array.isArray(o.questions)?o.questions:[],total:o.total,score:o.score,percent:o.percent,rev:o.rev||null,glows:Array.isArray(o.glows)?o.glows:[],grow:o.grow||null,spelling:Array.isArray(o.spelling)?o.spelling:[]}}catch(e){}return{goal:'',accuracy:[],summary:''}}
 function fbMetaSave(r){
   var rev=r._rev||(getRev?getRev(r):null);
-  if(r.type==='glow'||Array.isArray(r.glows))return JSON.stringify({type:'glow',summary:(r.summary||'').trim(),glows:r.glows||[],grow:r.grow||null});
+  if(r.type==='glow'||Array.isArray(r.glows))return JSON.stringify({type:'glow',summary:(r.summary||'').trim(),glows:r.glows||[],grow:r.grow||null,spelling:r.spelling||[]});
   if(r.type==='test'||Array.isArray(r.questions)){var o={type:'test',questions:r.questions||[],total:r.total,score:r.score,percent:r.percent,summary:(r.summary||'').trim()};if(rev)o.rev=rev;return JSON.stringify(o)}
   var g=(r.goal||'').trim(),sm=(r.summary||'').trim();if(g||sm||rev){var o2={goal:g,summary:sm};if(rev)o2.rev=rev;return JSON.stringify(o2)}return r.nzc_reference||r.nzcReference||null}
 // Flatten one tip into a single readable line for storage / CSV / plain-text contexts.
@@ -2093,6 +2099,22 @@ async function runTestMarking(){
   }
 }
 // ── GLOW & GROW (no score): two genuine strengths + one thing to work on ────
+// Spelling notes: keep only clean {wrong,right} pairs; where we have the source text, the flagged
+// word must really appear in it (whole word), so a hallucinated "misspelling" is dropped.
+function cleanSpelling(r,plainText){
+  var list=Array.isArray(r.spelling)?r.spelling:[];
+  var hay=plainText?(' '+String(plainText).toLowerCase().replace(/[^\p{L}\p{M}'’-]+/gu,' ')+' '):'';
+  var seen={};
+  r.spelling=list.map(function(x){return x&&{wrong:String(x.wrong||'').trim(),right:String(x.right||'').trim(),tip:String(x.tip||'').trim()}})
+    .filter(function(x){
+      if(!x||!x.wrong||!x.right||/\s/.test(x.wrong)||/\s/.test(x.right))return false;
+      var w=x.wrong.toLowerCase();
+      if(/[āēīōūĀĒĪŌŪ]/.test(x.wrong+x.right))return false; // never "correct" te reo Māori / macrons
+      if(w===x.right.toLowerCase()||seen[w])return false;
+      if(hay&&hay.indexOf(' '+w+' ')===-1)return false;
+      seen[w]=1;return true;
+    }).slice(0,4);
+}
 function verifyGlowQuotes(mm,plainText){
   if(!plainText)return;
   var plainNorm=normQuoteText(plainText);
@@ -2123,6 +2145,7 @@ async function markGlowOne(key,file,area,level,task,style,idx,limit){
         '3. The two glows must be different and specific — name WHAT works and WHY (e.g. a strong word choice, a clear opening, a good example), not generic praise like "good job". If strengths are hard to find, look at effort, voice, ideas, organisation or small wins — but never invent a strength that is not really there.',
         '4. The grow must be the SINGLE most useful next step for this student — specific and doable, not vague ("add more detail", "try harder"). Say concretely what to do, and give a short worked example of what it could look like in their own work.',
         '4b. GROW CHOICE: prefer a grow about ideas, evidence, structure or word choice over a single small conventions slip (one pronoun, one comma, one spelling) — unless conventions are genuinely the main thing holding the piece back or the same slip keeps repeating. If the grow IS a grammar or punctuation point: (a) in the example change ONLY the error and keep everything else exactly as the student wrote it, including word order and names; (b) teach the quick check they can reuse in one plain sentence (e.g. take the other names out and listen: "the hard work me put in" sounds wrong, so it needs "I"), not just the corrected version.',
+        '4c. SPELLING (typed work only): if the work is typed text, list up to 4 words the student has genuinely misspelled, copied EXACTLY as typed, each with the correct spelling and (optionally) a very short memory tip. Prioritise words a student of this age should know or is likely to reuse. NEVER flag: names, te reo Māori words (do not "correct" Māori, macrons or any other language), slang or deliberate style, or grammar (that is not spelling). If the work is handwritten, a photo or a scan, or you are not certain a word is wrong, return an empty list — never guess. These spelling notes are separate from, and must not replace, the two glows and one grow.',
         '5. Use warm, clear, age-appropriate language ('+lv.years+' students, aged '+lv.ages+'). Pitch the wording to suit THIS child: plainer and simpler if they are clearly struggling, richer and more challenging if they are a strong writer.',
         '6. Protect the student\'s dignity: NEVER label, name, rank or hint at their ability or level ("beginner", "low", "basic", "for your level", "advanced"), never compare them to others, and never be condescending. Differentiate only the reading level and tone.',
         '',
@@ -2135,7 +2158,8 @@ async function markGlowOne(key,file,area,level,task,style,idx,limit){
         '    {"quote": "short exact quote from the work, or empty", "comment": "Warm, specific praise to the student (you/your) — what works and why. One or two sentences."},',
         '    {"quote": "a different short exact quote, or empty", "comment": "Warm, specific praise to the student (you/your) — what works and why. One or two sentences."}',
         '  ],',
-        '  "grow": {"quote": "short exact quote from the work to work on, or empty", "suggestion": "Warm, specific, doable advice to the student (you/your) on the ONE thing to work on and how.", "example": "A short model rewrite or worked example showing what it could look like."}',
+        '  "grow": {"quote": "short exact quote from the work to work on, or empty", "suggestion": "Warm, specific, doable advice to the student (you/your) on the ONE thing to work on and how.", "example": "A short model rewrite or worked example showing what it could look like."},',
+        '  "spelling": [{"wrong": "word exactly as typed", "right": "correct spelling", "tip": "very short memory tip, or empty"}]',
         '}',
         '',
         'Teacher writing style to match: '+style,
@@ -2147,6 +2171,7 @@ async function markGlowOne(key,file,area,level,task,style,idx,limit){
       if(!Array.isArray(rr.glows))rr.glows=[];
       rr.glows=rr.glows.slice(0,2);
       if(!rr.grow||typeof rr.grow!=='object')rr.grow={quote:'',suggestion:'',example:''};
+      cleanSpelling(rr,plainText);
       scrubGlowLevelLanguage(rr);
       verifyGlowQuotes(rr,plainText);
       return rr;
@@ -2413,6 +2438,7 @@ function classroomComment(r,opt){
     (short?g.slice(0,1):g).forEach(function(x){parts.push('Glow: '+x)});
     if(gr.suggestion)parts.push('Grow: '+gcSentence(gr.suggestion));
     if(!short&&gr.example)parts.push('Try: '+gcSentence(gr.example));
+    if(!short&&(r.spelling||[]).length)parts.push('Spelling: '+r.spelling.map(function(x){return x.wrong+' → '+x.right}).join(', ')+'.');
   }else if(r.type==='test'||Array.isArray(r.questions)){
     var qs=r.questions||[],sc=r.score!=null?r.score:qs.reduce(function(a,q){return a+qMark(q)},0),tot=r.total!=null?r.total:qs.length;
     if(tot)score=fmtMark(sc)+'/'+tot;
@@ -2451,6 +2477,11 @@ function copyAllClassroom(){
   if(!lines.length){showToast('Nothing to copy yet','warn');return}
   gcCopyText(lines.join('\n'),lines.length+' Classroom comment'+(lines.length!==1?'s':'')+' copied (name, then comment)');
 }
+function spellHTML(sp){
+  sp=Array.isArray(sp)?sp:[];if(!sp.length)return'';
+  return'<div class="slbl" style="margin-top:12px">Spelling to check</div><ul class="spell-list">'+sp.map(function(x){
+    return'<li><span class="spell-wrong">'+esc(x.wrong)+'</span><span class="spell-arrow" aria-label="should be">→</span><span class="spell-right">'+esc(x.right)+'</span>'+(x.tip?'<span class="spell-tip">'+esc(x.tip)+'</span>':'')+'</li>'}).join('')+'</ul>';
+}
 function renderGlowCard(r,idx,editable){
   var remarkBtn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkGlow('+idx+')">'+ic('refresh')+(r._error?'Retry':'Re-do')+'</button>':'';
   if(r._error)return'<div class="rcard"><div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span>'+remarkBtn+'</div><div class="err">'+ic('alert')+' '+esc(r._error)+'</div></div>';
@@ -2477,6 +2508,7 @@ function renderGlowCard(r,idx,editable){
     html+='<div class="slbl" style="margin-top:12px">Grow — one thing to work on</div>';
     html+='<div class="sbox improve">'+ic('bulb')+'<div>'+(grow.quote?'<div class="quote">'+esc(grow.quote)+'</div>':'')+'<span>'+ed(editable,idx,'grow.suggestion',grow.suggestion||'')+'</span>'+(grow.example?'<div style="margin-top:6px;font-size:13px;color:var(--text2)"><strong>Try:</strong> '+ed(editable,idx,'grow.example',grow.example)+'</div>':'')+'</div></div>';
   }
+  html+=spellHTML(r.spelling);
   if(editable)html+=assignRowHTML(r,idx);
   html+='</div>';
   return html;
@@ -2660,7 +2692,7 @@ function normResult(r){
     base.type='test';base.questions=meta.questions||[];base.total=meta.total;base.score=meta.score;base.percent=meta.percent;base.summary=meta.summary||'';
     base.improve=(r.next_steps||[]).map(function(s){return{suggestion:String(s)}});
   }
-  if(meta&&meta.type==='glow'){base.type='glow';base.glows=meta.glows||[];base.grow=meta.grow||null;base.summary=meta.summary||''}
+  if(meta&&meta.type==='glow'){base.type='glow';base.glows=meta.glows||[];base.grow=meta.grow||null;base.spelling=meta.spelling||[];base.summary=meta.summary||''}
   if(meta&&meta.rev)base._rev=meta.rev;
   return base;
 }
@@ -2999,7 +3031,8 @@ function printGlowSheet(r,task){
   return'<div class="psheet" style="font-family:-apple-system,sans-serif"><div style="padding-bottom:18px;margin-bottom:24px;border-bottom:2px solid #1a1a1a"><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:6px">Māka · Glow &amp; Grow</div><div style="font-size:24px;font-weight:700;margin-bottom:3px">'+esc(firstNameOf(r.fileName))+'</div><div style="font-size:13px;color:#666">'+esc(task)+'</div></div>'
     +(summary?'<div style="font-size:13.5px;line-height:1.6;color:#333;background:#f6f5f2;border-radius:8px;padding:12px 14px;margin-bottom:16px">'+esc(summary)+'</div>':'')
     +(glows?'<div style="'+lbl+'color:#2d5a27">Glow</div>'+glows:'')
-    +(grow?'<div style="'+lbl+'color:#8a5a06;margin-top:14px">Grow</div>'+grow:'')+'</div>';
+    +(grow?'<div style="'+lbl+'color:#8a5a06;margin-top:14px">Grow</div>'+grow:'')
+    +((r.spelling||[]).length?'<div style="'+lbl+'color:#555;margin-top:14px">Spelling to check</div><div style="background:#f6f5f2;border-radius:8px;padding:12px 14px;font-size:13.5px;line-height:1.8">'+r.spelling.map(function(x){return'<span style="text-decoration:line-through;color:#888">'+esc(x.wrong)+'</span> &rarr; <strong style="color:#2d5a27">'+esc(x.right)+'</strong>'+(x.tip?' <span style="color:#666">('+esc(x.tip)+')</span>':'')}).join('<br>')+'</div>':'')+'</div>';
 }
 function printSheets(){
   if(!results.length){alert('No results to print.');return}
