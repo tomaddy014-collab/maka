@@ -1648,8 +1648,11 @@ function friendlyGeminiError(status,msg){
 // Send the API key in a request header (not the URL, which ends up in logs/histories). If the browser
 // blocks the custom header for any reason, fall back once to the URL form so marking never breaks.
 var GEMINI_HDR_OK=true;
-async function geminiFetch(key,body){
-  var base='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+// Primary model first; if it keeps returning server errors (overloaded/unavailable), fall back to a lighter one
+// so marking still completes instead of failing after a long wait.
+var GEMINI_MODELS=['gemini-2.5-flash','gemini-2.5-flash-lite'];
+async function geminiFetch(key,body,model){
+  var base='https://generativelanguage.googleapis.com/v1beta/models/'+(model||GEMINI_MODELS[0])+':generateContent';
   if(GEMINI_HDR_OK){
     try{return await fetch(base,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:body})}
     catch(e){GEMINI_HDR_OK=false}
@@ -1658,54 +1661,63 @@ async function geminiFetch(key,body){
 }
 async function gemini(key,parts,onRetry){
   // thinkingBudget:0 disables Gemini 2.5's hidden "thinking" tokens, which otherwise eat into
-  // maxOutputTokens and can cut off the visible answer (most noticeable on short outputs like
-  // report comments). Also faster and cheaper since no reasoning tokens are spent.
-  // Feedback JSON (many criteria / long tests) can be long: start generous, and if Gemini still reports
-  // finishReason MAX_TOKENS escalate once to the model's larger ceiling instead of using a cut-off reply.
-  var tokenSteps=[16384,32768],tokenIdx=0;
+  // maxOutputTokens and can cut off the visible answer. Faster and cheaper since no reasoning tokens are spent.
+  // Feedback JSON can be long: start generous, and if Gemini reports finishReason MAX_TOKENS escalate once.
+  var tokenSteps=[16384,32768],tokenIdx=0,modelIdx=0,serverFails=0;
   function makeBody(){return JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0.3,maxOutputTokens:tokenSteps[tokenIdx],thinkingConfig:{thinkingBudget:0}}})}
   var body=makeBody();
-  var maxTries=10,delay=2000,lastErr='Gemini unavailable';
+  var maxTries=8,delay=2000,last={kind:'',status:0,msg:''};
   for(var attempt=1;attempt<=maxTries;attempt++){
     try{
-      var resp=await geminiFetch(key,body);
+      var resp=await geminiFetch(key,body,GEMINI_MODELS[modelIdx]);
+      var ed=null;
+      if(!resp.ok)ed=await resp.json().catch(function(){return{}});
+      var gmsg=(ed&&ed.error&&ed.error.message)||'';
       // Hard client errors (bad key, bad request) — surface immediately, no point retrying
       if(resp.status===400||resp.status===401||resp.status===403||resp.status===404){
-        var ed=await resp.json().catch(function(){return{}});
-        throw new Error(friendlyGeminiError(resp.status,(ed.error&&ed.error.message)||''));
+        throw new Error(friendlyGeminiError(resp.status,gmsg));
       }
       if(!resp.ok){
-        // 429 (rate limit / busy), 500, 503 etc — transient, fall through to retry
-        lastErr='Gemini is busy ('+resp.status+')';
+        last={kind:resp.status===429?'quota':'server',status:resp.status,msg:gmsg};
+        if(resp.status>=500){
+          serverFails++;
+          if(serverFails>=2&&modelIdx<GEMINI_MODELS.length-1){modelIdx++;serverFails=0;attempt--;continue} // try the lighter model right away
+        }
       }else{
         var d=await resp.json();
         if(d.error)throw new Error(d.error.message||'Gemini error');
+        if(d.promptFeedback&&d.promptFeedback.blockReason)throw new Error('Gemini declined this request ('+d.promptFeedback.blockReason+') — try a different file or wording.');
         var cand0=(d.candidates||[])[0]||{content:{parts:[]}};
         var ps=(cand0.content&&cand0.content.parts)||[];
         var raw=ps.map(function(p){return p.text||''}).join('');
         if(cand0.finishReason==='MAX_TOKENS'){
-          // The reply was cut off mid-way — never hand half a JSON/sentence back as if it were complete.
           if(tokenIdx<tokenSteps.length-1){tokenIdx++;body=makeBody();attempt--;continue}
           throw new Error('Gemini’s reply was too long and got cut off — try fewer files or a shorter task and run it again.');
         }
-        if(!raw.trim())throw new Error('Empty response from Gemini');
+        if(!raw.trim()){
+          if(/SAFETY|PROHIBITED|BLOCK|RECITATION/i.test(cand0.finishReason||''))throw new Error('Gemini declined to answer this one ('+cand0.finishReason+') — try again or use a different file.');
+          last={kind:'empty',status:200,msg:'Gemini returned no text'+(cand0.finishReason?' (finishReason: '+cand0.finishReason+')':'')};
+          throw new Error('retry-empty');
+        }
         return raw.replace(/```json/g,'').replace(/```/g,'').trim();
       }
     }catch(e){
-      // Re-throw clearly fatal errors; retry everything else (busy, network, parse, empty)
-      if(/error 40|api key|api_key|invalid|permission|not valid|unregistered|refused|usage limit|got cut off/i.test(e.message||''))throw e;
-      if(/failed to fetch|networkerror|network request failed/i.test(e.message||''))lastErr='network';
-      else lastErr=e.message||'Gemini error';
+      var m=e.message||'';
+      if(m==='retry-empty'){/* fall through to retry */}
+      else if(/failed to fetch|networkerror|network request failed|load failed/i.test(m))last={kind:'network',status:0,msg:m};
+      else throw e; // clear, already-friendly errors (bad key, declined, cut off) and anything unexpected
     }
     if(attempt<maxTries){
       if(typeof onRetry==='function')onRetry(attempt,maxTries,Math.round(delay/1000));
       await sleep(delay);
-      delay=Math.min(Math.round(delay*1.7),30000);
+      delay=Math.min(Math.round(delay*1.7),20000);
     }
   }
-  if(/429|quota|resource_exhausted/i.test(lastErr))throw new Error('Gemini has hit its usage limit — wait a minute and try again, or check your quota at aistudio.google.com.');
-  if(lastErr==='network')throw new Error("Couldn't reach Gemini — check your internet connection and try again.");
-  throw new Error('Gemini is still busy after '+maxTries+' tries — please try again in a moment.');
+  var detail=last.msg?' Google said: “'+String(last.msg).slice(0,220)+'”':'';
+  if(last.kind==='quota')throw new Error('Gemini has hit a usage limit (429) — wait a minute and try again, or check your quota at aistudio.google.com. Free keys have low per-minute limits; marking several files at once can hit them.'+detail);
+  if(last.kind==='network')throw new Error("Couldn't reach Gemini — check your internet connection (or a school filter/firewall blocking generativelanguage.googleapis.com) and try again.");
+  if(last.kind==='server')throw new Error('Gemini’s servers returned an error ('+last.status+') after '+maxTries+' tries.'+detail+' This is usually Google being overloaded — try again in a few minutes.');
+  throw new Error((last.msg||'Gemini did not return a usable answer')+' after '+maxTries+' tries — please try again.');
 }
 // Extract the FIRST balanced JSON object, ignoring braces inside strings — robust to
 // trailing text, extra objects, or commentary the model sometimes appends.
@@ -3834,6 +3846,8 @@ function keyFrom(inputId){
 }
 function keyProblem(msg){
   msg=String(msg||'');
+  if(/servers returned an error|overloaded/i.test(msg))
+    return {head:'Google’s servers returned an error.',fix:msg+' Your key is probably fine.'};
   if(/invalid|not valid|looks invalid|api key/i.test(msg)&&!/refused/i.test(msg))
     return {head:'That key was not accepted.',fix:'Copy it again from aistudio.google.com/apikey (it starts with “AIza”), paste it with no spaces, then press Test key.'};
   if(/refused|permission|403/i.test(msg))
