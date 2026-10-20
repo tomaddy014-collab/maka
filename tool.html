@@ -1659,14 +1659,14 @@ async function geminiFetch(key,body,model){
   }
   return fetch(base+'?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:body});
 }
-async function gemini(key,parts,onRetry){
+async function gemini(key,parts,onRetry,opts){
   // thinkingBudget:0 disables Gemini 2.5's hidden "thinking" tokens, which otherwise eat into
   // maxOutputTokens and can cut off the visible answer. Faster and cheaper since no reasoning tokens are spent.
   // Feedback JSON can be long: start generous, and if Gemini reports finishReason MAX_TOKENS escalate once.
   var tokenSteps=[16384,32768],tokenIdx=0,modelIdx=0,serverFails=0;
   function makeBody(){return JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0.3,maxOutputTokens:tokenSteps[tokenIdx],thinkingConfig:{thinkingBudget:0}}})}
   var body=makeBody();
-  var maxTries=8,delay=2000,last={kind:'',status:0,msg:''};
+  var maxTries=(opts&&opts.maxTries)||8,delay=(opts&&opts.delay)||2000,last={kind:'',status:0,msg:''};
   for(var attempt=1;attempt<=maxTries;attempt++){
     try{
       var resp=await geminiFetch(key,body,GEMINI_MODELS[modelIdx]);
@@ -3853,10 +3853,10 @@ function keyProblem(msg){
   if(/refused|permission|403/i.test(msg))
     return {head:'Google refused that key.',fix:'Check the key is not restricted, and that the Gemini API is switched on for its project at aistudio.google.com/apikey. A fresh key usually fixes it.'};
   if(/usage limit|quota|429|resource_exhausted/i.test(msg))
-    return {head:'The key works but has hit its free limit for now.',fix:'Wait a minute and try again, or check your quota at aistudio.google.com.'};
+    return {head:'The key is fine, but Google says it has hit a usage limit.',fix:msg};
   if(/reach gemini|network|failed to fetch/i.test(msg))
     return {head:'Could not reach Google.',fix:'Check your internet connection (or school filter) and press Test key again.'};
-  if(/busy|__busy__/i.test(msg))
+  if(/busy/i.test(msg))
     return {head:'Gemini is busy right now.',fix:'That is not a problem with your key. Try again in a minute.'};
   return {head:'The test did not go through.',fix:msg||'Try again in a moment. If it keeps happening, paste a fresh key from aistudio.google.com/apikey.'};
 }
@@ -3874,8 +3874,9 @@ async function testKey(inputId,outId,btnId){
   if(btn){btn.disabled=true;btn.setAttribute('aria-busy','true');btn.innerHTML='<span class="spinner"></span>Testing…'}
   if(out){out.className='key-test-out';out.innerHTML='<span class="spinner"></span><span>Asking Gemini a tiny question…</span>'}
   try{
-    // One short question. Give up after a single retry so a busy Google never leaves the button spinning.
-    var reply=await gemini(key,[{text:'Reply with the single word: OK'}],function(a){if(a>=2)throw new Error('__busy__')});
+    // One short question, two real attempts (plus a lighter-model fallback), so the button never spins for long
+    // and any failure reports what Google actually said instead of a generic 'busy'.
+    var reply=await gemini(key,[{text:'Reply with the single word: OK'}],null,{maxTries:2,delay:1500});
     show(true,'Your key works.','Gemini answered, so you are ready to mark.');
   }catch(e){
     var p=keyProblem(e&&e.message);show(false,p.head,p.fix);
