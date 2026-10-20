@@ -2,7 +2,9 @@
 // HTML is always served fresh from the network (bypassing the HTTP cache), with the
 // last-seen copy kept only as an offline fallback — so a new Netlify deploy shows up
 // on the next normal load, no hard-refresh needed. Static assets are cached.
-var VERSION = '2025-07-02-1';
+// Pages are cached under their path only (no query string), so URLs such as
+// student.html?name=... never put a student's name into Cache Storage.
+var VERSION = '2026-10-20-1';
 var CACHE = 'maka-' + VERSION;
 var ASSETS = ['/manifest.json', '/icon-192.svg', '/icon-512.svg'];
 
@@ -31,13 +33,17 @@ self.addEventListener('fetch', function (e) {
 
   if (isHTML) {
     // Always fresh HTML: network first, bypassing the browser HTTP cache; fall back to cache offline.
+    // Cache key is origin + path only: the query string (student names, ids, auth codes) is dropped.
+    var pageKey = url.origin + url.pathname;
     e.respondWith(
       fetch(req, { cache: 'no-store' }).then(function (resp) {
-        var clone = resp.clone();
-        caches.open(CACHE).then(function (c) { c.put(req, clone); });
+        if (resp && resp.ok && !resp.redirected) {
+          var clone = resp.clone();
+          caches.open(CACHE).then(function (c) { c.put(pageKey, clone); });
+        }
         return resp;
       }).catch(function () {
-        return caches.match(req).then(function (m) { return m || caches.match('/tool.html'); });
+        return caches.match(pageKey).then(function (m) { return m || caches.match(new URL('tool.html', self.registration.scope).href); });
       })
     );
     return;
