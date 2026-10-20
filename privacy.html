@@ -65,7 +65,8 @@ th{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;le
 tr:last-child td{border-bottom:none}
 td:first-child{font-weight:600;width:30%}
 code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;background:var(--paper-dark);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
-.todo{background:var(--gold-soft);border:1px dashed var(--gold);border-radius:6px;padding:1px 6px;font-weight:500}
+.todo{display:inline-block;background:#ffe08a;color:#3a2a00;border:2px dashed #b4232a;border-radius:6px;padding:2px 8px;font-weight:700;letter-spacing:.01em}
+.todo::before{content:"⚠ ";color:#b4232a}
 .footer{font-size:13px;color:var(--text2);margin-top:3.5rem;padding-top:1.25rem;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between}
 .footer nav{display:flex;flex-wrap:wrap;gap:4px 18px}
 .footer a{color:var(--text2);text-decoration:none;display:inline-block;padding:10px 0}
@@ -92,14 +93,14 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;bac
 <main>
 <h1>Privacy: where student information goes</h1>
 <p class="lede">Teachers, school leaders and whānau are right to ask what happens to student work once it goes into Māka. This page answers that in plain language, based on how Māka is actually built.</p>
-<p class="meta">Last updated 13 October 2026. This describes how the app works; it is not a legal document and it is not legal advice. It is written with the principles of the New Zealand Privacy Act 2020 in mind (be open about what is collected, collect no more than is needed, keep it safe, let it be deleted). That is the aim, not a promise of legal compliance.</p>
+<p class="meta">Last updated 20 October 2026. This describes how the app works; it is not a legal document and it is not legal advice. It is written with the principles of the New Zealand Privacy Act 2020 in mind (be open about what is collected, collect no more than is needed, keep it safe, let it be deleted). That is the aim, not a promise of legal compliance.</p>
 
 <h2 id="short">The short version</h2>
 <ul class="short">
   <li><strong>Marking happens at Google.</strong> When you mark, the student work you upload is sent from your browser to Google’s Gemini service, using <em>your own</em> Gemini API key. Māka cannot mark work without sending it there.</li>
   <li><strong>Signed-in teachers have results saved.</strong> If you are signed in, marked results and a PDF copy of each piece of work are saved to your Māka account, which is stored with a service called Supabase. If you are not signed in, nothing is saved to that database.</li>
   <li><strong>Your account, plus students with their code.</strong> Only your account can open your saved work in Māka. A student can see their own results only if they have the login code you gave them. The person who runs Māka can technically reach what is stored in the database, as with any hosted service.</li>
-  <li><strong>Deleting removes the data it names.</strong> Deleting a result, a session or your account removes the saved results <em>and</em> the stored PDF copies. Two things stay by design or limitation: removing a student from the class list keeps their marking history, and your sign-in login itself can only be removed by the person who runs Māka. Details are below.</li>
+  <li><strong>Deleting removes the data it names.</strong> Deleting a result, a session or your account removes the saved results and asks the file storage to remove the stored PDF copies; if storage reports a file it could not remove, Māka tells you. Two things stay by design or limitation: removing a student from the class list keeps their marking history, and your sign-in login itself can only be removed by the person who runs Māka. Details are below.</li>
   <li><strong>Use a paid-tier Gemini key for student work.</strong> As we understand Google’s terms, content sent through a <em>free</em> key may be used by Google to improve its products and may be read by people, while content sent through a key on a <em>billing-enabled (paid)</em> project is not used that way. Check Google’s current terms yourself — they change and can differ by region.</li>
   <li><strong>Supabase’s and your school’s rules also apply.</strong> What Supabase does with stored data depends on your project’s settings and terms. Māka cannot promise anything about that. Check your school’s policy before uploading student work.</li>
 </ul>
@@ -129,20 +130,20 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;bac
 </div>
 
 <h2 id="gemini">What is sent to Google Gemini</h2>
-<p>Marking is done by Google’s Gemini model, not by Māka. Your browser sends the request straight to Google using <strong>your own Gemini API key</strong>. Māka does not have a server in the middle that passes it on; the pages themselves are hosted on Netlify, which is not part of that request.</p>
+<p>Marking is done by Google’s Gemini models, not by Māka. Māka normally uses Gemini 2.5 Flash; if that model is busy or out of quota it falls back through other Gemini Flash models (<code>gemini-flash-latest</code>, <code>gemini-2.5-flash-lite</code>, <code>gemini-flash-lite-latest</code>) and keeps using the one that worked for a few hours. They are all Google Gemini API models reached with the same key, so the same Google terms apply. Your browser sends the request straight to Google using <strong>your own Gemini API key</strong>. Māka does not have a server in the middle that passes it on; the pages themselves are hosted on Netlify, which is not part of that request.</p>
 <div class="note" style="border-left:3px solid var(--gold,#c8840a);background:var(--gold-soft,rgba(200,132,10,.12));padding:12px 14px;border-radius:8px;margin:14px 0">
   <p style="margin:0 0 6px"><strong>Free key vs paid key matters.</strong> Google’s Gemini API terms treat free (“unpaid”) and paid usage differently. As we understand them, work sent through a <em>free</em> key can be used by Google to improve its products and may be reviewed by people; work sent through a key on a project with <em>billing enabled</em> is not used to improve its products. Google’s terms change and can differ by region, so please read the current version at <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener">ai.google.dev/gemini-api/terms</a>.</p>
   <p style="margin:0"><strong>Our advice:</strong> for identifiable student work, use a paid-tier key (turn on billing in the Google AI Studio / Google Cloud project the key belongs to), and use the free tier only for your own test material or fully anonymised work. Māka cannot check which kind of key you have.</p>
 </div>
 <h3>What is included in those requests</h3>
 <ul>
-  <li><strong>The student’s work</strong>, converted to a PDF in your browser. If the student wrote their name on it, that goes too, and Māka asks Gemini to read the name off the work so it can label the result.</li>
+  <li><strong>The student’s work.</strong> PDFs are sent as PDFs. Photos and scans are sent as a resized JPEG image. Typed Word (.docx) and text files are sent as the text itself, read out of the file in your browser. If the student wrote their name on the work, that goes too, and Māka asks Gemini to read the name off the work so it can label the result.</li>
   <li><strong>The file name</strong>, which is often a student’s name.</li>
   <li>The learning area, level, task, rubric and your writing-style text.</li>
   <li>When marking writing, a second “moderation” request, which sends the work again together with the first round of marking.</li>
   <li>For test marking, the <strong>test paper</strong> you upload.</li>
   <li>For a resubmission, the <strong>earlier version of the work</strong> (fetched from your stored copy) and the earlier feedback.</li>
-  <li>For report comments and weekly posts: the student’s name (first name only when generating for the whole class; full name from a student hub), pronouns, scores, strengths and next steps from past results, and your writing-style text. The he/she/they setting is used only to choose pronouns. Year level, login codes, email addresses and passwords are not included.</li>
+  <li>For report comments and weekly posts: the student’s name (first name only when generating for the whole class; full name from a student hub), pronouns, scores, strengths and next steps from past results, and your writing-style text. The he/she/they setting is used only to choose pronouns. A report comment generated from a student hub also includes the student’s year level (for example “Year 5”) so the wording suits their age. Login codes, email addresses and passwords are never included.</li>
 </ul>
 <div class="note">
   <p><strong>What Google does with it depends on your plan.</strong> Google’s terms for how Gemini API inputs are handled can differ depending on your key’s plan and billing setup. Māka cannot see or change that. Check Google’s current Gemini API terms before uploading student work, and ask your school if you are unsure. Where Google processes and keeps data is also set by Google, not Māka.</p>
@@ -164,23 +165,24 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;bac
 <h2 id="deleting">Deleting data</h2>
 <p>What the buttons currently do:</p>
 <ul>
-  <li><strong>Removing one student’s result</strong> (from the Mark tab after the 4-second undo, or from a past session in History): deletes the saved result row and the stored PDF copy.</li>
-  <li><strong>Deleting a whole session</strong> (History): removes every result in the session, their stored PDF copies, and then the session itself (after the 4-second undo window).</li>
+  <li><strong>Removing one student’s result</strong> (from the Mark tab after the 4-second undo, or from a past session in History): deletes the saved result row and asks storage to delete its PDF copy.</li>
+  <li><strong>Deleting a whole session</strong> (History): removes every result in the session, asks storage to delete their PDF copies, and then removes the session itself (after the 4-second undo window). If storage reports files it could not remove, you see a warning with the number.</li>
   <li><strong>Removing a student from the class list</strong> (Class tab or student hub): deletes the class-list entry (name, year level, setting, login code, so the student’s code stops working). Their results, stored PDFs and any saved report comments stay.</li>
   <li><strong>Saved report comments</strong> have no delete button of their own; they are removed by Delete account.</li>
-  <li><strong>Delete account</strong> (Settings): removes your sessions, results, stored PDFs, class list, saved rubrics, report comments and your profile record (email, display name, API key, writing style), clears the cached results in your browser, and signs you out. It does <strong>not</strong> remove your sign-in login itself — only the person who runs Māka can do that. If anything fails part-way you are told, and you can run it again.</li>
+  <li><strong>Delete account</strong> (Settings): removes your sessions, results, stored PDFs (it also clears any leftover files in your account’s storage folder), class list, saved rubrics, report comments and your profile record (email, display name, API key, writing style), clears the cached results in your browser, and signs you out. It does <strong>not</strong> remove your sign-in login itself — only the person who runs Māka can do that. If anything fails part-way, including files storage says it could not remove, you are told, and you can run it again.</li>
   <li><strong>Data already sent to Google</strong> cannot be deleted from Māka. That is governed by Google’s terms.</li>
 </ul>
+<p>Stored files are removed by asking Supabase’s file storage to delete them, from your browser. Māka reports the files storage says it could not remove, but it cannot independently prove every copy is gone. If you need certainty, for example after deleting a very large account, ask the person who runs Māka to check your storage folder.</p>
 <p>If you need a student’s data fully removed, delete their results (and the student from the class list) as above. To remove your sign-in login as well, ask the person who runs Māka (contact details below).</p>
 
 <h2 id="browser">What stays in your browser</h2>
 <p>Māka saves a few things on the device you use. None of it is sent anywhere by these features.</p>
 <ul>
   <li><strong>Your latest marking results</strong> (<code>maka-results</code>): file names, scores, feedback and short quotes from the work, kept so a refresh does not lose your marking. Kept for up to 24 hours, replaced when you mark again, and removed by the Clear button. Signing out now clears it too, and Clear removes it at any time.</li>
-  <li><strong>Preferences</strong>: light or dark mode, your last learning area and level, Classroom-comment options and print layout.</li>
+  <li><strong>Preferences</strong>: light or dark mode, your last learning area and level, which Gemini model last worked, Classroom-comment options and print layout.</li>
   <li><strong>Your sign-in session</strong>, stored by the Supabase library until you sign out.</li>
   <li><strong>A student’s login code</strong> is held for that browser tab only and is cleared on log out or when the tab closes.</li>
-  <li><strong>Offline copy of the site</strong>: a service worker keeps the page files and icons so Māka can open offline. It does not store student data.</li>
+  <li><strong>Offline copy of the site</strong>: a service worker keeps the page files and icons so Māka can open offline. Pages are kept under their plain address with the part after the “?” removed, so a student hub link (which carries the student’s name) does not leave that name in the offline copy. It does not store student results. An earlier version did keep those full addresses; that old copy is deleted automatically the next time the updated site loads.</li>
 </ul>
 <p>Māka’s pages load fonts from Google Fonts and code libraries from the jsDelivr network, so those services receive the normal details any website visit sends, such as your IP address.</p>
 
