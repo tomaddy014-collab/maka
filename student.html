@@ -89,6 +89,7 @@ nav.scrolled{box-shadow:0 8px 30px -12px rgba(15,14,12,0.12)}
 .btn .ico{font-size:15px}
 .btn-p{background:#1a1a1a;color:#fff;border-color:#1a1a1a}.btn-p:hover{background:#333}
 .btn-green{background:var(--green);color:#fff;border-color:var(--green)}.btn-green:hover{background:#1e3d1a;color:#fff}
+[data-theme="dark"] .btn-green{color:#161513}[data-theme="dark"] .btn-green:hover{background:#97cc92;color:#161513}
 .btn-danger{color:var(--danger-text);border-color:var(--border2)}.btn-danger:hover{background:var(--danger-bg);border-color:var(--danger-text)}
 .btn-sm{padding:7px 12px;font-size:12.5px}
 .btn-row{display:flex;gap:8px;flex-wrap:wrap}
@@ -196,7 +197,7 @@ canvas{width:100%!important}
 .sbox .quote::before{content:'\201C'}.sbox .quote::after{content:'\201D'}
 .sbox .tryex{margin-top:6px;font-size:12.5px;line-height:1.5;color:var(--text);background:rgba(0,0,0,0.03);border-radius:6px;padding:6px 9px}
 [data-theme="dark"] .sbox .tryex{background:rgba(255,255,255,0.05)}
-.sbox .trylbl{font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.05em;font-size:10px;margin-right:5px}
+.sbox .trylbl{font-weight:700;color:var(--warn-text,#854f0b);text-transform:uppercase;letter-spacing:.05em;font-size:10px;margin-right:5px}
 .fixlist{display:flex;flex-wrap:wrap;gap:8px}
 .fix{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;background:var(--bg2);border:1px solid var(--border);border-radius:100px;padding:4px 11px}
 .fix-wrong{color:var(--danger-text);text-decoration:line-through}
@@ -965,7 +966,7 @@ async function genReport(){
   var who=yn>=1&&yn<=13?'Year '+yn+' student (New Zealand Curriculum)':'primary/intermediate student (Years 3–8, New Zealand Curriculum)';
 
   var prompt=[
-    'Write a full school report comment for a NZ '+who+' named '+STUDENT.name+'.',
+    'Write a full school report comment for a NZ '+who+' named '+(STUDENT.name||'').trim().split(/\s+/)[0]+'. Use only this first name — never a surname.',
     'Single paragraph, 4–6 sentences, third person.',
     'Use pronouns: '+pro.subject+'/'+pro.object+'/'+pro.possessive+'.',
     term?'Report context: '+term:'',

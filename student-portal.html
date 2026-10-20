@@ -47,6 +47,7 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg3);color:
 .ico{width:1em;height:1em;display:inline-block;vertical-align:-0.14em;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 nav{background:var(--nav-bg);backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);border-bottom:1px solid var(--border);padding:0 1.5rem;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
 .logo{font-family:'Fraunces',serif;font-size:20px;font-weight:800;color:#0f0e0c;text-decoration:none;letter-spacing:-.02em}
+[data-theme="dark"] .logo{color:#ece9e3}
 .logo span{color:var(--green)}
 .icon-btn{background:none;border:none;cursor:pointer;color:var(--text2);width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:18px;transition:background .2s var(--ease),color .2s var(--ease)}
 .icon-btn:hover{background:var(--bg2);color:var(--text)}
@@ -145,7 +146,7 @@ canvas{width:100%!important}
 .sbox .quote::before{content:'\201C'}.sbox .quote::after{content:'\201D'}
 .sbox .tryex{margin-top:6px;font-size:12.5px;line-height:1.5;color:var(--text);background:rgba(0,0,0,0.03);border-radius:6px;padding:6px 9px}
 [data-theme="dark"] .sbox .tryex{background:rgba(255,255,255,0.05)}
-.sbox .trylbl{font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.05em;font-size:10px;margin-right:5px}
+.sbox .trylbl{font-weight:700;color:var(--warn-text,#854f0b);text-transform:uppercase;letter-spacing:.05em;font-size:10px;margin-right:5px}
 .fixlist{display:flex;flex-wrap:wrap;gap:8px}
 .fix{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;background:var(--bg2);border:1px solid var(--border);border-radius:100px;padding:4px 11px}
 .fix-wrong{color:var(--danger-text);text-decoration:line-through}
@@ -185,7 +186,7 @@ canvas{width:100%!important}
 <body>
 
 <nav>
-  <a href="index.html" class="logo" style="text-decoration:none">m<span>a</span>ka</a>
+  <a href="index.html" class="logo" style="text-decoration:none" aria-label="Māka home">m<span>ā</span>ka</a>
   <div style="display:flex;align-items:center;gap:10px">
     <button id="theme-btn" class="icon-btn" onclick="toggleTheme()" aria-label="Toggle dark mode"></button>
     <a href="#" id="logout-link" class="btn" style="padding:7px 13px;font-size:12.5px">Log out</a>

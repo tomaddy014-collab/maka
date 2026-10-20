@@ -79,7 +79,8 @@ nav.scrolled{box-shadow:0 8px 30px -12px rgba(15,14,12,0.12)}
 .dropdown{position:absolute;top:36px;right:0;background:var(--bg);border:.5px solid var(--border);border-radius:var(--r);padding:6px;min-width:190px;box-shadow:0 8px 24px rgba(0,0,0,0.1);display:none;z-index:200;opacity:0;transform:translateY(-6px) scale(.97);transition:opacity .2s var(--ease),transform .2s var(--ease-spring)}
 .dropdown.open{display:block;animation:ddOpen .22s var(--ease-spring) forwards}
 @keyframes ddOpen{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
-.dd-name{font-size:13px;font-weight:500;padding:8px 12px 4px}
+.dd-name{font-size:13px;font-weight:600;padding:8px 12px 4px;color:var(--text)}
+.dd-email{color:var(--text2)}
 .dd-email{font-size:11px;color:var(--text2);padding:0 12px 8px}
 .dd-sep{height:.5px;background:var(--border);margin:4px 0}
 .dd-btn{display:block;width:100%;padding:8px 12px;border-radius:6px;border:none;background:none;font-size:13px;cursor:pointer;text-align:left;font-family:'DM Sans',sans-serif;color:var(--text2);transition:background .2s var(--ease),padding-left .2s var(--ease)}
@@ -248,14 +249,14 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 @keyframes modalIn{from{opacity:0;transform:scale(.94) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .modal-title{font-weight:600;font-size:16px;margin-bottom:1rem}
 .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem}
-@media print{nav,.main>*:not(#print-out){display:none!important}#print-out{display:block!important}body{background:#fff}
+@media print{nav,.main>*:not(#print-out),#toast-wrap,.modal-bg,.tour-root,#auth-banner{display:none!important}#print-out{display:block!important}body{background:#fff}
   @page{size:A4;margin:12mm}
   .psheet{max-width:680px;margin:0 auto;padding:36px 0}
   /* 1 per page: each sheet on its own page */
   #print-out:not(.two-up) .psheet{page-break-after:always}
   #print-out:not(.two-up) .psheet:last-child{page-break-after:auto}
   /* 2 per page: each sheet takes an equal half-page block, kept whole, break after every 2nd */
-  #print-out.two-up .psheet{max-width:none;box-sizing:border-box;min-height:126mm;padding:0 0 6mm;margin:0;page-break-inside:avoid;break-inside:avoid;border-bottom:1px dashed #ccc}
+  #print-out.two-up .psheet{max-width:none;box-sizing:border-box;height:132mm;overflow:hidden;padding:0 0 4mm;margin:0;page-break-inside:avoid;break-inside:avoid;border-bottom:1px dashed #ccc;zoom:.66}
   #print-out.two-up .psheet:nth-of-type(2n){page-break-after:always;border-bottom:none}
 }
 .print-out{display:none}
@@ -271,7 +272,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .sbox .quote::before{content:'\201C'}.sbox .quote::after{content:'\201D'}
 .sbox .tryex{margin-top:6px;font-size:12.5px;line-height:1.5;color:var(--text);background:rgba(0,0,0,0.03);border-radius:6px;padding:6px 9px}
 [data-theme="dark"] .sbox .tryex{background:rgba(255,255,255,0.05)}
-.sbox .trylbl{font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.05em;font-size:10px;margin-right:5px}
+.sbox .trylbl{font-weight:700;color:var(--warn-text);text-transform:uppercase;letter-spacing:.05em;font-size:10px;margin-right:5px}
 .ccomment{font-size:12px;color:var(--text2);line-height:1.45;margin-top:3px;font-weight:400}
 .summary-box{font-size:13.5px;line-height:1.6;color:var(--text);background:var(--bg2);border-radius:var(--rs);padding:11px 13px;margin:12px 0}
 .qtable td{vertical-align:top;padding:9px 6px 9px 0;border-bottom:.5px solid var(--border)}
@@ -485,6 +486,15 @@ input[type=text],input[type=password],input[type=email],select{min-height:44px}
 .auth-banner{display:none;gap:10px;align-items:flex-start;font-size:13px;line-height:1.55;background:var(--warn-bg);color:var(--warn-text);border-radius:var(--rs);padding:11px 14px;margin-bottom:14px}
 .auth-banner .ico{flex-shrink:0;margin-top:2px}
 .auth-banner a{color:inherit;font-weight:600}
+@media(max-width:600px){
+  .stu-item{flex-wrap:wrap;row-gap:8px}
+  .stu-item>div:nth-child(2){flex:1 1 calc(100% - 48px)}
+  .stu-item:hover{transform:none}
+  #dash-sess-sel,.card-title select{max-width:100%;min-width:0;width:100%!important}
+  #panel-dashboard .card>div{flex-wrap:wrap;min-width:0}
+  .ntab{flex:1 1 0;min-width:0!important}
+  .card-title{flex-wrap:wrap}
+}
 /* Audit fixes */
 .rhead>div:last-child{flex-wrap:wrap;justify-content:flex-end;min-width:0}
 .rhead .remark-btn{margin-left:0}
@@ -1672,7 +1682,7 @@ function pdfBase64ToFile(b64,name){
 // Plain mammoth text-extraction flattens everything to plain text with no such distinction,
 // which is how a student's inserted answers were going missing.
 var DOCX_NS='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
-async function extractDocxText(file){
+async function extractDocxText(file,markInserts){
   if(!window.JSZip)throw new Error('Document reader still loading — try again in a moment, or save the file as PDF.');
   var buf=await file.arrayBuffer();
   var zip=await window.JSZip.loadAsync(buf);
@@ -1691,7 +1701,7 @@ async function extractDocxText(file){
       if(local==='t'){out.push(c.textContent);continue}
       if(local==='tab'){out.push('\t');continue}
       if(local==='br'||local==='cr'){out.push('\n');continue}
-      if(local==='ins'){out.push(' «STUDENT ANSWER: ');walk(c,out);out.push(' »');continue}
+      if(local==='ins'){if(markInserts){out.push(' «STUDENT ANSWER: ');walk(c,out);out.push(' »')}else walk(c,out);continue} // markers only for test answer sheets
       walk(c,out);
     }
   }
@@ -1735,14 +1745,14 @@ async function ensurePDFFile(file){
 // What Gemini receives for a file. Typed work (Word / text) is sent as the text itself — exact characters,
 // macrons and quotes intact, and cheaper than a PDF. Photos go as a right-way-up, resized JPEG; PDFs as-is.
 var GEMINI_MAX_INLINE=15*1024*1024; // Gemini rejects requests over ~20MB of inline data
-async function getContentParts(file){
+async function getContentParts(file,opts){
   var t=file.type||'',name=(file.name||'').toLowerCase();
   var isDocx=name.slice(-5)==='.docx'||t.indexOf('officedocument.wordprocessingml')!==-1;
   var isTxt=t==='text/plain'||name.slice(-4)==='.txt';
   if(isDocx||isTxt){
     var txt='';
     if(isTxt)txt=(await file.text()).trim();
-    else{try{txt=await extractDocxText(file)}catch(e){txt=''}if(!txt)try{txt=await extractDocxTextFallback(file)}catch(e){}}
+    else{try{txt=await extractDocxText(file,!!(opts&&opts.markInserts))}catch(e){txt=''}if(!txt)try{txt=await extractDocxTextFallback(file)}catch(e){}}
     if(!txt)throw new Error(isTxt?'This text file is empty.':'No text found in this Word file — try saving it as a PDF.');
     return[{text:'THE STUDENT’S WORK (typed text, copied exactly as written — this is the work to assess):\n<<<\n'+txt.normalize('NFC')+'\n>>>'}];
   }
@@ -1811,7 +1821,7 @@ async function gemini(key,parts,onRetry,opts){
     return JSON.stringify({contents:[{parts:parts}],generationConfig:gc});
   }
   var maxTries=(opts&&opts.maxTries)||8,delay=(opts&&opts.delay)||2000,last={kind:'',status:0,msg:'',model:''};
-  var maxCalls=maxTries+GEMINI_MODELS.length*3;
+  var maxCalls=maxTries+GEMINI_MODELS.length*3,maxWait=(opts&&opts.maxWait)||75000,waited=0; // cap total waiting so failures surface in about a minute
   for(var attempt=1;attempt<=maxTries&&calls<maxCalls;attempt++){
     var model=GEMINI_MODELS[mi],waitMs=0;
     try{
@@ -1869,6 +1879,8 @@ async function gemini(key,parts,onRetry,opts){
     }
     if(attempt<maxTries){
       var w=waitMs||delay;
+      if(waited+w>maxWait)break;
+      waited+=w;
       if(typeof onRetry==='function')onRetry(attempt,maxTries,Math.round(w/1000));
       await sleep(w);
       if(!waitMs)delay=Math.min(Math.round(delay*1.7),20000);
@@ -1940,7 +1952,7 @@ async function getVerifiableText(file){
   }catch(e){}
   return null;
 }
-function normQuoteText(s){return String(s||'').toLowerCase().replace(/[’‘]/g,"'").replace(/[“”]/g,'"').replace(/\s+/g,' ').trim()}
+function normQuoteText(s){return String(s||'').normalize('NFC').toLowerCase().replace(/[’‘]/g,"'").replace(/[“”]/g,'"').replace(/\s+/g,' ').trim()}
 function quoteVerified(quote,plainNorm){
   var q=normQuoteText(quote);
   return!q||plainNorm.indexOf(q)!==-1;
@@ -2160,7 +2172,7 @@ async function remarkStu(idx){
 
 var MARKING=false;
 // Errors a retry can't fix (bad key, unreadable/oversized file, declined content) — don't burn quota retrying them.
-var PERMANENT_ERR=/api key|refused|not valid|looks invalid|could not read|could not decode|too large|no text found|is empty|declined|HEIC|cut off|used up its daily/i;
+var PERMANENT_ERR=/api key|refused|not valid|looks invalid|could not read|could not decode|too large|no text found|is empty|declined|HEIC|cut off|used up its daily|rate-limiting|usage limit|on every model|None of the Gemini models/i;
 function retryable(r){return r&&r._error&&!PERMANENT_ERR.test(r._error)}
 async function runMarking(){
   if(MARK_MODE==='test')return runTestMarking();
@@ -2206,7 +2218,7 @@ async function runMarking(){
     document.getElementById('cmp-a').textContent=out.length+' students — '+sname;
     persistResults();
     notifyDone('Marking complete','Māka finished marking '+okCount+' piece'+(okCount!==1?'s':'')+' of work.');
-    if(sb&&USER)saveSess(sname,area,level,task,rub,out);
+    if(sb&&USER&&okCount)saveSess(sname,area,level,task,rub,out);else if(!USER&&okCount)showToast('Marked — but you’re not signed in, so nothing was saved to your account.','warn',7000);
   }finally{
     MARKING=false;
     if(mb){mb.disabled=files.length===0;mb.removeAttribute('aria-busy');mb.innerHTML=mbHTML}
@@ -2357,7 +2369,7 @@ async function markTest(key,file,paper,paperFile,answerKey,area,level,idx,limit,
   try{
     return await ml(async function(){
       progressItems[idx].status='working';progressItems[idx].phase=revCtx?'Comparing…':'Marking…';renderProg();
-      var cparts=await getContentParts(file);
+      var cparts=await getContentParts(file,{markInserts:true}); // test answer sheets: flag tracked-change answers
       var paperParts=paperFile?await getContentParts(paperFile):[];
       var lv=levelInfo(level);
       var p=[
@@ -2473,7 +2485,7 @@ async function runTestMarking(){
     document.getElementById('cmp-a').textContent=out.length+' students — '+sname;
     persistResults();
     notifyDone('Marking complete','Māka finished marking '+okCount+' test'+(okCount!==1?'s':'')+'.');
-    if(sb&&USER)saveSess(sname,area,level,'Comprehension test','',out);
+    if(sb&&USER&&okCount)saveSess(sname,area,level,'Comprehension test','',out);else if(!USER&&okCount)showToast('Marked — but you’re not signed in, so nothing was saved to your account.','warn',7000);
   }finally{
     MARKING=false;
     if(mb){mb.disabled=files.length===0;mb.removeAttribute('aria-busy');mb.innerHTML=mbHTML}
@@ -2553,6 +2565,7 @@ async function markGlowOne(key,file,area,level,task,style,idx,limit){
       rr.glows=rr.glows.slice(0,2);
       if(!rr.grow||typeof rr.grow!=='object')rr.grow={quote:'',suggestion:'',example:''};
       cleanSpelling(rr,plainText);
+      if(/^image\//.test(file.type||'')||/\.(jpe?g|png)$/i.test(file.name||''))rr.spelling=[]; // photos/scans: handwriting, so no spelling list
       scrubGlowLevelLanguage(rr);
       verifyGlowQuotes(rr,plainText);
       return rr;
@@ -2587,7 +2600,7 @@ async function runGlowMarking(){
     document.getElementById('cmp-a').textContent=out.length+' students — '+sname;
     persistResults();
     notifyDone('Glow & Grow complete','Māka finished feedback for '+okCount+' piece'+(okCount!==1?'s':'')+' of work.');
-    if(sb&&USER)saveSess(sname,area,level,task||'Glow & Grow','',out);
+    if(sb&&USER&&okCount)saveSess(sname,area,level,task||'Glow & Grow','',out);else if(!USER&&okCount)showToast('Done — but you’re not signed in, so nothing was saved to your account.','warn',7000);
   }finally{
     MARKING=false;
     if(mb){mb.disabled=files.length===0;mb.removeAttribute('aria-busy');mb.innerHTML=mbHTML}
@@ -2712,8 +2725,15 @@ function makeEditable(el,onSave){
     var orig=el.textContent,inp=document.createElement('input');inp.type='text';inp.inputMode='numeric';inp.value=orig;inp.className='editing';inp.setAttribute('aria-label','Score 1 to 5');
     el.innerHTML='';el.appendChild(inp);inp.focus();inp.select();
     el.onclick=null;el.onkeydown=null;
-    function done(){var v=inp.value.trim();el.innerHTML=orig;onSave(v||orig);el.onclick=null;el.onkeydown=null;makeEditable(el,onSave)}
-    inp.onblur=done;inp.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();done()}if(e.key==='Escape'){el.innerHTML=orig;el.onclick=null;el.onkeydown=null;makeEditable(el,onSave)}};
+    var finished=false;
+    function finish(save){
+      if(finished)return;finished=true;inp.onblur=null;inp.onkeydown=null; // blur fires again when the box is replaced
+      var v=inp.value.trim();el.innerHTML=orig;el.onclick=null;el.onkeydown=null;
+      if(save)onSave(v||orig);
+      makeEditable(el,onSave);
+    }
+    inp.onblur=function(){finish(true)};
+    inp.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();finish(true)}else if(e.key==='Escape'){e.preventDefault();finish(false)}};
   }
   el.onclick=begin;
   el.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();begin()}};
@@ -3223,10 +3243,19 @@ function loadDashSess(){
   sb.from('student_results').select('*').eq('session_id',id).then(function(res){renderDashboard((res.data||[]).map(normResult));document.getElementById('dash-sess-label').textContent=document.getElementById('dash-sess-sel').options[document.getElementById('dash-sess-sel').selectedIndex].text}).catch(function(){});
 }
 function heatColor(s){return s>=5?'#1f6b1c':s>=4?'#3a833a':s>=3?'#936a0a':s>=2?'#a85525':s>=1?'#9c2b2b':'#9a958c'}
+// Student label for dashboard lists: the class-list name when known, else a tidy first name — never a raw file name.
+function dashName(r){return assignedStudentFor(r)||firstNameOf(r.fileName||r.file_name||'')}
 function renderDashboard(res){
   var v=(res||[]).filter(function(r){return!r._error&&(r.criteria||[]).length});
   DASH_VIEW=v;
-  if(!v.length){document.getElementById('dash-empty').style.display='block';document.getElementById('dash-content').style.display='none';return}
+  if(!v.length){
+    var de=document.getElementById('dash-empty'),other=(res||[]).filter(function(r){return r&&!r._error}).length;
+    var t=de.querySelector('div[style*="font-weight:500"]'),d=t&&t.nextElementSibling;
+    if(t&&d){
+      if(other){t.textContent='The dashboard charts rubric marks';d.textContent='These are test or Glow & Grow results, which have no rubric scores to chart. You can see them on the Mark tab, in History and in each student’s hub.'}
+      else{t.textContent='No results yet';d.textContent='Mark some student work and your class patterns will show up here.'}
+    }
+    de.style.display='block';document.getElementById('dash-content').style.display='none';return}
   document.getElementById('dash-empty').style.display='none';document.getElementById('dash-content').style.display='block';
   var tots=v.map(function(r){return(r.criteria||[]).map(function(c){return parseInt(c.score)||0}).reduce(function(a,b){return a+b},0)});
   var avg=(tots.reduce(function(a,b){return a+b},0)/tots.length).toFixed(1);
@@ -3238,13 +3267,13 @@ function renderDashboard(res){
   var cn=v[0].criteria.map(function(c){return c.name||''});
   document.getElementById('dash-bars').innerHTML=cn.map(function(n,ci){var a2=(v.map(function(r){return parseInt((r.criteria[ci]||{}).score)||0}).reduce(function(a,b){return a+b},0)/v.length).toFixed(1);return'<div class="bar-row"><div class="bar-lbl">'+esc(n.split('—')[0].trim())+'</div><div class="bar-track"><div class="bar-fill" style="width:'+Math.round(parseFloat(a2)/5*100)+'%"></div></div><div class="bar-val">'+a2+'/5</div></div>'}).join('');
   var bd=[{l:'Exceeds expectations',cls:'ph',st:v.filter(function(r){return(r.overallScore||r.overall_score||'').includes('Exceeds')})},{l:'Achieved expectations',cls:'ph',st:v.filter(function(r){var o=r.overallScore||r.overall_score||'';return o.includes('Achieved')&&!o.includes('Exceeds')})},{l:'Approaching expectations',cls:'pm',st:v.filter(function(r){return(r.overallScore||r.overall_score||'').includes('Approaching')})},{l:'Beginning',cls:'pl',st:v.filter(function(r){return(r.overallScore||r.overall_score||'').includes('Beginning')})}];
-  document.getElementById('dash-bands').innerHTML=bd.map(function(b){return'<div class="band-row"><span class="pill '+b.cls+'" style="min-width:28px;text-align:center">'+b.st.length+'</span><span style="font-weight:500;font-size:13px;width:220px;flex-shrink:0">'+b.l+'</span><span style="font-size:12px;color:var(--text2)">'+esc(b.st.map(function(r){return stripExt(r.fileName||r.file_name||'')}).join(', ')||'—')+'</span></div>'}).join('');
+  document.getElementById('dash-bands').innerHTML=bd.map(function(b){return'<div class="band-row"><span class="pill '+b.cls+'" style="min-width:28px;text-align:center">'+b.st.length+'</span><span style="font-weight:500;font-size:13px;width:220px;flex-shrink:0">'+b.l+'</span><span style="font-size:12px;color:var(--text2)">'+esc(b.st.map(function(r){return dashName(r)}).join(', ')||'—')+'</span></div>'}).join('');
   setTimeout(function(){document.querySelectorAll('#dash-bars .bar-fill').forEach(function(el){var w=el.style.width;el.style.width='0';requestAnimationFrame(function(){requestAnimationFrame(function(){el.style.width=w})})})},50);
   var sup=v.filter(function(r){var s=(r.criteria||[]).map(function(c){return parseInt(c.score)||0});return s.length&&s.reduce(function(a,b){return a+b},0)/s.length<2.5});
   document.getElementById('dash-support').innerHTML=sup.length?sup.map(function(r){
     var weak=(r.criteria||[]).filter(function(c){return parseInt(c.score)<=2}).map(function(c){return(c.name||'').split('—')[0].trim()}).filter(Boolean);
     var chips=weak.length?'<div class="sup-weak">'+weak.map(function(w){return'<span class="sup-chip">'+esc(w)+'</span>'}).join('')+'</div>':'';
-    return'<div class="sup-row"><div class="sup-head"><span class="sup-name">'+esc(stripExt(r.fileName||r.file_name||''))+'</span><span class="pill pl">'+esc(r.criteriaTotal||r.criteria_total||'')+'</span></div>'+chips+'</div>';
+    return'<div class="sup-row"><div class="sup-head"><span class="sup-name">'+esc(dashName(r))+'</span><span class="pill pl">'+esc(r.criteriaTotal||r.criteria_total||'')+'</span></div>'+chips+'</div>';
   }).join(''):emptyState('check','No students flagged — great work!');
   // Cohort insight banner
   var insightEl=document.getElementById('dash-insight');
@@ -3257,7 +3286,7 @@ function renderDashboard(res){
   // Criterion heatmap
   var heatEl=document.getElementById('dash-heat');
   if(heatEl&&cn.length){
-    var hRows=v.map(function(r){return'<tr><td class="hm-name">'+esc(stripExt(r.fileName||r.file_name||'').split(/[\s\-_.]/)[0])+'</td>'+cn.map(function(n,ci){var s=parseInt((r.criteria[ci]||{}).score)||0;return'<td class="hm-cell" style="background:'+heatColor(s)+'" title="'+esc(n.split('—')[0].trim())+': '+s+'/5">'+s+'</td>'}).join('')+'</tr>'}).join('');
+    var hRows=v.map(function(r){return'<tr><td class="hm-name">'+esc(dashName(r).split(/[\s\-_.]/)[0])+'</td>'+cn.map(function(n,ci){var s=parseInt((r.criteria[ci]||{}).score)||0;return'<td class="hm-cell" style="background:'+heatColor(s)+'" title="'+esc(n.split('—')[0].trim())+': '+s+'/5">'+s+'</td>'}).join('')+'</tr>'}).join('');
     heatEl.innerHTML='<div class="hm-wrap"><table class="hm-table"><thead><tr><th class="hm-name"></th>'+cn.map(function(n){return'<th class="hm-head" title="'+esc(n)+'">'+esc(n.split('—')[0].trim().substring(0,10))+'</th>'}).join('')+'</tr></thead><tbody>'+hRows+'</tbody></table></div>';
   }
 }
@@ -3281,12 +3310,13 @@ function loadHistory(){
 }
 function renderHistList(){
   var rows=document.getElementById('hist-rows');if(!rows)return;
-  var q=(document.getElementById('hist-search')||{}).value||'';q=q.trim().toLowerCase();
+  function fold(t){return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()} // "kakapo" finds "Kākāpō"
+  var q=(document.getElementById('hist-search')||{}).value||'';q=fold(q.trim());
   var area=(document.getElementById('hist-area')||{}).value||'';
   var list=HIST_SESSIONS.filter(function(s){
     if(area&&(s.learning_area||'')!==area)return false;
     if(!q)return true;
-    return((s.name||'')+' '+(s.learning_area||'')+' '+(s.task||'')).toLowerCase().indexOf(q)!==-1;
+    return fold((s.name||'')+' '+(s.learning_area||'')+' '+(s.task||'')).indexOf(q)!==-1;
   });
   if(!list.length){rows.innerHTML='<div style="font-size:13px;color:var(--text2);padding:8px 0">No sessions match your search.</div>';return}
   rows.innerHTML=list.map(function(s){var d=new Date(s.created_at).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'});return'<div class="sess-item" id="sess-'+s.id+'"><div class="ico" style="font-size:26px;flex-shrink:0;display:flex;align-items:center">'+ic('clipboard')+'</div><div class="sess-info"><div class="sess-name">'+esc(s.name||'Untitled')+'</div><div class="sess-meta">'+esc(s.learning_area||'')+(s.level?' · Level '+s.level:'')+' · '+d+'</div></div><div class="btn-row"><button class="btn btn-sm" onclick="loadHistDetail(\''+s.id+'\',\''+escJs(s.name||'Session')+'\')">View</button><button class="btn btn-sm" onclick="renameSession(\''+s.id+'\',\''+escJs(s.name||'')+'\')">Rename</button><button class="btn btn-sm btn-danger" onclick="delSession(\''+s.id+'\',\''+escJs(s.name||'Session')+'\')">Delete</button></div></div>'}).join('');
@@ -3460,13 +3490,15 @@ function addStu(){
   var name=document.getElementById('new-stu-name').value.trim();
   if(!name){alert('Please enter a student name.');return}
   if(!sb||!USER){alert('Sign in to save students.');return}
+  if(CLASS_STUDENTS.some(function(x){return(x.name||'').trim().toLowerCase()===name.toLowerCase()})){alert(name+' is already in your class list.');return}
   var year=document.getElementById('new-stu-year').value,gender=document.getElementById('new-stu-gender').value;
   var btn=document.querySelector('#add-stu-modal .btn-p');
   if(btn){btn.disabled=true;btn.textContent='Saving…'}
   sb.from('students').insert({teacher_id:USER.id,name:name,year_level:year||null,gender:gender||null})
     .then(function(res){
       if(res.error){alert('Could not save: '+res.error.message);if(btn){btn.disabled=false;btn.textContent='Add'}return}
-      closeModal('add-stu-modal');loadClassList();loadClassStudents();
+      if(btn){btn.disabled=false;btn.textContent='Add'}
+      closeModal('add-stu-modal');loadClassList();loadClassStudents();showToast('Added '+name,'ok');
     })
     .catch(function(e){alert('Could not save: '+e.message);if(btn){btn.disabled=false;btn.textContent='Add'}})
 }
@@ -3589,10 +3621,13 @@ function exportCSV(){
     rows=[['File','Score','Total','Percent','Grade','Summary']];
     results.forEach(function(r){if(r._error)return;var qs=r.questions||[],score=r.score!=null?r.score:qs.reduce(function(a,q){return a+qMark(q)},0),total=r.total!=null?r.total:qs.length;rows.push([r.fileName||'',fmtMark(score),total,(total?Math.round(score/total*100):0)+'%',r.overallScore||'',fbGet(r).summary||''])});
   }else{
-  rows=[['File','Overall','Total','Strengths','Next step 1','Next step 2','Next step 3','NZC']];
-  results.forEach(function(r){var ns=fbStepsSave(r);rows.push([r.fileName||'',r.overallScore||'',r.criteriaTotal||'',fbStrengthsSave(r),ns[0]||'',ns[1]||'',ns[2]||'',r.nzcReference||''])});
+  var critNames=[];results.forEach(function(r){(r&&r.criteria||[]).forEach(function(c){var n=(c.name||'').split('—')[0].trim();if(n&&critNames.indexOf(n)===-1)critNames.push(n)})});
+  rows=[['Student','File','Overall','Total'].concat(critNames,['Strengths','Next step 1','Next step 2','Next step 3'])];
+  results.forEach(function(r){if(!r||r._error)return;var ns=fbStepsSave(r);
+    var cs=critNames.map(function(n){var c=(r.criteria||[]).find(function(x){return(x.name||'').split('—')[0].trim()===n});return c?c.score:''});
+    rows.push([assignedStudentFor(r)||'',r.fileName||'',r.overallScore||'',r.criteriaTotal||''].concat(cs,[fbStrengthsSave(r),ns[0]||'',ns[1]||'',ns[2]||'']))});
   }
-  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(function(r){return r.map(function(v){return'"'+String(v).replace(/"/g,'""')+'"'}).join(',')}).join('\n')],{type:'text/csv'}));a.download='marking_results.csv';a.click();
+  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+rows.map(function(r){return r.map(function(v){return'"'+String(v).replace(/"/g,'""')+'"'}).join(',')}).join('\n')],{type:'text/csv'}));a.download='marking_results.csv';a.click();
 }
 // ── Bulk PDF export: one report card per student, all in one file ─────────────
 // A drop-in stand-in for the bits of jsPDF the report-card export uses, that draws with the BROWSER's fonts on
@@ -4152,7 +4187,7 @@ async function testKey(inputId,outId,btnId){
   try{
     // One short question, two real attempts (plus a lighter-model fallback), so the button never spins for long
     // and any failure reports what Google actually said instead of a generic 'busy'.
-    var reply=await gemini(key,[{text:'Reply with the single word: OK'}],null,{maxTries:2,delay:1500});
+    var reply=await gemini(key,[{text:'Reply with the single word: OK'}],null,{maxTries:2,delay:1500,maxWait:10000});
     show(true,'Your key works.','Gemini answered, so you are ready to mark.');
   }catch(e){
     var p=keyProblem(e&&e.message);show(false,p.head,p.fix);

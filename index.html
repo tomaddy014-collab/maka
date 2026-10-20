@@ -372,6 +372,7 @@ footer{padding:2.5rem;display:flex;align-items:center;justify-content:space-betw
 html.no-splash #splash,html.no-splash #sweep{display:none}
 #page{opacity:1}
 /* camera pulls back: page eases from a slight zoom-in down to rest */
+html,body{overflow-x:clip}
 html:not(.no-splash) #page{opacity:0;transform:scale(1.045);transform-origin:50% 42%}
 html:not(.no-splash) #page.ready{opacity:1;transform:none;transition:opacity .9s var(--ease),transform 1.2s var(--spring)}
 @media (prefers-reduced-motion: reduce){#splash,#sweep{display:none}#page{opacity:1!important;transform:none!important}}
