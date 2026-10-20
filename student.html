@@ -444,7 +444,8 @@ async function loadAll(){
   if(!STUDENT_ID){showErr('No student selected — go back to the Class tab and click a student.');return}
 
   var sr;
-  try{sr=await sb.from('students').select('*').eq('id',STUDENT_ID).eq('teacher_id',USER.id).maybeSingle()}catch(e){sr={data:null}}
+  try{sr=await sb.from('students').select('*').eq('id',STUDENT_ID).eq('teacher_id',USER.id).maybeSingle()}catch(e){sr={data:null,error:e}}
+  if(sr&&sr.error){showErr('Could not load this student: '+(sr.error.message||sr.error));return}
   if(!sr||!sr.data){showErr('Student not found. They may have been deleted.');return}
   STUDENT=sr.data;
   document.title='Māka — '+STUDENT.name;
@@ -459,11 +460,13 @@ async function loadAll(){
   // a bare first-name file match is ambiguous and we require the surname too.
   var others=[];
   try{var cl=await sb.from('students').select('name').eq('teacher_id',USER.id);others=((cl&&cl.data)||[]).map(function(s){return s.name})}catch(e){}
-  var fl=firstName.toLowerCase(),ll=lastName.toLowerCase(),fullL=STUDENT.name.toLowerCase();
-  var collision=others.some(function(n){return n!==STUDENT.name&&n.toLowerCase().split(/\s+/)[0]===fl});
+  // Normalise separators (space, - _ .) to single spaces so every check is whole-word.
+  function normName(s){return String(s||'').toLowerCase().replace(/[\s\-_.]+/g,' ').trim()}
+  var fl=normName(firstName),ll=normName(lastName),fullL=normName(STUDENT.name);
+  var collision=others.some(function(n){return n!==STUDENT.name&&n.toLowerCase().split(/\s+/)[0]===firstName.toLowerCase()});
   ALL_RESULTS=raw.filter(function(r){
-    var fn=(' '+(r.file_name||'').toLowerCase()+' ').replace(/[\s\-_.]+/g,' ');
-    if(fn.indexOf(fullL)!==-1)return true;            // exact full name — always keep
+    var fn=' '+normName(r.file_name)+' ';
+    if(fullL&&fn.indexOf(' '+fullL+' ')!==-1)return true; // full name as whole words ("ana lee" must not match "hana lee")
     if(!collision)return fn.indexOf(' '+fl+' ')!==-1;  // unique first name — but as a WHOLE word (Jo must not match Joshua)
     return ll&&fn.indexOf(' '+ll+' ')!==-1;            // ambiguous — require surname to disambiguate
   });
@@ -602,14 +605,23 @@ function renderPage(){
 function renderCritBars(){
   var withCrit=ALL_RESULTS.filter(function(r){return r.criteria&&r.criteria.length});
   if(!withCrit.length)return'<div class="empty">'+ic('target')+'<div>No criterion data yet.</div></div>';
-  var latest=withCrit[withCrit.length-1];
-  var cn=latest.criteria.map(function(c){return c.name||''});
-  return cn.map(function(name,ci){
-    var vals=withCrit.filter(function(r){return r.criteria[ci]}).map(function(r){return parseInt(r.criteria[ci].score)||0});
+  // Group by criterion NAME, not position — different rubrics order (and name) criteria differently.
+  var groups={},order=[];
+  withCrit.forEach(function(r){r.criteria.forEach(function(c){
+    var short=String(c.name||'').split('—')[0].trim();if(!short)return;
+    var k=short.toLowerCase();
+    if(!groups[k]){groups[k]={short:short,full:c.name||short,vals:[]};order.push(k)}
+    groups[k].vals.push(parseInt(c.score)||0);
+  })});
+  // Criteria in the most recent rubric first, then any older ones.
+  var latestKeys=withCrit[withCrit.length-1].criteria.map(function(c){return String(c.name||'').split('—')[0].trim().toLowerCase()});
+  order.sort(function(a,b){var ia=latestKeys.indexOf(a),ib=latestKeys.indexOf(b);return(ia<0?1e3:ia)-(ib<0?1e3:ib)});
+  return order.map(function(k){
+    var g=groups[k],vals=g.vals,name=g.full;
     var a=vals.length?(vals.reduce(function(a,b){return a+b},0)/vals.length):0;
     var pct=Math.round(a/5*100);
     var col=pct>=70?'var(--green)':pct>=50?'var(--warn-text)':'var(--danger-text)';
-    return'<div class="bar-row"><div class="bar-lbl" title="'+esc(name)+'">'+esc(name.split('—')[0].trim())+'</div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+col+'"></div></div>'+sparkline(vals,col)+'<div class="bar-val">'+a.toFixed(1)+'</div></div>';
+    return'<div class="bar-row"><div class="bar-lbl" title="'+esc(name)+'">'+esc(g.short)+'</div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+col+'"></div></div>'+sparkline(vals,col)+'<div class="bar-val">'+a.toFixed(1)+'</div></div>';
   }).join('');
 }
 // Tiny inline trend line of a criterion's scores across sessions (scores are 1-5).
@@ -814,52 +826,108 @@ function drawChart(){
   }
 }
 
-// ── PDF REPORT EXPORT (jsPDF) ────────────────────────────────────────────────
-function downloadReportPDF(){
+// ── PDF REPORT EXPORT ────────────────────────────────────────────────────────
+// jsPDF's built-in fonts (helvetica) can't encode macrons (ā ē ī ō ū) or curly quotes,
+// so names like Tāne came out garbled. Instead each A4 page is drawn on a canvas at
+// 150dpi with the browser's own fonts, then embedded in the PDF as an image.
+var PDF_FONT='"DM Sans","Helvetica Neue",Arial,sans-serif';
+function buildReportPages(){
+  var PW=595.28,PH=841.89,CW=1240,CH=1754,S=CW/PW;   // layout in points, drawn at 150dpi
+  var M=48,TOP=56,BOTTOM=PH-60;
+  var INK='#1a1a1a',GREY='#6b6b6b',BODY='#4a4a4a',GOLD='#a86d05',GREEN='#2d5a27';
+  var pages=[],ctx=null,y=TOP;
+  function newPage(){var c=document.createElement('canvas');c.width=CW;c.height=CH;ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,CW,CH);ctx.textBaseline='alphabetic';pages.push(c);y=TOP}
+  function font(size,bold){ctx.font=(bold?'700 ':'400 ')+(size*S).toFixed(1)+'px '+PDF_FONT}
+  function width(t,size,bold){font(size,bold);return ctx.measureText(t).width/S}
+  function text(t,x,size,o){o=o||{};font(size,o.bold);ctx.fillStyle=o.color||INK;ctx.textAlign=o.align||'left';ctx.fillText(String(t),x*S,y*S)}
+  function rule(col){ctx.strokeStyle=col||'#dcd8d2';ctx.lineWidth=S;ctx.beginPath();ctx.moveTo(M*S,y*S);ctx.lineTo((PW-M)*S,y*S);ctx.stroke()}
+  function need(h){if(y+h>BOTTOM)newPage()}
+  // Greedy word wrap using real glyph widths; hard-breaks a word longer than a line.
+  function wrap(t,maxW,size,bold){
+    font(size,bold);var out=[],cur='';
+    function w(s){return ctx.measureText(s).width/S}
+    String(t||'').split(/\s+/).filter(Boolean).forEach(function(word){
+      var trial=cur?cur+' '+word:word;
+      if(w(trial)<=maxW){cur=trial;return}
+      if(cur)out.push(cur);
+      while(w(word)>maxW&&word.length>1){var k=word.length-1;while(k>1&&w(word.slice(0,k))>maxW)k--;out.push(word.slice(0,k));word=word.slice(k)}
+      cur=word;
+    });
+    if(cur)out.push(cur);
+    return out;
+  }
+  function label(t,col){y+=4;need(32);text(t,M+6,8.5,{bold:true,color:col});y+=13}
+  function bullet(t){
+    var lh=13.5;
+    wrap(t,PW-M*2-26,10).forEach(function(l,i){need(lh);if(i===0)text('–',M+6,10,{color:BODY});text(l,M+18,10,{color:BODY});y+=lh});
+    y+=2;
+  }
+  function para(t,x,size,col){var lh=size*1.4;wrap(t,PW-M-x,size).forEach(function(l){need(lh);text(l,x,size,{color:col});y+=lh})}
+
+  newPage();
+  text('Māka',M,22,{bold:true});
+  text('Student progress report',PW-M,10,{color:GREY,align:'right'});
+  y+=10;rule();y+=26;
+  wrap(STUDENT.name||'Student',PW-M*2,18,true).forEach(function(l,i){if(i)y+=22;text(l,M,18,{bold:true})});
+  y+=20;
+  text([STUDENT.year_level||'',new Date().toLocaleDateString('en-NZ',{day:'numeric',month:'long',year:'numeric'})].filter(Boolean).join('  ·  '),M,11,{color:GREY});
+  y+=12;rule();y+=26;
+
+  if(!ALL_RESULTS.length){text('No marking results yet.',M,11,{color:BODY})}
+  ALL_RESULTS.slice().reverse().forEach(function(r){
+    var meta=parseMeta(r.nzc_reference),right='';
+    if(meta.type==='test'){
+      var qs=meta.questions||[],sc=meta.score!=null?meta.score:qs.reduce(function(a,q){return a+qMark(q)},0),tt=meta.total!=null?meta.total:qs.length;
+      right=fmtMark(sc)+'/'+tt+(tt?' · '+Math.round(sc/tt*100)+'%':'');
+    }else if(meta.type==='glow')right='Glow & Grow';
+    else right=[r.overall_score,r.criteria_total].filter(Boolean).join('   ');
+    need(90);
+    var rw=right?width(right,12,true)+16:0;
+    if(right)text(right,PW-M,12,{bold:true,color:GREEN,align:'right'});
+    wrap((r.sessions&&r.sessions.name)||'Session',PW-M*2-rw,13,true).forEach(function(l,i){if(i)y+=17;text(l,M,13,{bold:true})});
+    var sub=[(r.sessions&&r.sessions.learning_area)||'',r.sessions&&r.sessions.created_at?fmtDate(r.sessions.created_at):''].filter(Boolean).join(' · ');
+    if(sub){y+=14;text(sub,M,9,{color:GREY})}
+    y+=8;rule('#ebe8e2');y+=16;
+    if(meta.summary){para(meta.summary,M+6,10,BODY);y+=4}
+    (r.criteria||[]).forEach(function(c){
+      var nm=(c.name||'').split('—')[0].trim();
+      var lines=wrap(nm,PW-M*2-60,10);need(lines.length*14+2);
+      text((parseInt(c.score)||0)+'/5',PW-M,10,{color:GREY,align:'right'});
+      lines.forEach(function(l,i){text((i?'   ':'•  ')+l,M+6,10);y+=14});
+      y+=1;
+    });
+    if(meta.type==='glow'){
+      var glows=(meta.glows||[]).map(function(g){return(g.quote?'“'+g.quote+'” — ':'')+(g.comment||'')}).filter(function(s){return s.trim()});
+      if(glows.length){label('GLOW',GREEN);glows.forEach(bullet)}
+      var gr=meta.grow;
+      if(gr&&(gr.suggestion||gr.quote)){label('GROW',GOLD);bullet((gr.quote?'“'+gr.quote+'” — ':'')+(gr.suggestion||'')+(gr.example?' Try: “'+gr.example+'”':''))}
+    }else{
+      if(r.strengths&&meta.type!=='test'){label('WHAT WENT WELL',GREEN);bullet(r.strengths)}
+      var steps=(r.next_steps||[]).filter(Boolean);
+      if(steps.length){label('HOW TO IMPROVE',GOLD);steps.forEach(bullet)}
+      if(meta.goal){label('GOAL FOR NEXT TIME',GREEN);bullet(meta.goal)}
+    }
+    y+=16;
+  });
+
+  // Footer on every page
+  var foot=(STUDENT.name||'Student')+' · Māka progress report';
+  pages.forEach(function(c,i){ctx=c.getContext('2d');y=PH-30;text(foot,M,8,{color:GREY});text('Page '+(i+1)+' of '+pages.length,PW-M,8,{color:GREY,align:'right'})});
+  return pages;
+}
+async function downloadReportPDF(){
   try{
     var jsPDFns=window.jspdf||window.jsPDF;var JSP=jsPDFns&&(jsPDFns.jsPDF||jsPDFns);
     if(!JSP){alert('PDF library still loading — try again in a moment.');return}
+    // Make sure the page fonts are ready before drawing, or the canvas falls back silently.
+    try{if(document.fonts&&document.fonts.load)await Promise.all([document.fonts.load('400 24px "DM Sans"'),document.fonts.load('700 24px "DM Sans"')])}catch(e){}
+    var pages=buildReportPages();
     var doc=new JSP({unit:'pt',format:'a4'});
-    var pw=doc.internal.pageSize.getWidth(),m=48,y=56;
-    var gold=[200,132,10],ink=[26,26,26],grey=[107,107,107],green=[45,90,39];
-    function line(){doc.setDrawColor(220,216,210);doc.line(m,y,pw-m,y);y+=18}
-    function need(h){if(y+h>doc.internal.pageSize.getHeight()-48){doc.addPage();y=56}}
-    doc.setFont('helvetica','bold');doc.setFontSize(22);doc.setTextColor(ink[0],ink[1],ink[2]);
-    doc.text('Māka',m,y);
-    doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(grey[0],grey[1],grey[2]);
-    doc.text('Student progress report',pw-m,y,{align:'right'});
-    y+=10;line();
-    doc.setFont('helvetica','bold');doc.setFontSize(18);doc.setTextColor(ink[0],ink[1],ink[2]);
-    doc.text(STUDENT.name||'Student',m,y);y+=20;
-    doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(grey[0],grey[1],grey[2]);
-    var meta=[STUDENT.year_level||'',new Date().toLocaleDateString('en-NZ',{day:'numeric',month:'long',year:'numeric'})].filter(Boolean).join('  ·  ');
-    doc.text(meta,m,y);y+=12;line();
-    if(!ALL_RESULTS.length){doc.setFontSize(11);doc.text('No marking results yet.',m,y);doc.save((STUDENT.name||'student')+'-report.pdf');return}
-    ALL_RESULTS.slice().reverse().forEach(function(r){
-      need(110);
-      doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(ink[0],ink[1],ink[2]);
-      doc.text((r.sessions&&r.sessions.name)||'Session',m,y);
-      doc.setTextColor(green[0],green[1],green[2]);
-      doc.text((r.overall_score||'')+'   '+(r.criteria_total||''),pw-m,y,{align:'right'});
-      y+=8;doc.setDrawColor(235,232,226);doc.line(m,y,pw-m,y);y+=16;
-      doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(ink[0],ink[1],ink[2]);
-      (r.criteria||[]).forEach(function(c){
-        need(18);
-        var nm=(c.name||'').split('—')[0].trim();
-        doc.setTextColor(ink[0],ink[1],ink[2]);doc.text('•  '+nm,m+6,y);
-        doc.setTextColor(grey[0],grey[1],grey[2]);doc.text((c.score||0)+'/5',pw-m,y,{align:'right'});
-        y+=15;
-      });
-      var tips=[r.strengths,(r.next_steps&&r.next_steps[0])].filter(Boolean);
-      if(tips.length){
-        y+=4;doc.setTextColor(gold[0],gold[1],gold[2]);doc.setFont('helvetica','bold');doc.setFontSize(9);
-        need(16);doc.text('HOW TO IMPROVE',m+6,y);y+=13;
-        doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(80,80,80);
-        tips.forEach(function(t){var lines=doc.splitTextToSize('– '+t,pw-m*2-12);need(lines.length*13+4);doc.text(lines,m+6,y);y+=lines.length*13+2});
-      }
-      y+=14;
-    });
-    doc.save((STUDENT.name||'student').replace(/\s+/g,'-')+'-report.pdf');
+    var pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight();
+    pages.forEach(function(c,i){if(i)doc.addPage();doc.addImage(c.toDataURL('image/jpeg',0.85),'JPEG',0,0,pw,ph)});
+    // ASCII file name: some browsers drop a non-ASCII download name (Tāne → "download").
+    var fname=String(STUDENT.name||'student').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w\s-]+/g,'').trim().replace(/\s+/g,'-')||'student';
+    doc.save(fname+'-report.pdf');
   }catch(e){alert('Could not generate PDF: '+(e.message||e))}
 }
 
@@ -892,8 +960,12 @@ async function genReport(){
   if(STUDENT.gender==='boy')pro={subject:'he',object:'him',possessive:'his'};
   else if(STUDENT.gender==='girl')pro={subject:'she',object:'her',possessive:'her'};
 
+  // Describe the student by their actual year level (Years 3–8 / NZC Levels 2–4).
+  var yl=String(STUDENT.year_level||'').trim(),ym=yl.match(/(\d+)/),yn=ym?parseInt(ym[1],10):0;
+  var who=yn>=1&&yn<=13?'Year '+yn+' student (New Zealand Curriculum)':'primary/intermediate student (Years 3–8, New Zealand Curriculum)';
+
   var prompt=[
-    'Write a full school report comment for a NZ Years 7–8 student named '+STUDENT.name+'.',
+    'Write a full school report comment for a NZ '+who+' named '+STUDENT.name+'.',
     'Single paragraph, 4–6 sentences, third person.',
     'Use pronouns: '+pro.subject+'/'+pro.object+'/'+pro.possessive+'.',
     term?'Report context: '+term:'',
@@ -928,19 +1000,20 @@ async function genReport(){
     if(!text)throw new Error('Empty response from Gemini');
 
     out.style.display='block';
-    out.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px"><span style="font-size:12px;font-weight:600;color:var(--text2)">Report comment</span><button class="copy-btn" onclick="navigator.clipboard.writeText(this.dataset.t).then(function(){this.textContent=\'Copied!\';setTimeout(function(){document.querySelector(\'.copy-btn[data-t]\').textContent=\'Copy\'},1500)}.bind(this))" data-t="'+esc(text)+'">Copy</button></div><div style="font-size:13.5px;line-height:1.8">'+esc(text)+'</div>';
+    out.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px"><span style="font-size:12px;font-weight:600;color:var(--text2)">Report comment</span><button class="copy-btn" data-t="'+esc(text)+'">Copy</button></div><div style="font-size:13.5px;line-height:1.8">'+esc(text)+'</div><div id="rep-save-status"></div>';
 
     var label=(term||'Report')+' — '+new Date().toLocaleDateString('en-NZ');
+    function saveFailed(msg){var st=document.getElementById('rep-save-status');if(st)st.innerHTML='<div class="err" style="margin-top:10px">Comment generated but not saved: '+esc(msg)+'. Copy it now so it isn\'t lost.</div>'}
     sb.from('report_comments').insert({
       teacher_id:USER.id,
       student_name:STUDENT.name,
       comment_text:text,
       label:label
-    }).then(function(){
+    }).then(function(res){
+      if(res&&res.error){saveFailed(res.error.message||'unknown error');return}
       ALL_COMMENTS.unshift({comment_text:text,label:label,created_at:new Date().toISOString()});
       document.getElementById('comments-list').innerHTML=renderComments();
-      document.querySelectorAll('.copy-btn[data-t]').forEach(function(b){b.onclick=function(){navigator.clipboard.writeText(b.dataset.t).then(function(){b.textContent='Copied!';setTimeout(function(){b.textContent='Copy'},1500)})}});
-    }).catch(function(){});
+    }).catch(function(e){saveFailed((e&&e.message)||'network error')});
 
   }catch(e){
     out.style.display='block';
@@ -974,17 +1047,40 @@ function saveEdit(){
 }
 function deleteStudent(){
   if(!confirm('Remove '+STUDENT.name+' from your class list? Their marking history will be kept.'))return;
-  sb.from('students').delete().eq('id',STUDENT.id).then(function(){window.location.href='tool.html'}).catch(function(e){alert(e.message)});
+  sb.from('students').delete().eq('id',STUDENT.id).select('id').then(function(res){
+    if(res&&res.error){alert('Could not remove '+STUDENT.name+': '+res.error.message);return}
+    if(res&&Array.isArray(res.data)&&!res.data.length){alert('Could not remove '+STUDENT.name+' — your session may have expired. Please sign in again.');return}
+    window.location.href='tool.html';
+  }).catch(function(e){alert('Could not remove '+STUDENT.name+': '+((e&&e.message)||e))});
 }
 
-function initSupabase(){
+// Copy buttons (saved comments and the freshly generated one) — one delegated handler,
+// so buttons work as soon as they're rendered.
+function copyText(t){
+  if(navigator.clipboard&&navigator.clipboard.writeText)return navigator.clipboard.writeText(t);
+  return new Promise(function(res,rej){try{var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();var ok=document.execCommand('copy');document.body.removeChild(ta);ok?res():rej(new Error('copy failed'))}catch(e){rej(e)}});
+}
+document.addEventListener('click',function(e){
+  var b=e.target&&e.target.closest&&e.target.closest('.copy-btn[data-t]');
+  if(!b)return;
+  copyText(b.dataset.t).then(function(){b.textContent='Copied!'},function(){b.textContent='Copy failed'}).then(function(){setTimeout(function(){b.textContent='Copy'},1500)});
+});
+
+function showSignIn(){
+  document.getElementById('main').innerHTML='<div style="max-width:860px;margin:2rem auto"><div class="card" style="text-align:center;padding:2rem"><p style="color:var(--text2);margin-bottom:1rem">Please sign in to see this student\'s hub.</p><a href="login.html" class="btn btn-p">Sign in</a></div></div>';
+}
+async function initSupabase(){
   try{
     sb=supabase.createClient(SURL,SKEY);
     if(!_TEACHER_ID||!STUDENT_ID){
       document.getElementById('main').innerHTML='<div style="max-width:860px;margin:2rem auto"><div class="card" style="text-align:center;padding:2rem"><p style="color:var(--text2);margin-bottom:1rem">Please open the student hub from the Class tab in Māka.</p><a href="tool.html" class="btn btn-p">← Back to Māka</a></div></div>';
       return;
     }
-    USER={id:_TEACHER_ID};
+    // Without a session, RLS returns nothing and the page would wrongly say the student was deleted.
+    var ses=null;
+    try{var gs=await sb.auth.getSession();ses=gs&&gs.data&&gs.data.session}catch(e){}
+    if(!ses||!ses.user){showSignIn();return}
+    USER={id:ses.user.id};
     loadAll();
   }catch(e){showErr('Failed to initialise: '+e.message)}
 }
