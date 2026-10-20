@@ -75,7 +75,7 @@ nav.scrolled{border-color:var(--line);box-shadow:0 1px 0 var(--line)}
 .nav-logo:hover{opacity:.72}
 .nav-links{display:flex;align-items:center;gap:2rem}
 .nav-links a{
-  font-size:14px;font-weight:500;
+  font-size:14px;font-weight:500;white-space:nowrap;
   color:var(--ink-2);text-decoration:none;
   transition:color .25s var(--ease);
   position:relative;
@@ -389,12 +389,17 @@ html:not(.no-splash) #page.ready{opacity:1;transform:none;transition:opacity .9s
 }
 @media(max-width:600px){
   .nav-links .hide-mobile{display:none}
-  .nav-links{gap:1.1rem}
+  nav{padding:.9rem 1rem}
+  .nav-links{gap:.85rem}
+  .nav-cta{padding:8px 13px}
+  .nav-cta .ico{display:none}
   .steps-grid{grid-template-columns:1fr}
   .bento-grid{grid-template-columns:1fr}
   .b1,.b2,.b8{grid-column:span 1}
   footer{flex-direction:column;align-items:flex-start}
 }
+.lbl-short{display:none}
+@media(max-width:400px){.lbl-long{display:none}.lbl-short{display:inline}}
 </style>
 </head>
 <body>
@@ -491,7 +496,7 @@ html:not(.no-splash) #page.ready{opacity:1;transform:none;transition:opacity .9s
     <a href="#features" class="hide-mobile">Features</a>
     <a href="login.html">Sign in</a>
     <a href="login.html" class="hide-mobile">Sign up</a>
-    <a href="student-login.html">Student login</a>
+    <a href="student-login.html" aria-label="Student login"><span class="lbl-long">Student login</span><span class="lbl-short">Students</span></a>
     <a href="tool.html" class="nav-cta">Open tool <svg class="ico" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></a>
   </div>
 </nav>
