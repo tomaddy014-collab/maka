@@ -377,14 +377,23 @@ function renderPage(){
 function renderCritBars(){
   var withCrit=ALL_RESULTS.filter(function(r){return r.criteria&&r.criteria.length});
   if(!withCrit.length)return'<div class="empty">'+ic('target')+'<div>No criterion data yet.</div></div>';
-  var latest=withCrit[withCrit.length-1];
-  var cn=latest.criteria.map(function(c){return c.name||''});
-  return cn.map(function(name,ci){
-    var vals=withCrit.filter(function(r){return r.criteria[ci]}).map(function(r){return parseInt(r.criteria[ci].score)||0});
+  // Group by criterion NAME, not position — different rubrics order (and name) criteria differently.
+  var groups={},order=[];
+  withCrit.forEach(function(r){r.criteria.forEach(function(c){
+    var short=String(c.name||'').split('—')[0].trim();if(!short)return;
+    var k=short.toLowerCase();
+    if(!groups[k]){groups[k]={short:short,full:c.name||short,vals:[]};order.push(k)}
+    groups[k].vals.push(parseInt(c.score)||0);
+  })});
+  // Criteria in the most recent rubric first, then any older ones.
+  var latestKeys=withCrit[withCrit.length-1].criteria.map(function(c){return String(c.name||'').split('—')[0].trim().toLowerCase()});
+  order.sort(function(a,b){var ia=latestKeys.indexOf(a),ib=latestKeys.indexOf(b);return(ia<0?1e3:ia)-(ib<0?1e3:ib)});
+  return order.map(function(k){
+    var g=groups[k],vals=g.vals,name=g.full;
     var a=vals.length?(vals.reduce(function(a,b){return a+b},0)/vals.length):0;
     var pct=Math.round(a/5*100);
     var col=pct>=70?'var(--green)':pct>=50?'var(--warn-text)':'var(--danger-text)';
-    return'<div class="bar-row"><div class="bar-lbl" title="'+esc(name)+'">'+esc(name.split('—')[0].trim())+'</div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+col+'"></div></div>'+sparkline(vals,col)+'<div class="bar-val">'+a.toFixed(1)+'</div></div>';
+    return'<div class="bar-row"><div class="bar-lbl" title="'+esc(name)+'">'+esc(g.short)+'</div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+col+'"></div></div>'+sparkline(vals,col)+'<div class="bar-val">'+a.toFixed(1)+'</div></div>';
   }).join('');
 }
 function sparkline(vals,col){
@@ -431,7 +440,6 @@ function renderGlowSession(r,i,meta,area,date){
       +(glows?'<div class="slbl">Glow</div>'+glows:'')
       +(grow?'<div class="slbl">Grow</div>'+grow:'')
       +((meta.spelling||[]).length?'<div class="slbl">Spelling to check</div><ul class="spell-list">'+meta.spelling.map(function(x){return'<li><span class="spell-wrong">'+esc(x.wrong)+'</span><span class="spell-arrow">→</span><span class="spell-right">'+esc(x.right)+'</span>'+(x.tip?'<span class="spell-tip">'+esc(x.tip)+'</span>':'')+'</li>'}).join('')+'</ul>':'')
-      +(r.pdf_path?'<button class="btn btn-green view-work" onclick="viewPDF(\''+esc(r.pdf_path||'')+'\',this)">'+ic('file')+' View your work</button>':'')
     +'</div>'
   +'</div>';
 }
