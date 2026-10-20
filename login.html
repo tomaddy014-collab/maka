@@ -158,6 +158,13 @@ input:focus{outline:none;border-color:var(--gold);background:#fff;padding:12px 1
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+// Capture the URL BEFORE the Supabase client reads (and clears) the auth fragment.
+// A password-reset link signs the user in with a recovery session, so we must not
+// treat that session as a normal sign-in and bounce them to the tool.
+var _authHash=location.hash||'',_authSearch=location.search||'';
+var IS_RECOVERY=/(^|[#&?])type=recovery(&|$)/.test(_authHash)||/[?&]type=recovery(&|$)/.test(_authSearch);
+var HAS_AUTH_CODE=/[?&]code=/.test(_authSearch); // PKCE links carry ?code= without a type
+var RECOVERY_SHOWN=false;
 var sb=supabase.createClient(
   'https://agwqenhduoxxeemklmpr.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnd3FlbmhkdW94eGVlbWtsbXByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MzkxNDAsImV4cCI6MjA5NDAxNTE0MH0.TZkrRgForSDTzQ4vZ9j36WncEAVBx4reG-ADcoohY8o'
@@ -179,17 +186,29 @@ function show(panel){
 function setMsg(text,type){var m=document.getElementById('msg');m.textContent=text;m.className='msg '+type;m.style.display='block'}
 function clearMsg(){var m=document.getElementById('msg');m.style.display='none'}
 
-// If already signed in, redirect
-sb.auth.getSession().then(function(res){
-  if(res.data&&res.data.session)window.location.href='tool.html';
+function showRecovery(){
+  if(RECOVERY_SHOWN)return;
+  RECOVERY_SHOWN=true;
+  document.getElementById('tabs').style.display='none';
+  show('newpass');
+}
+if(IS_RECOVERY)showRecovery();
+
+// Handle password recovery link (registered before getSession so the event isn't missed)
+sb.auth.onAuthStateChange(function(event){
+  if(event==='PASSWORD_RECOVERY')showRecovery();
 });
 
-// Handle password recovery link
-sb.auth.onAuthStateChange(function(event){
-  if(event==='PASSWORD_RECOVERY'){
-    document.getElementById('tabs').style.display='none';
-    show('newpass');
+// If already signed in normally, redirect. Never redirect a recovery session —
+// the user still needs to set a new password.
+sb.auth.getSession().then(function(res){
+  if(!(res.data&&res.data.session)||IS_RECOVERY||RECOVERY_SHOWN)return;
+  if(HAS_AUTH_CODE){
+    // The PASSWORD_RECOVERY event can arrive just after the session; give it a moment.
+    setTimeout(function(){if(!RECOVERY_SHOWN)window.location.href='tool.html'},800);
+    return;
   }
+  window.location.href='tool.html';
 });
 
 function doLogin(){
@@ -224,7 +243,7 @@ function doReset(){
   var email=document.getElementById('r-email').value.trim();
   if(!email){setMsg('Please enter your email.','err');return}
   var btn=document.getElementById('r-btn');btn.disabled=true;btn.textContent='Sending…';
-  sb.auth.resetPasswordForEmail(email,{redirectTo:'https://makrd.netlify.app/login.html'}).then(function(res){
+  sb.auth.resetPasswordForEmail(email,{redirectTo:new URL('login.html',location.href).href}).then(function(res){
     if(res.error)setMsg(res.error.message,'err');
     else setMsg('Reset link sent! Check your inbox.','ok');
     btn.disabled=false;btn.textContent='Send reset link →';
