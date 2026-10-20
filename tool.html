@@ -1648,10 +1648,20 @@ function friendlyGeminiError(status,msg){
 // Send the API key in a request header (not the URL, which ends up in logs/histories). If the browser
 // blocks the custom header for any reason, fall back once to the URL form so marking never breaks.
 var GEMINI_HDR_OK=true;
-// Primary model first; if it keeps returning server errors (overloaded/unavailable), fall back to a lighter one
-// so marking still completes instead of failing after a long wait.
-var GEMINI_MODELS=['gemini-2.5-flash','gemini-2.5-flash-lite'];
+// Model chain. Google counts quotas and outages PER MODEL, so when one model is rate-limited, out of daily quota,
+// overloaded or retired, the next one usually still works. The "-latest" aliases always point at a current model.
+var GEMINI_MODELS=['gemini-2.5-flash','gemini-flash-latest','gemini-2.5-flash-lite','gemini-flash-lite-latest'];
+var GEMINI_NO_THINK_CFG={};      // models that reject thinkingConfig.thinkingBudget:0 (newer models) — sent without it
+var GEMINI_PAUSE_UNTIL=0;        // shared back-off: when Google says "slow down", every parallel request waits
+var GEMINI_SKIP={};              // model -> timestamp until which it is skipped (daily quota hit / retired)
+function geminiStartIdx(){
+  try{var m=JSON.parse(localStorage.getItem('maka-gemini-model')||'null');
+    if(m&&m.t&&Date.now()-m.t<6*3600e3){var i=GEMINI_MODELS.indexOf(m.m);if(i>0)return i}}catch(e){}
+  return 0;
+}
+function geminiRemember(model){try{localStorage.setItem('maka-gemini-model',JSON.stringify({m:model,t:Date.now()}))}catch(e){}}
 async function geminiFetch(key,body,model){
+  var wait=GEMINI_PAUSE_UNTIL-Date.now();if(wait>0)await sleep(wait);
   var base='https://generativelanguage.googleapis.com/v1beta/models/'+(model||GEMINI_MODELS[0])+':generateContent';
   if(GEMINI_HDR_OK){
     try{return await fetch(base,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:body})}
@@ -1659,65 +1669,100 @@ async function geminiFetch(key,body,model){
   }
   return fetch(base+'?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:body});
 }
+// Read Google's structured 429 details: how long to wait, and whether it is a per-day quota.
+function geminiQuotaInfo(err){
+  var info={retryMs:0,daily:false};
+  (err&&err.details||[]).forEach(function(d){
+    if(d&&d.retryDelay){var m=String(d.retryDelay).match(/([\d.]+)s/);if(m)info.retryMs=Math.ceil(parseFloat(m[1])*1000)}
+    (d&&d.violations||[]).forEach(function(v){if(/per.?day/i.test((v.quotaId||'')+' '+(v.quotaMetric||'')))info.daily=true});
+  });
+  if(/per.?day|daily/i.test((err&&err.message)||''))info.daily=true;
+  return info;
+}
 async function gemini(key,parts,onRetry,opts){
-  // thinkingBudget:0 disables Gemini 2.5's hidden "thinking" tokens, which otherwise eat into
-  // maxOutputTokens and can cut off the visible answer. Faster and cheaper since no reasoning tokens are spent.
-  // Feedback JSON can be long: start generous, and if Gemini reports finishReason MAX_TOKENS escalate once.
-  var tokenSteps=[16384,32768],tokenIdx=0,modelIdx=0,serverFails=0;
-  function makeBody(){return JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0.3,maxOutputTokens:tokenSteps[tokenIdx],thinkingConfig:{thinkingBudget:0}}})}
-  var body=makeBody();
-  var maxTries=(opts&&opts.maxTries)||8,delay=(opts&&opts.delay)||2000,last={kind:'',status:0,msg:''};
-  for(var attempt=1;attempt<=maxTries;attempt++){
+  // thinkingBudget:0 turns off Gemini 2.5's hidden "thinking" tokens (they eat maxOutputTokens and slow things down).
+  // Feedback JSON can be long: start generous; if Gemini reports MAX_TOKENS escalate once.
+  var tokenSteps=[16384,32768],tokenIdx=0,serverFails=0,quotaWaits=0,calls=0;
+  var mi=geminiStartIdx();
+  function nextModel(){for(var j=mi+1;j<GEMINI_MODELS.length;j++){if(!(GEMINI_SKIP[GEMINI_MODELS[j]]>Date.now())){mi=j;serverFails=0;quotaWaits=0;return true}}return false}
+  if(GEMINI_SKIP[GEMINI_MODELS[mi]]>Date.now()&&!nextModel())mi=0;
+  function makeBody(){
+    var gc={temperature:0.3,maxOutputTokens:tokenSteps[tokenIdx]};
+    if(!GEMINI_NO_THINK_CFG[GEMINI_MODELS[mi]])gc.thinkingConfig={thinkingBudget:0};
+    return JSON.stringify({contents:[{parts:parts}],generationConfig:gc});
+  }
+  var maxTries=(opts&&opts.maxTries)||8,delay=(opts&&opts.delay)||2000,last={kind:'',status:0,msg:'',model:''};
+  var maxCalls=maxTries+GEMINI_MODELS.length*3;
+  for(var attempt=1;attempt<=maxTries&&calls<maxCalls;attempt++){
+    var model=GEMINI_MODELS[mi],waitMs=0;
     try{
-      var resp=await geminiFetch(key,body,GEMINI_MODELS[modelIdx]);
-      var ed=null;
-      if(!resp.ok)ed=await resp.json().catch(function(){return{}});
-      var gmsg=(ed&&ed.error&&ed.error.message)||'';
-      // Hard client errors (bad key, bad request) — surface immediately, no point retrying
-      if(resp.status===400||resp.status===401||resp.status===403||resp.status===404){
-        throw new Error(friendlyGeminiError(resp.status,gmsg));
+      calls++;
+      var resp=await geminiFetch(key,makeBody(),model);
+      var ed=null;if(!resp.ok)ed=await resp.json().catch(function(){return{}});
+      var gerr=(ed&&ed.error)||{},gmsg=gerr.message||'';
+      if(resp.status===400&&/thinking/i.test(gmsg)&&!GEMINI_NO_THINK_CFG[model]){GEMINI_NO_THINK_CFG[model]=1;attempt--;continue}
+      if(resp.status===404||(resp.status===400&&/not found|is not supported|unsupported model|deprecated/i.test(gmsg))){
+        GEMINI_SKIP[model]=Date.now()+24*3600e3;last={kind:'model',status:resp.status,msg:gmsg,model:model};
+        if(nextModel()){attempt--;continue}
+        throw new Error('None of the Gemini models Māka uses are available to this key right now. Google said: “'+String(gmsg).slice(0,200)+'”');
       }
-      if(!resp.ok){
-        last={kind:resp.status===429?'quota':'server',status:resp.status,msg:gmsg};
-        if(resp.status>=500){
-          serverFails++;
-          if(serverFails>=2&&modelIdx<GEMINI_MODELS.length-1){modelIdx++;serverFails=0;attempt--;continue} // try the lighter model right away
+      // Hard client errors (bad key, bad request) — surface immediately, no point retrying
+      if(resp.status===400||resp.status===401||resp.status===403)throw new Error(friendlyGeminiError(resp.status,gmsg));
+      if(resp.status===429){
+        var qi=geminiQuotaInfo(gerr);last={kind:'quota',status:429,msg:gmsg,model:model,daily:qi.daily};
+        // Daily quota, or a long wait: this model is done for now — move along the chain straight away.
+        if(qi.daily||qi.retryMs>45000||quotaWaits>=1){
+          if(qi.daily)GEMINI_SKIP[model]=Date.now()+3*3600e3;
+          if(nextModel()){attempt--;continue}
+          // End of the chain: a daily quota will not reset soon, and per-minute limits get at most 3 waits.
+          if(qi.daily||qi.retryMs>45000||quotaWaits>=3)break;
         }
+        quotaWaits++;
+        waitMs=Math.max(qi.retryMs||0,5000);
+        GEMINI_PAUSE_UNTIL=Math.max(GEMINI_PAUSE_UNTIL,Date.now()+waitMs); // pause the other parallel requests too
+      }else if(!resp.ok){
+        last={kind:'server',status:resp.status,msg:gmsg,model:model};
+        if(resp.status>=500){serverFails++;if(serverFails>=2&&nextModel()){attempt--;continue}}
       }else{
         var d=await resp.json();
         if(d.error)throw new Error(d.error.message||'Gemini error');
         if(d.promptFeedback&&d.promptFeedback.blockReason)throw new Error('Gemini declined this request ('+d.promptFeedback.blockReason+') — try a different file or wording.');
         var cand0=(d.candidates||[])[0]||{content:{parts:[]}};
         var ps=(cand0.content&&cand0.content.parts)||[];
-        var raw=ps.map(function(p){return p.text||''}).join('');
+        var raw=ps.filter(function(p){return!p.thought}).map(function(p){return p.text||''}).join('');
         if(cand0.finishReason==='MAX_TOKENS'){
-          if(tokenIdx<tokenSteps.length-1){tokenIdx++;body=makeBody();attempt--;continue}
+          if(tokenIdx<tokenSteps.length-1){tokenIdx++;attempt--;continue}
           throw new Error('Gemini’s reply was too long and got cut off — try fewer files or a shorter task and run it again.');
         }
         if(!raw.trim()){
-          if(/SAFETY|PROHIBITED|BLOCK|RECITATION/i.test(cand0.finishReason||''))throw new Error('Gemini declined to answer this one ('+cand0.finishReason+') — try again or use a different file.');
-          last={kind:'empty',status:200,msg:'Gemini returned no text'+(cand0.finishReason?' (finishReason: '+cand0.finishReason+')':'')};
+          if(/SAFETY|PROHIBITED|BLOCK|RECITATION|SPII/i.test(cand0.finishReason||''))throw new Error('Gemini declined to answer this one ('+cand0.finishReason+') — try again or use a different file.');
+          last={kind:'empty',status:200,msg:'Gemini returned no text'+(cand0.finishReason?' (finishReason: '+cand0.finishReason+')':''),model:model};
           throw new Error('retry-empty');
         }
+        geminiRemember(model);
         return raw.replace(/```json/g,'').replace(/```/g,'').trim();
       }
     }catch(e){
       var m=e.message||'';
-      if(m==='retry-empty'){/* fall through to retry */}
-      else if(/failed to fetch|networkerror|network request failed|load failed/i.test(m))last={kind:'network',status:0,msg:m};
-      else throw e; // clear, already-friendly errors (bad key, declined, cut off) and anything unexpected
+      if(m==='retry-empty'){/* retry */}
+      else if(/failed to fetch|networkerror|network request failed|load failed/i.test(m))last={kind:'network',status:0,msg:m,model:model};
+      else throw e;
     }
     if(attempt<maxTries){
-      if(typeof onRetry==='function')onRetry(attempt,maxTries,Math.round(delay/1000));
-      await sleep(delay);
-      delay=Math.min(Math.round(delay*1.7),20000);
+      var w=waitMs||delay;
+      if(typeof onRetry==='function')onRetry(attempt,maxTries,Math.round(w/1000));
+      await sleep(w);
+      if(!waitMs)delay=Math.min(Math.round(delay*1.7),20000);
     }
   }
   var detail=last.msg?' Google said: “'+String(last.msg).slice(0,220)+'”':'';
-  if(last.kind==='quota')throw new Error('Gemini has hit a usage limit (429) — wait a minute and try again, or check your quota at aistudio.google.com. Free keys have low per-minute limits; marking several files at once can hit them.'+detail);
+  if(last.kind==='quota'){
+    if(last.daily)throw new Error('This Gemini key has used up its daily allowance on every model Māka can use (429).'+detail+' It resets daily — or turn on billing for the key’s Google project (a paid-tier key has much higher limits).');
+    throw new Error('Gemini is rate-limiting this key (429) — Māka waited and retried but it is still over the per-minute limit.'+detail+' Try marking fewer files at once, wait a minute, or use a paid-tier key.');
+  }
   if(last.kind==='network')throw new Error("Couldn't reach Gemini — check your internet connection (or a school filter/firewall blocking generativelanguage.googleapis.com) and try again.");
-  if(last.kind==='server')throw new Error('Gemini’s servers returned an error ('+last.status+') after '+maxTries+' tries.'+detail+' This is usually Google being overloaded — try again in a few minutes.');
-  throw new Error((last.msg||'Gemini did not return a usable answer')+' after '+maxTries+' tries — please try again.');
+  if(last.kind==='server')throw new Error('Gemini’s servers returned an error ('+last.status+') on every model Māka tried.'+detail+' This is usually Google being overloaded — try again in a few minutes.');
+  throw new Error((last.msg||'Gemini did not return a usable answer')+' — please try again.');
 }
 // Extract the FIRST balanced JSON object, ignoring braces inside strings — robust to
 // trailing text, extra objects, or commentary the model sometimes appends.

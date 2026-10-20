@@ -905,10 +905,23 @@ async function genReport(){
   ].filter(Boolean).join('\n');
 
   try{
-    var gbody=JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:2048,thinkingConfig:{thinkingBudget:0}}}),gbase='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',gresp;
-    try{gresp=await fetch(gbase,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:gbody})}
-    catch(e){gresp=await fetch(gbase+'?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:gbody})}
-    var d=await gresp.json();
+    // Same model chain as the Mark tab: quotas/outages are per model, so fall through to the next one.
+    var gmodels=['gemini-2.5-flash','gemini-flash-latest','gemini-2.5-flash-lite','gemini-flash-lite-latest'],d=null,glast='';
+    for(var gi=0;gi<gmodels.length&&!d;gi++){
+      for(var think=1;think>=0;think--){
+        var gc={temperature:0.4,maxOutputTokens:2048};if(think)gc.thinkingConfig={thinkingBudget:0};
+        var gbody=JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:gc}),gbase='https://generativelanguage.googleapis.com/v1beta/models/'+gmodels[gi]+':generateContent',gresp;
+        try{gresp=await fetch(gbase,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:gbody})}
+        catch(e){gresp=await fetch(gbase+'?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:gbody})}
+        var gj=await gresp.json().catch(function(){return{}});
+        if(gresp.ok){d=gj;break}
+        glast=(gj.error&&gj.error.message)||('Gemini error '+gresp.status);
+        if(gresp.status===400&&think&&/thinking/i.test(glast))continue;           // newer model: retry without thinkingConfig
+        if(gresp.status===400||gresp.status===401||gresp.status===403)throw new Error(glast); // bad key / bad request
+        break;                                                                     // 404 / 429 / 5xx: try the next model
+      }
+    }
+    if(!d)throw new Error(glast||'Gemini error');
     if(d.error)throw new Error(d.error.message||'Gemini error');
     var ps=((d.candidates||[])[0]||{content:{parts:[]}}).content.parts||[];
     var text=ps.filter(function(p){return p.text&&!p.thought}).map(function(p){return p.text}).join('').trim();
