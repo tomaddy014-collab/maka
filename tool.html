@@ -478,6 +478,13 @@ input[type=text],input[type=password],input[type=email],select{min-height:44px}
 .spell-arrow{color:var(--text3)}
 .spell-right{font-weight:600;color:var(--green)}
 .spell-tip{flex-basis:100%;font-size:12px;color:var(--text2)}
+.portal-tip{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.55;background:var(--info-bg);color:var(--text);border-radius:var(--rs);padding:11px 13px;margin-bottom:12px}
+.portal-tip>.ico{color:var(--info-text);flex-shrink:0;margin-top:2px}
+.portal-tip a{color:var(--info-text);word-break:break-all}
+.portal-tip .btn{margin-left:4px;vertical-align:middle}
+.auth-banner{display:none;gap:10px;align-items:flex-start;font-size:13px;line-height:1.55;background:var(--warn-bg);color:var(--warn-text);border-radius:var(--rs);padding:11px 14px;margin-bottom:14px}
+.auth-banner .ico{flex-shrink:0;margin-top:2px}
+.auth-banner a{color:inherit;font-weight:600}
 /* Audit fixes */
 .rhead>div:last-child{flex-wrap:wrap;justify-content:flex-end;min-width:0}
 .rhead .remark-btn{margin-left:0}
@@ -1127,11 +1134,28 @@ window.addEventListener('load',function(){
       try{
         var session=res&&res.data&&res.data.session;
         if(session){USER=session.user;updateNavForUser();loadProfileBg();}
+        updateAuthBanner();
       }catch(e){}
-    }).catch(function(){});
+    }).catch(function(){updateAuthBanner()});
+    // If the sign-in lapses mid-session, say so — otherwise marking keeps working but silently stops saving.
+    sb.auth.onAuthStateChange(function(event,session){
+      if(event==='SIGNED_OUT'||(!session&&USER)){USER=null;updateAuthBanner(true)}
+      else if(session&&session.user&&(!USER||USER.id!==session.user.id)){USER=session.user;updateNavForUser();loadProfileBg();updateAuthBanner()}
+    });
   }catch(e){}
 });
 
+function updateAuthBanner(lapsed){
+  var b=document.getElementById('auth-banner');
+  if(!b){
+    var host=document.getElementById('panel-mark');if(!host)return;
+    b=document.createElement('div');b.id='auth-banner';b.className='auth-banner';b.setAttribute('role','status');
+    host.insertBefore(b,host.firstChild);
+  }
+  if(USER){b.style.display='none';return}
+  b.innerHTML=ic('alert')+'<div><strong>'+(lapsed?'You’ve been signed out.':'You’re not signed in.')+'</strong> Marking still works, but results stay only in this browser for 24 hours and aren’t saved to your account or student profiles. <a href="login.html">Sign in</a></div>';
+  b.style.display='flex';
+}
 function updateNavForUser(){
   if(!USER)return;
   var name=(PROFILE&&PROFILE.display_name)||USER.email||'Teacher';
@@ -1154,7 +1178,13 @@ function loadProfileBg(){
         if(PROFILE.gemini_key)document.getElementById('set-key').value=PROFILE.gemini_key;
         if(PROFILE.writing_style)document.getElementById('set-style').value=PROFILE.writing_style;
         updateNavForUser();
-      }else{sb.from('profiles').upsert({id:USER.id,email:USER.email,display_name:''}).then(function(){}).catch(function(){})}
+      }else if(!res.error){
+        // No row yet (brand-new account): create it with the name given at sign-up. Never overwrite on a failed read.
+        var nm=((USER.user_metadata&&USER.user_metadata.display_name)||'').trim();
+        PROFILE={id:USER.id,email:USER.email,display_name:nm};
+        sb.from('profiles').insert({id:USER.id,email:USER.email,display_name:nm}).then(function(){}).catch(function(){});
+        if(nm){document.getElementById('av-init').textContent=nm[0].toUpperCase();document.getElementById('dd-name').textContent=nm;var sn=document.getElementById('set-name');if(sn)sn.value=nm}
+      }
       loadRubrics();loadDashSessions();loadCompareSessions();loadClassStudents();updateStepState();autoCollapseStep0();if(window.makaTourMaybeOffer)makaTourMaybeOffer('profile');if(window.gsReady)gsReady('profile');
     }catch(e){}
   }).catch(function(){});
@@ -1163,7 +1193,7 @@ function loadProfileBg(){
 // Cache the class list so result cards can offer an "assign to student" dropdown.
 function loadClassStudents(){
   if(!sb||!USER)return;
-  sb.from('students').select('id,name').eq('teacher_id',USER.id).order('name').then(function(res){
+  sb.from('students').select('id,name,gender,year_level').eq('teacher_id',USER.id).order('name').then(function(res){
     CLASS_STUDENTS=(res&&res.data)||[];
     if(results.length)renderResults(results);
     if(res&&!res.error){if(window.makaTourMaybeOffer)makaTourMaybeOffer('students');if(window.gsReady)gsReady('students')}
@@ -1195,25 +1225,57 @@ if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){set
 function toggleDD(){var open=document.getElementById('dropdown').classList.toggle('open');var b=document.getElementById('avatar-btn');if(b)b.setAttribute('aria-expanded',open?'true':'false')}
 document.addEventListener('click',function(e){if(document.getElementById('avatar-btn')&&!document.getElementById('avatar-btn').contains(e.target)){document.getElementById('dropdown').classList.remove('open');document.getElementById('avatar-btn').setAttribute('aria-expanded','false')}});
 
-function saveName(){if(!sb||!USER)return;var n=document.getElementById('set-name').value.trim();if(!n)return;sb.from('profiles').update({display_name:n}).eq('id',USER.id).then(function(){PROFILE.display_name=n;document.getElementById('dd-name').textContent=n;document.getElementById('av-init').textContent=n[0].toUpperCase();showStatus('name-status','Saved','ok')}).catch(function(){})}
-function saveKey(){if(!sb||!USER)return;var k=document.getElementById('set-key').value.trim();if(!k)return;sb.from('profiles').update({gemini_key:k}).eq('id',USER.id).then(function(){PROFILE.gemini_key=k;document.getElementById('apikey').value=k;showStatus('key-status','Saved','ok')}).catch(function(){})}
-function saveStyle(){if(!sb||!USER)return;var s=document.getElementById('set-style').value.trim();sb.from('profiles').update({writing_style:s||null}).eq('id',USER.id).then(function(){PROFILE.writing_style=s;showStatus('style-status','Saved','ok')}).catch(function(){})}
+function saveName(){if(!sb||!USER)return;var n=document.getElementById('set-name').value.trim();if(!n)return;sb.from('profiles').update({display_name:n}).eq('id',USER.id).then(function(res){if(res&&res.error){showStatus('name-status','Not saved: '+res.error.message,'err');return}PROFILE.display_name=n;document.getElementById('dd-name').textContent=n;document.getElementById('av-init').textContent=n[0].toUpperCase();showStatus('name-status','Saved','ok')}).catch(function(e){showStatus('name-status','Not saved: '+(e.message||e),'err')})}
+function saveKey(){if(!sb||!USER)return;var k=document.getElementById('set-key').value.trim();if(!k)return;sb.from('profiles').update({gemini_key:k}).eq('id',USER.id).then(function(res){if(res&&res.error){showStatus('key-status','Not saved: '+res.error.message,'err');return}PROFILE.gemini_key=k;document.getElementById('apikey').value=k;showStatus('key-status','Saved','ok')}).catch(function(e){showStatus('key-status','Not saved: '+(e.message||e),'err')})}
+function saveStyle(){if(!sb||!USER)return;var s=document.getElementById('set-style').value.trim();sb.from('profiles').update({writing_style:s||null}).eq('id',USER.id).then(function(res){if(res&&res.error){showStatus('style-status','Not saved: '+res.error.message,'err');return}PROFILE.writing_style=s;showStatus('style-status','Saved','ok')}).catch(function(e){showStatus('style-status','Not saved: '+(e.message||e),'err')})}
 // Remove stored PDFs + result rows (+ optionally the session rows) so deleting never leaves student files behind.
+async function removeStored(paths){
+  var failed=0;
+  for(var i=0;i<paths.length;i+=100){
+    try{var rm=await sb.storage.from('student-pdfs').remove(paths.slice(i,i+100));if(rm&&rm.error)failed+=Math.min(100,paths.length-i)}
+    catch(e){failed+=Math.min(100,paths.length-i)}
+  }
+  return failed;
+}
+// Remove stored PDFs + result rows. Pages through results (Supabase returns at most 1000 rows per request).
 async function purgeResults(filter){
   // filter: {session_id:id} or {teacher_id:id}
-  var q=sb.from('student_results').select('pdf_path');
-  Object.keys(filter).forEach(function(k){q=q.eq(k,filter[k])});
-  var got=await q,paths=((got&&got.data)||[]).map(function(r){return r.pdf_path}).filter(Boolean);
-  for(var i=0;i<paths.length;i+=100){try{await sb.storage.from('student-pdfs').remove(paths.slice(i,i+100))}catch(e){}}
+  var paths=[];
+  for(var from=0;;from+=1000){
+    var q=sb.from('student_results').select('pdf_path');
+    Object.keys(filter).forEach(function(k){q=q.eq(k,filter[k])});
+    var got=await q.range(from,from+999);
+    if(got&&got.error)throw new Error(got.error.message);
+    var rows=(got&&got.data)||[];
+    rows.forEach(function(r){if(r.pdf_path)paths.push(r.pdf_path)});
+    if(rows.length<1000)break;
+  }
+  var failed=await removeStored(paths);
   var d=sb.from('student_results').delete();
   Object.keys(filter).forEach(function(k){d=d.eq(k,filter[k])});
   var res=await d;if(res&&res.error)throw new Error(res.error.message);
+  return failed;
+}
+// Everything in the teacher's storage folder — catches files no result row points to any more.
+async function purgeStorageFolder(uid){
+  var failed=0;
+  for(var guard=0;guard<50;guard++){
+    var ls=await sb.storage.from('student-pdfs').list(uid,{limit:1000});
+    if(ls&&ls.error)break;
+    var names=((ls&&ls.data)||[]).map(function(f){return f.name}).filter(Boolean);
+    if(!names.length)break;
+    var f=await removeStored(names.map(function(n){return uid+'/'+n}));
+    failed+=f;if(f===names.length)break; // nothing could be removed — stop rather than loop
+  }
+  return failed;
 }
 async function deleteAccountData(uid){
-  await purgeResults({teacher_id:uid});
+  var failed=await purgeResults({teacher_id:uid});
+  failed+=await purgeStorageFolder(uid);
   var tables=['sessions','report_comments','rubrics','students'];
   for(var i=0;i<tables.length;i++){var r=await sb.from(tables[i]).delete().eq('teacher_id',uid);if(r&&r.error)throw new Error(tables[i]+': '+r.error.message)}
   var pr=await sb.from('profiles').delete().eq('id',uid);if(pr&&pr.error)throw new Error('profile: '+pr.error.message);
+  if(failed)throw new Error(failed+' stored file'+(failed!==1?'s':'')+' could not be removed — your other data was deleted; ask the person who runs Māka to clear the rest');
 }
 function deleteAcct(){
   if(!sb||!USER)return;
@@ -1317,7 +1379,7 @@ function renderFiles(){
   el.innerHTML=files.map(function(f,i){return'<li class="fitem"><span style="font-size:16px;color:var(--text3);display:inline-flex">'+fileIcon(f)+'</span><span class="fname">'+esc(f.name)+'</span>'+fileTag(f)+'<span class="fsize">'+fmt(f.size)+'</span><button class="xbtn" data-i="'+i+'" aria-label="Remove '+esc(f.name)+'">×</button></li>'}).join('');
   cnt.textContent=files.length+' file'+(files.length!==1?'s':'')+' ready';
   cnt.style.display='block';
-  el.querySelectorAll('.xbtn').forEach(function(b){b.onclick=function(){files.splice(parseInt(b.dataset.i),1);renderFiles();updMark()}});
+  el.querySelectorAll('.xbtn').forEach(function(b){b.onclick=function(){if(MARKING){showToast('Wait until marking finishes before removing files.','warn');return}files.splice(parseInt(b.dataset.i),1);renderFiles();updMark()}});
   updateStepState();
 }
 function updMark(){document.getElementById('markbtn').disabled=files.length===0}
@@ -1463,9 +1525,10 @@ function attachRevision(res,revCtx){
 }
 function getRev(r){return r._rev||fbParseMeta(r.nzc_reference||r.nzcReference).rev||null}
 // Build a revision context (prior result + original file parts) for each uploaded file.
-async function buildRevCtxs(){
-  if(!RESUB.on||!RESUB.sessionId||!RESUB.results.length)return files.map(function(){return null});
-  return await Promise.all(files.map(async function(f){
+async function buildRevCtxs(list){
+  list=list||files;
+  if(!RESUB.on||!RESUB.sessionId||!RESUB.results.length)return list.map(function(){return null});
+  return await Promise.all(list.map(async function(f){
     var pr=priorFor(f);if(!pr)return null;
     var parts=await originalParts(pr);
     return{prior:pr,parts:parts};
@@ -1522,7 +1585,7 @@ var dz=document.getElementById('dropzone');
 dz.ondragover=function(e){e.preventDefault();e.stopPropagation();dz.classList.add('dragover')};
 dz.ondragleave=function(){dz.classList.remove('dragover')};
 dz.ondrop=function(e){e.preventDefault();e.stopPropagation();dz.classList.remove('dragover');addFiles(e.dataTransfer.files)};
-document.getElementById('clearbtn').onclick=function(){files=[];results=[];currentSessId=null;try{localStorage.removeItem('maka-results')}catch(e){}renderFiles();updMark();document.getElementById('rsec').style.display='none';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='none';document.getElementById('save-status').innerHTML=''};
+document.getElementById('clearbtn').onclick=function(){if(MARKING){showToast('Wait until marking finishes before clearing.','warn');return}files=[];results=[];currentSessId=null;try{localStorage.removeItem('maka-results')}catch(e){}renderFiles();updMark();document.getElementById('rsec').style.display='none';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='none';document.getElementById('save-status').innerHTML=''};
 document.getElementById('csvbtn').onclick=exportCSV;
 setTimeout(function(){if(typeof syncGcControls==='function')syncGcControls()},0);
 document.getElementById('printbtn').onclick=printSheets;
@@ -1535,26 +1598,64 @@ function getJSPDF(){var ns=window.jspdf||window.jsPDF;return ns&&(ns.jsPDF||ns)}
 // Render plain text into a simple multi-page PDF (real embedded text, not an image) and
 // return its base64 data. Used so typed Word/text files reach Gemini as a PDF like everything
 // else, while staying just as readable as sending the raw text (the text layer is real).
+// Render text into a PDF by drawing it on canvas pages with the browser's own fonts. jsPDF's built-in
+// fonts can't encode macrons (ā ē ī ō ū) or curly quotes — they came out garbled or vanished — so text
+// pages are painted as images instead. Used only for the stored "View your work" copy; Gemini gets the text itself.
 function textToPDFBase64(text){
   var JSP=getJSPDF();if(!JSP)throw new Error('PDF library still loading — try again in a moment.');
-  var doc=new JSP({unit:'pt',format:'a4'});
-  var pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight(),m=48,y=56;
-  doc.setFont('helvetica','normal');doc.setFontSize(11);
-  var lines=doc.splitTextToSize(text,pw-m*2);
-  lines.forEach(function(line){if(y>ph-48){doc.addPage();y=56}doc.text(line,m,y);y+=15});
+  var W=1240,H=1754,M=96,FS=27,LH=40; // A4 at 150dpi
+  var cv=document.createElement('canvas');cv.width=W;cv.height=H;
+  var cx=cv.getContext('2d');
+  var font=FS+'px "DM Sans", "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif';
+  cx.font=font;
+  var lines=[];
+  String(text).replace(/\r\n?/g,'\n').split('\n').forEach(function(par){
+    if(!par.trim()){lines.push('');return}
+    var words=par.replace(/\t/g,'    ').split(/(\s+)/),cur='';
+    words.forEach(function(w){
+      var test=cur+w;
+      if(cx.measureText(test).width>W-M*2&&cur.trim()){lines.push(cur.replace(/\s+$/,''));cur=w.replace(/^\s+/,'')}
+      else cur=test;
+      while(cx.measureText(cur).width>W-M*2&&cur.length>1){ // a single very long word: hard-break it
+        var k=cur.length;while(k>1&&cx.measureText(cur.slice(0,k)).width>W-M*2)k--;
+        lines.push(cur.slice(0,k));cur=cur.slice(k);
+      }
+    });
+    lines.push(cur);
+  });
+  var perPage=Math.floor((H-M*2)/LH),doc=new JSP({unit:'pt',format:'a4'});
+  var pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight();
+  for(var pg=0;pg*perPage<Math.max(lines.length,1);pg++){
+    cx.fillStyle='#ffffff';cx.fillRect(0,0,W,H);cx.fillStyle='#111111';cx.font=font;cx.textBaseline='top';
+    lines.slice(pg*perPage,(pg+1)*perPage).forEach(function(l,i){cx.fillText(l,M,M+i*LH)});
+    if(pg>0)doc.addPage();
+    doc.addImage(cv.toDataURL('image/jpeg',0.82),'JPEG',0,0,pw,ph);
+  }
   return doc.output('datauristring').split(',')[1];
 }
-// Render an image file onto a single PDF page (scaled to fit) and return its base64 data.
+// Decode an image (browsers apply the photo's EXIF rotation when drawing it), shrink it to a sensible size
+// and return a JPEG — phone photos are often 4000px+, which is slow, huge, and was being stretched/sideways.
+async function imageToJpeg(file,maxDim){
+  maxDim=maxDim||2000;
+  var url=URL.createObjectURL(file);
+  try{
+    var img=await new Promise(function(res,rej){var im=new Image();im.onload=function(){res(im)};im.onerror=function(){rej(new Error('Could not decode this image — it may be corrupted, or an iPhone HEIC photo. Save it as JPG or PNG and try again.'))};im.src=url});
+    var w=img.naturalWidth,h=img.naturalHeight,sc=Math.min(1,maxDim/Math.max(w,h));
+    var cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(w*sc));cv.height=Math.max(1,Math.round(h*sc));
+    var cx=cv.getContext('2d');cx.fillStyle='#ffffff';cx.fillRect(0,0,cv.width,cv.height);cx.drawImage(img,0,0,cv.width,cv.height);
+    var dataURL=cv.toDataURL('image/jpeg',0.85);
+    return{dataURL:dataURL,b64:dataURL.split(',')[1],w:cv.width,h:cv.height};
+  }finally{URL.revokeObjectURL(url)}
+}
+// Render an image file onto a single PDF page (scaled to fit, correct way up) and return its base64 data.
 async function imageToPDFBase64(file){
   var JSP=getJSPDF();if(!JSP)throw new Error('PDF library still loading — try again in a moment.');
-  var dataURL=await new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result)};r.onerror=function(){rej(new Error('Could not read this image.'))};r.readAsDataURL(file)});
-  var img=await new Promise(function(res,rej){var im=new Image();im.onload=function(){res(im)};im.onerror=function(){rej(new Error('Could not decode this image — it may be corrupted.'))};im.src=dataURL});
-  var doc=new JSP({unit:'pt',format:'a4'});
+  var j=await imageToJpeg(file,2000);
+  var doc=new JSP({unit:'pt',format:'a4',orientation:j.w>j.h?'landscape':'portrait'});
   var pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight(),m=24;
-  var maxW=pw-m*2,maxH=ph-m*2;
-  var scale=Math.min(maxW/img.naturalWidth,maxH/img.naturalHeight,1);
-  var w=img.naturalWidth*scale,h=img.naturalHeight*scale,x=(pw-w)/2,y=(ph-h)/2;
-  doc.addImage(dataURL,file.type==='image/png'?'PNG':'JPEG',x,y,w,h);
+  var scale=Math.min((pw-m*2)/j.w,(ph-m*2)/j.h);
+  var w=j.w*scale,h=j.h*scale;
+  doc.addImage(j.dataURL,'JPEG',(pw-w)/2,(ph-h)/2,w,h);
   return doc.output('datauristring').split(',')[1];
 }
 // Convert base64 PDF data into a real File — used so the SAME converted PDF can both be sent
@@ -1631,10 +1732,27 @@ async function ensurePDFFile(file){
   }
   return pdfBase64ToFile(pdfB64,stripExt(file.name)+'.pdf');
 }
+// What Gemini receives for a file. Typed work (Word / text) is sent as the text itself — exact characters,
+// macrons and quotes intact, and cheaper than a PDF. Photos go as a right-way-up, resized JPEG; PDFs as-is.
+var GEMINI_MAX_INLINE=15*1024*1024; // Gemini rejects requests over ~20MB of inline data
 async function getContentParts(file){
-  var pdf=await ensurePDFFile(file);
-  var b64=await toB64(pdf);
-  return[{inline_data:{mime_type:pdf.type||'application/octet-stream',data:b64}}];
+  var t=file.type||'',name=(file.name||'').toLowerCase();
+  var isDocx=name.slice(-5)==='.docx'||t.indexOf('officedocument.wordprocessingml')!==-1;
+  var isTxt=t==='text/plain'||name.slice(-4)==='.txt';
+  if(isDocx||isTxt){
+    var txt='';
+    if(isTxt)txt=(await file.text()).trim();
+    else{try{txt=await extractDocxText(file)}catch(e){txt=''}if(!txt)try{txt=await extractDocxTextFallback(file)}catch(e){}}
+    if(!txt)throw new Error(isTxt?'This text file is empty.':'No text found in this Word file — try saving it as a PDF.');
+    return[{text:'THE STUDENT’S WORK (typed text, copied exactly as written — this is the work to assess):\n<<<\n'+txt.normalize('NFC')+'\n>>>'}];
+  }
+  if(t.indexOf('image/')===0||/\.(jpe?g|png)$/.test(name)){
+    var j=await imageToJpeg(file,2000);
+    return[{inline_data:{mime_type:'image/jpeg',data:j.b64}}];
+  }
+  var b64=await toB64(file);
+  if(b64.length>GEMINI_MAX_INLINE)throw new Error('“'+file.name+'” is too large to send to Gemini ('+Math.round(b64.length*0.75/1048576)+' MB). Save a smaller or lower-resolution copy (under about 10 MB) and try again.');
+  return[{inline_data:{mime_type:(t==='application/pdf'||name.slice(-4)==='.pdf')?'application/pdf':(t||'application/octet-stream'),data:b64}}];
 }
 // Turn raw Gemini API errors into clear, actionable guidance for teachers.
 function friendlyGeminiError(status,msg){
@@ -1689,6 +1807,7 @@ async function gemini(key,parts,onRetry,opts){
   function makeBody(){
     var gc={temperature:0.3,maxOutputTokens:tokenSteps[tokenIdx]};
     if(!GEMINI_NO_THINK_CFG[GEMINI_MODELS[mi]])gc.thinkingConfig={thinkingBudget:0};
+    if(opts&&opts.json)gc.responseMimeType='application/json'; // forces valid JSON (quotes in student text no longer break parsing)
     return JSON.stringify({contents:[{parts:parts}],generationConfig:gc});
   }
   var maxTries=(opts&&opts.maxTries)||8,delay=(opts&&opts.delay)||2000,last={kind:'',status:0,msg:'',model:''};
@@ -1880,7 +1999,7 @@ async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLi
       '      "criterion": "The exact criterion name (from the rubric) this improve item targets.",',
       '      "quote": "A SHORT verbatim quote from the student\'s own writing to work on. Never invented. Empty \\"\\" if the work has no readable text.",',
       '      "suggestion": "Warm, specific advice to the student (you/your) on HOW to move THIS criterion up exactly ONE rubric level (e.g. from a 2 to a 3, or a 3 to a 4) — never aim further than one level at a time. Name the ONE concrete thing the next level up requires that is currently missing or weak, based on the rubric\'s own next-level wording, and say concretely what to add, change or do differently to reach it.",',
-      '      "example": "A short model rewrite or worked example showing what THIS one-level jump could look like in their own work — realistic for a Year 7-8 student."',
+      '      "example": "A short model rewrite or worked example showing what THIS one-level jump could look like in their own work — realistic for a '+lv.years+' student."',
       '    }',
       '  ],',
       '  "goal": "One clear, encouraging learning goal for NEXT time, written directly to the student, aimed at the single biggest one-level jump available to them. Start with \\"Next time\\". One sentence."',
@@ -1904,11 +2023,11 @@ async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLi
       ].filter(Boolean).join('\n');
       if(revCtx.parts)sendParts=[{text:'ORIGINAL (previous) VERSION:'}].concat(revCtx.parts,[{text:'REVISED (new) VERSION:'}],cparts);
     }
-    var rr=parseJSON(await gemini(key,sendParts.concat([{text:'File: "'+file.name+'"\n\n'+p1+revBlock}]),onBusy));
-    rr.fileName=rr.fileName||file.name;
+    var rr=parseJSON(await gemini(key,sendParts.concat([{text:'File: "'+file.name+'"\n\n'+p1+revBlock}]),onBusy,{json:true}));
+    rr.fileName=file.name; // never trust the model's echo — duplicates broke saving and resubmission matching
     return rr;
     });
-    var mod=await md(async function(){
+    var mod;try{mod=await md(async function(){
     // Second AI pass: an independent moderation review of the scores and feedback.
     progressItems[idx].phase='Moderating…';renderProg();
     var p2=[
@@ -1930,12 +2049,15 @@ async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLi
       '',
       'Teacher writing style to match: '+style,
       '',
+      'RUBRIC — the exact criteria and level descriptions to check every score against:',
+      rubric,
+      '',
       'Original marking: '+JSON.stringify(r),
       '',
       'Return ONLY the updated raw JSON with the same keys (fileName, summary, criteria, praiseQuote, praise, improve, goal). Keep summary as a warm 2-3 sentence overall comment to the student. No markdown, no explanation.'
     ].join('\n');
-    var mm=parseJSON(await gemini(key,cparts.concat([{text:p2}]),onBusy));
-    mm.fileName=r.fileName;
+    var mm=parseJSON(await gemini(key,cparts.concat([{text:p2}]),onBusy,{json:true}));
+    mm.fileName=file.name;
     // Safeguard: if moderation dropped per-criterion comments (or a whole field), fall back to the first pass.
     preserveComments(mm,r);
     if(!Array.isArray(mm.improve)||!mm.improve.length)mm.improve=r.improve;
@@ -1954,6 +2076,14 @@ async function markOne(key,file,rubric,area,level,task,style,idx,markLimit,modLi
     attachRevision(mm,revCtx);
     return mm;
     });
+    }catch(me){
+      // Moderation is a quality pass: if it fails (busy/limit/odd reply), keep the good first-pass mark
+      // rather than throwing the whole file away and re-marking it.
+      if(/api key|refused|not valid|looks invalid/i.test(me.message||''))throw me;
+      mod=r;mod.fileName=file.name;
+      scrubResultLevelLanguage(mod);verifyQuotes(mod,plainText);finaliseGrade(mod);attachRevision(mod,revCtx);
+      mod._unmoderated=true;
+    }
     progressItems[idx].status='done';progressItems[idx].phase='';renderProg();
     return mod;
   }catch(e){progressItems[idx].status='error';progressItems[idx].phase='';progressItems[idx].err=e.message;renderProg();return{fileName:file.name,_error:e.message}}
@@ -1994,28 +2124,44 @@ function scrubResultLevelLanguage(r){
   if(r.goal)r.goal=scrubLevelLanguage(r.goal);
 }
 // Compute criteriaTotal + overallScore from the criterion scores so the total is always arithmetically correct.
-function gradeBand(total){return total>=21?'Exceeds':total>=14?'Achieved':total>=8?'Approaching':'Beginning'}
+// Bands keep the original /25 cut-offs (21/14/8) as proportions, so rubrics with more or fewer criteria still band correctly.
+function gradeBand(total,max){var p=total/(max||25);return p>=0.84?'Exceeds':p>=0.56?'Achieved':p>=0.32?'Approaching':'Beginning'}
 function finaliseGrade(r){
   var crit=(r&&r.criteria)||[];
-  var total=crit.reduce(function(s,c){return s+(parseInt(c.score)||0)},0);
-  r.criteriaTotal=total+'/25';
-  r.overallScore=gradeBand(total);
+  crit.forEach(function(c){if(c)c.score=Math.max(1,Math.min(5,parseInt(c.score)||1))});
+  var total=crit.reduce(function(s,c){return s+(parseInt(c.score)||0)},0),max=(crit.length||5)*5;
+  r.criteriaTotal=total+'/'+max;
+  r.overallScore=gradeBand(total,max);
   return r;
 }
 
+// The file a result card was marked from (kept on the result, so it stays right even after files are
+// removed/added). Re-mark must never pick "whatever is at this index now".
+function remarkFile(idx){
+  if(MARKING){showToast('Wait until marking finishes, then re-mark.','warn');return null}
+  var r=results[idx],f=r&&r._file;
+  if(!f){showToast('The original file for this card isn’t available any more — upload it again to re-mark.','warn');return null}
+  if(r._remarking)return null;
+  return f;
+}
 async function remarkStu(idx){
   var key=getKey();if(!key)return;
   var area=document.getElementById('la').value,level=document.getElementById('cl').value,task=document.getElementById('task').value,rub=document.getElementById('rubric').value.trim()||DEFAULT_RUBRIC;
-  progressItems[idx]={name:files[idx].name,status:'pending',phase:'',err:''};
+  var file=remarkFile(idx);if(!file)return;
+  var prev=results[idx]||{};prev._remarking=true;
+  progressItems[idx]={name:file.name,status:'pending',phase:'',err:''};
   document.getElementById('progress').style.display='block';renderProg();
-  var prev=results[idx]||{};
-  var res=await markOne(key,files[idx],rub,area,level,task,getStyle(),idx);
-  res._file=files[idx];if(prev.assignTo)res.assignTo=prev.assignTo;
-  results[idx]=res;document.getElementById('progress').style.display='none';renderResults(results);
-  if(currentSessId&&!res._error&&sb&&USER)sb.from('student_results').upsert({session_id:currentSessId,teacher_id:USER.id,file_name:resultSaveName(res),overall_score:res.overallScore,criteria_total:res.criteriaTotal,criteria:res.criteria,strengths:fbStrengthsSave(res),next_steps:fbStepsSave(res),nzc_reference:fbMetaSave(res)},{onConflict:'session_id,file_name'}).then(function(){}).catch(function(){});
+  var rc=null;try{if(RESUB.on)rc=(await buildRevCtxs([file]))[0]}catch(e){}
+  var res=await markOne(key,file,rub,area,level,task,getStyle(),idx,null,null,rc);
+  res._file=file;if(prev.assignTo)res.assignTo=prev.assignTo;
+  results[idx]=res;document.getElementById('progress').style.display='none';renderResults(results);persistResults();
+  if(!res._error)saveOneResult(idx);
 }
 
 var MARKING=false;
+// Errors a retry can't fix (bad key, unreadable/oversized file, declined content) — don't burn quota retrying them.
+var PERMANENT_ERR=/api key|refused|not valid|looks invalid|could not read|could not decode|too large|no text found|is empty|declined|HEIC|cut off|used up its daily/i;
+function retryable(r){return r&&r._error&&!PERMANENT_ERR.test(r._error)}
 async function runMarking(){
   if(MARK_MODE==='test')return runTestMarking();
   if(MARK_MODE==='glow')return runGlowMarking();
@@ -2032,19 +2178,20 @@ async function runMarking(){
     var sname=document.getElementById('session-name').value.trim()||('Session '+new Date().toLocaleDateString('en-NZ'));
     if(RESUB.on&&RESUB.sessionId&&!/resub/i.test(sname))sname=sname+' — Resubmission';
     document.getElementById('rsec').style.display='block';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='block';document.getElementById('save-status').innerHTML='';
-    progressItems=files.map(function(f){return{name:f.name,status:'pending',phase:'',err:''}});renderProg();
-    var out=new Array(files.length);
+    var batch=files.slice(); // the run works on its own snapshot: removing/adding files mid-run can't misalign results
+    progressItems=batch.map(function(f){return{name:f.name,status:'pending',phase:'',err:''}});renderProg();
+    var out=new Array(batch.length);
     // Resubmission: pull each student's prior result + original file up front.
-    var revCtxs=await buildRevCtxs();
+    var revCtxs=await buildRevCtxs(batch);
     // True two-stage pipeline: marking (up to 3) and moderation (up to 3) are throttled
     // separately, so the moment a file starts moderating, a marking slot frees and the next
     // file begins marking straight away — marking and moderation run in parallel throughout.
-    var markLimit=makeLimiter(3),modLimit=makeLimiter(3);
-    await Promise.all(files.map(function(f,i){
+    var markLimit=makeLimiter(2),modLimit=makeLimiter(2); // gentle on free-tier per-minute limits
+    await Promise.all(batch.map(function(f,i){
       return markOne(key,f,rub,area,level,task,style,i,markLimit,modLimit,revCtxs[i]).then(function(res){out[i]=res});
     }));
-    for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r&&r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(2500);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markOne(key,files[i],rub,area,level,task,style,i,null,null,revCtxs[i])}));fail.forEach(function(i,j){out[i]=ret[j]})}
-    out.forEach(function(r,i){r._file=files[i]});
+    for(var a=0;a<2;a++){var fail=out.map(function(r,i){return retryable(r)?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(2500);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markOne(key,batch[i],rub,area,level,task,style,i,markLimit,modLimit,revCtxs[i])}));fail.forEach(function(i,j){out[i]=ret[j]})}
+    out.forEach(function(r,i){r._file=batch[i]});
     results=out;document.getElementById('progress').style.display='none';renderResults(out);
     var okCount=out.filter(function(r){return!r._error}).length;
     var failCount=out.length-okCount;
@@ -2099,7 +2246,7 @@ function finaliseTest(r,expectedTotal){
 function countQuestions(paper,answerKey){
   function maxNum(text){
     var max=0;String(text||'').split('\n').forEach(function(line){
-      var m=line.match(/^\s*(\d{1,3})[.)]/);
+      var m=line.match(/^\s*(?:Q(?:uestion)?\s*)?(\d{1,3})\s*[.):\-]/i);
       if(m){var n=parseInt(m[1],10);if(n>max)max=n}
     });
     return max;
@@ -2253,7 +2400,7 @@ async function markTest(key,file,paper,paperFile,answerKey,area,level,idx,limit,
         '  "improve": [{"suggestion": "One short, specific next-step tip written to the student (you/your). One sentence."}]',
         '}',
         '',
-        'The test has exactly '+expectedTotal+' question'+(expectedTotal===1?'':'s')+'. Include EXACTLY one entry in "questions" for each, numbered 1 to '+expectedTotal+', in order — even ones left blank. Give 1-2 items in "improve". Write summary and tips directly to the student (you/your), warm and encouraging.'
+        (expectedTotal?'The test has exactly '+expectedTotal+' question'+(expectedTotal===1?'':'s')+'. Include EXACTLY one entry in "questions" for each, numbered 1 to '+expectedTotal+', in order — even ones left blank. Give 1-2 items in "improve". Write summary and tips directly to the student (you/your), warm and encouraging.':'Count every numbered question on the test paper yourself, and include exactly one entry in "questions" for each one, in order — even ones the student left blank.')
       ].join('\n');
       var answerParts=cparts,pFull=p;
       if(revCtx&&revCtx.prior){
@@ -2267,8 +2414,8 @@ async function markTest(key,file,paper,paperFile,answerKey,area,level,idx,limit,
         if(revCtx.parts)answerParts=[{text:'FIRST ATTEMPT:'}].concat(revCtx.parts,[{text:'NEW ATTEMPT:'}],cparts);
       }
       var sendParts=paperFile?[{text:'TEST PAPER PDF:'}].concat(paperParts,[{text:"STUDENT'S ANSWER FILE:"}],answerParts):answerParts;
-      var r=parseJSON(await gemini(key,sendParts.concat([{text:pFull}]),onBusy));
-      r.fileName=r.fileName||file.name;
+      var r=parseJSON(await gemini(key,sendParts.concat([{text:pFull}]),onBusy,{json:true}));
+      r.fileName=file.name;
       scrubResultLevelLanguage(r);
       finaliseTest(r,expectedTotal);
       attachRevision(r,revCtx);
@@ -2311,12 +2458,13 @@ async function runTestMarking(){
     var expectedTotal=countQuestions(paper,answerKey);
     var paperFile=TEST_PAPER_FILE;
     document.getElementById('rsec').style.display='block';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='block';document.getElementById('save-status').innerHTML='';
-    progressItems=files.map(function(f){return{name:f.name,status:'pending',phase:'',err:''}});renderProg();
-    var out=new Array(files.length),limit=makeLimiter(3);
-    var revCtxs=await buildRevCtxs();
-    await Promise.all(files.map(function(f,i){return markTest(key,f,paper,paperFile,answerKey,area,level,i,limit,revCtxs[i],expectedTotal).then(function(res){out[i]=res})}));
-    for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r&&r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(2500);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markTest(key,files[i],paper,paperFile,answerKey,area,level,i,null,revCtxs[i],expectedTotal)}));fail.forEach(function(i,j){out[i]=ret[j]})}
-    out.forEach(function(r,i){r._file=files[i]});
+    var batch=files.slice();
+    progressItems=batch.map(function(f){return{name:f.name,status:'pending',phase:'',err:''}});renderProg();
+    var out=new Array(batch.length),limit=makeLimiter(2);
+    var revCtxs=await buildRevCtxs(batch);
+    await Promise.all(batch.map(function(f,i){return markTest(key,f,paper,paperFile,answerKey,area,level,i,limit,revCtxs[i],expectedTotal).then(function(res){out[i]=res})}));
+    for(var a=0;a<2;a++){var fail=out.map(function(r,i){return retryable(r)?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(2500);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markTest(key,batch[i],paper,paperFile,answerKey,area,level,i,limit,revCtxs[i],expectedTotal)}));fail.forEach(function(i,j){out[i]=ret[j]})}
+    out.forEach(function(r,i){r._file=batch[i]});
     results=out;document.getElementById('progress').style.display='none';renderResults(out);
     var okCount=out.filter(function(r){return!r._error}).length,failCount=out.length-okCount;
     if(failCount){var firstErr=(out.find(function(r){return r&&r._error})||{})._error||'';if(okCount===0&&firstErr)showToast(firstErr,'err',8000);else showToast(failCount+" test"+(failCount>1?"s":"")+" couldn't be marked — open the red card"+(failCount>1?"s":"")+" to retry",'warn',7000)}
@@ -2398,8 +2546,8 @@ async function markGlowOne(key,file,area,level,task,style,idx,limit){
         'Teacher writing style to match: '+style,
         'TONE: write everything directly TO the student (you/your), warm and encouraging, in short plain words a '+lv.ages+' year old reads easily. Never talk about the student in third person and never sound harsh.'
       ].join('\n');
-      var rr=parseJSON(await gemini(key,cparts.concat([{text:'File: "'+file.name+'"\n\n'+p}]),onBusy));
-      rr.fileName=rr.fileName||file.name;
+      var rr=parseJSON(await gemini(key,cparts.concat([{text:'File: "'+file.name+'"\n\n'+p}]),onBusy,{json:true}));
+      rr.fileName=file.name;
       rr.type='glow';rr.overallScore='Glow & Grow';rr.criteriaTotal='—';rr.criteria=[];
       if(!Array.isArray(rr.glows))rr.glows=[];
       rr.glows=rr.glows.slice(0,2);
@@ -2425,11 +2573,12 @@ async function runGlowMarking(){
     var area=document.getElementById('la').value,level=document.getElementById('cl').value,task=document.getElementById('task').value,style=getStyle();
     var sname=document.getElementById('session-name').value.trim()||('Glow & Grow '+new Date().toLocaleDateString('en-NZ'));
     document.getElementById('rsec').style.display='block';document.getElementById('results').innerHTML='';document.getElementById('progress').style.display='block';document.getElementById('save-status').innerHTML='';
-    progressItems=files.map(function(f){return{name:f.name,status:'pending',phase:'',err:''}});renderProg();
-    var out=new Array(files.length),limit=makeLimiter(3);
-    await Promise.all(files.map(function(f,i){return markGlowOne(key,f,area,level,task,style,i,limit).then(function(res){out[i]=res})}));
-    for(var a=0;a<2;a++){var fail=out.map(function(r,i){return r&&r._error?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(2500);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markGlowOne(key,files[i],area,level,task,style,i,null)}));fail.forEach(function(i,j){out[i]=ret[j]})}
-    out.forEach(function(r,i){r._file=files[i]});
+    var batch=files.slice();
+    progressItems=batch.map(function(f){return{name:f.name,status:'pending',phase:'',err:''}});renderProg();
+    var out=new Array(batch.length),limit=makeLimiter(2);
+    await Promise.all(batch.map(function(f,i){return markGlowOne(key,f,area,level,task,style,i,limit).then(function(res){out[i]=res})}));
+    for(var a=0;a<2;a++){var fail=out.map(function(r,i){return retryable(r)?i:-1}).filter(function(i){return i!==-1});if(!fail.length)break;await sleep(2500);var ret=await Promise.all(fail.map(function(i){progressItems[i].status='pending';progressItems[i].err='';progressItems[i].phase='Retrying…';renderProg();return markGlowOne(key,batch[i],area,level,task,style,i,limit)}));fail.forEach(function(i,j){out[i]=ret[j]})}
+    out.forEach(function(r,i){r._file=batch[i]});
     results=out;document.getElementById('progress').style.display='none';renderResults(out);
     var okCount=out.filter(function(r){return!r._error}).length,failCount=out.length-okCount;
     if(failCount){var firstErr=(out.find(function(r){return r&&r._error})||{})._error||'';if(okCount===0&&firstErr)showToast(firstErr,'err',8000);else showToast(failCount+" file"+(failCount>1?"s":"")+" couldn't be done — open the red card"+(failCount>1?"s":"")+" to retry",'warn',7000)}
@@ -2470,8 +2619,9 @@ async function uploadPDF(file,teacherId){
     // Store the CONVERTED PDF, not the raw original — so "View your work" always opens a
     // real, renderable PDF regardless of whether the teacher uploaded a .docx/.txt/image.
     var pdfFile=await ensurePDFFile(file);
-    var path=teacherId+'/'+Date.now()+'_'+pdfFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-    var res=await sb.storage.from('student-pdfs').upload(path,pdfFile,{contentType:pdfFile.type||'application/octet-stream',upsert:true});
+    var uid=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():(Date.now()+'-'+Math.random().toString(36).slice(2));
+    var path=teacherId+'/'+uid+'_'+pdfFile.name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]/g,'_').slice(-80);
+    var res=await sb.storage.from('student-pdfs').upload(path,pdfFile,{contentType:pdfFile.type||'application/octet-stream',upsert:false});
     if(res.error){console.error('PDF upload error:',res.error.message);return null;}
     return path;
   }catch(e){console.error('PDF upload failed:',e.message);return null;}
@@ -2531,17 +2681,20 @@ function saveAllToProfiles(){
     function findPdf(r){var nm=resultSaveName(r);var m=rows.find(function(x){return x.file_name===nm});return m?m.pdf_path:null}
     return Promise.all(valid.map(function(r){var existing=findPdf(r);return existing?Promise.resolve(existing):(r._file?uploadPDF(r._file,USER.id):Promise.resolve(null))}))
     .then(function(paths){
-      return sb.from('student_results').upsert(valid.map(function(r,i){return{
+      return saveResultRows(valid.map(function(r,i){return{
         session_id:currentSessId,teacher_id:USER.id,file_name:resultSaveName(r),
         overall_score:r.overallScore,criteria_total:r.criteriaTotal,criteria:r.criteria,
         strengths:fbStrengthsSave(r),next_steps:fbStepsSave(r),
         nzc_reference:fbMetaSave(r),pdf_path:paths[i]||null
-      }}),{onConflict:'session_id,file_name'});
+      }}));
     }).then(function(up){
       if(up&&up.error)throw new Error(up.error.message);
       // Only after a successful upsert, delete rows from this session that are no longer present.
-      var orphans=rows.filter(function(x){return!newNames[x.file_name]}).map(function(x){return x.file_name});
+      var orphanRows=rows.filter(function(x){return!newNames[x.file_name]}),orphans=orphanRows.map(function(x){return x.file_name});
       if(!orphans.length)return null;
+      var keep={};valid.forEach(function(r){var e=findPdf(r);if(e)keep[e]=1});
+      var orphanPdfs=orphanRows.map(function(x){return x.pdf_path}).filter(function(p){return p&&!keep[p]});
+      if(orphanPdfs.length)sb.storage.from('student-pdfs').remove(orphanPdfs).catch(function(){});
       return sb.from('student_results').delete().eq('session_id',currentSessId).in('file_name',orphans);
     });
   }).then(function(){persistResults();done(true,'Saved to '+valid.length+' student profile'+(valid.length!==1?'s':''))})
@@ -2599,7 +2752,7 @@ function assignRowHTML(r,idx){
 }
 // A marked comprehension test: per-question ✓/✗, score, summary and tips.
 function renderTestCard(r,idx,editable){
-  if(r._error){var btn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkTest('+idx+')">'+ic('refresh')+'Retry</button>':'';var delBtn0=editable?'<button class="remark-btn" onclick="delResult('+idx+')" aria-label="Remove this result" title="Remove">'+ic('trash')+'</button>':'';return'<div class="rcard"><div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span>'+btn+delBtn0+'</div><div class="err">'+ic('alert')+' '+esc(r._error)+'</div></div>'}
+  if(r._error){var btn=editable&&r._file?'<button class="remark-btn" onclick="remarkTest('+idx+')">'+ic('refresh')+'Retry</button>':'';var delBtn0=editable?'<button class="remark-btn" onclick="delResult('+idx+')" aria-label="Remove this result" title="Remove">'+ic('trash')+'</button>':'';return'<div class="rcard"><div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span>'+btn+delBtn0+'</div><div class="err">'+ic('alert')+' '+esc(r._error)+'</div></div>'}
   var qs=r.questions||[];
   var score=r.score!=null?r.score:qs.reduce(function(a,q){return a+qMark(q)},0);
   var total=r.total!=null?r.total:qs.length;
@@ -2641,9 +2794,13 @@ function remarkTest(idx){
   var key=getKey();if(!key)return;
   var paper=document.getElementById('test-paper').value.trim(),answerKey=document.getElementById('test-key').value.trim();
   var area=document.getElementById('la').value,level=document.getElementById('cl').value;
+  if(!paper&&!TEST_PAPER_FILE){showToast('Paste or upload the test paper first, then re-mark.','warn');return}
+  var file=remarkFile(idx);if(!file)return;
+  var prev=results[idx]||{};prev._remarking=true;
   var expectedTotal=countQuestions(paper,answerKey);
-  progressItems[idx]={name:files[idx].name,status:'pending',phase:'',err:''};
-  markTest(key,files[idx],paper,TEST_PAPER_FILE,answerKey,area,level,idx,null,null,expectedTotal).then(function(res){res._file=files[idx];results[idx]=res;renderResults(results);persistResults();saveOneResult(idx)});
+  progressItems[idx]={name:file.name,status:'pending',phase:'',err:''};
+  document.getElementById('progress').style.display='block';renderProg();
+  markTest(key,file,paper,TEST_PAPER_FILE,answerKey,area,level,idx,null,null,expectedTotal).then(function(res){res._file=file;if(prev.assignTo)res.assignTo=prev.assignTo;results[idx]=res;document.getElementById('progress').style.display='none';renderResults(results);persistResults();saveOneResult(idx)});
 }
 // ── Google Classroom: short copy-and-paste comments (no Google sign-in needed) ──
 var GC_OPT={style:'full',score:true};
@@ -2814,8 +2971,8 @@ function spellHTML(sp){
     return'<li><span class="spell-wrong">'+esc(x.wrong)+'</span><span class="spell-arrow" aria-label="should be">→</span><span class="spell-right">'+esc(x.right)+'</span>'+(x.tip?'<span class="spell-tip">'+esc(x.tip)+'</span>':'')+'</li>'}).join('')+'</ul>';
 }
 function renderGlowCard(r,idx,editable){
-  var remarkBtn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkGlow('+idx+')">'+ic('refresh')+(r._error?'Retry':'Re-do')+'</button>':'';
-  if(r._error)return'<div class="rcard"><div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span>'+remarkBtn+'</div><div class="err">'+ic('alert')+' '+esc(r._error)+'</div></div>';
+  var remarkBtn=editable&&r._file?'<button class="remark-btn" onclick="remarkGlow('+idx+')">'+ic('refresh')+(r._error?'Retry':'Re-do')+'</button>':'';
+  if(r._error)return'<div class="rcard"><div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span><div style="display:flex;gap:6px">'+remarkBtn+(editable?'<button class="remark-btn" onclick="delResult('+idx+')" aria-label="Remove this result" title="Remove">'+ic('trash')+'</button>':'')+'</div></div><div class="err">'+ic('alert')+' '+esc(r._error)+'</div></div>';
   var gcBtn=gcBtnFor(idx,editable);
   var delBtn=editable?'<button class="remark-btn" onclick="delResult('+idx+')" aria-label="Remove this result" title="Remove">'+ic('trash')+'</button>':'';
   var fileLabel=r.fileName||r.file_name||'';
@@ -2847,22 +3004,23 @@ function renderGlowCard(r,idx,editable){
 async function remarkGlow(idx){
   var key=getKey();if(!key)return;
   var area=document.getElementById('la').value,level=document.getElementById('cl').value,task=document.getElementById('task').value;
-  progressItems[idx]={name:files[idx].name,status:'pending',phase:'',err:''};
+  var file=remarkFile(idx);if(!file)return;
+  var prev=results[idx]||{};prev._remarking=true;
+  progressItems[idx]={name:file.name,status:'pending',phase:'',err:''};
   document.getElementById('progress').style.display='block';renderProg();
-  var prev=results[idx]||{};
-  var res=await markGlowOne(key,files[idx],area,level,task,getStyle(),idx);
-  res._file=files[idx];if(prev.assignTo)res.assignTo=prev.assignTo;
+  var res=await markGlowOne(key,file,area,level,task,getStyle(),idx);
+  res._file=file;if(prev.assignTo)res.assignTo=prev.assignTo;
   results[idx]=res;document.getElementById('progress').style.display='none';renderResults(results);persistResults();saveOneResult(idx);
 }
 function renderResultCard(r,idx,editable){
   if(r.type==='test'||Array.isArray(r.questions))return renderTestCard(r,idx,editable);
   if(r.type==='glow'||Array.isArray(r.glows))return renderGlowCard(r,idx,editable);
-  if(r._error){var btn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkStu('+idx+')">'+ic('refresh')+'Retry</button>':'';return'<div class="rcard"><div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span>'+btn+'</div><div class="err">'+ic('alert')+' '+esc(r._error)+'</div></div>'}
+  if(r._error){var btn=editable&&r._file?'<button class="remark-btn" onclick="remarkStu('+idx+')">'+ic('refresh')+'Retry</button>':'';if(editable)btn+='<button class="remark-btn" onclick="delResult('+idx+')" aria-label="Remove this result" title="Remove">'+ic('trash')+'</button>';return'<div class="rcard"><div class="rhead"><span class="rname">'+esc(r.fileName||r.file_name||'')+'</span><div style="display:flex;gap:6px">'+btn+'</div></div><div class="err">'+ic('alert')+' '+esc(r._error)+'</div></div>'}
   var crit=r.criteria||[],tot=r.criteriaTotal||r.criteria_total||'';
   var sc=crit.map(function(c){return parseInt(c.score)||0}),total=sc.reduce(function(a,b){return a+b},0);
   var pct=sc.length?Math.round(total/(sc.length*5)*100):0;
   var overall=r.overallScore||r.overall_score||'';
-  var remarkBtn=editable&&files[idx]?'<button class="remark-btn" onclick="remarkStu('+idx+')">'+ic('refresh')+'Re-mark</button>':'';
+  var remarkBtn=editable&&r._file?'<button class="remark-btn" onclick="remarkStu('+idx+')">'+ic('refresh')+'Re-mark</button>':'';
   var delBtn=editable?'<button class="remark-btn" onclick="delResult('+idx+')" aria-label="Remove this result" title="Remove">'+ic('trash')+'</button>':'';
   var fileLabel=r.fileName||r.file_name||'';
   var stuName=editable?(assignedStudentFor(r)||(r.studentName||'').trim()):'';
@@ -2890,6 +3048,14 @@ function renderResultCard(r,idx,editable){
 }
 // Which class student this result will save to: explicit assignment, else auto-detected from the file name.
 // Matching order (most → least confident): full name, first+last, unambiguous first name.
+// Which class student a saved result belongs to (same full-name / unique-first-name rules everywhere).
+function studentForFile(fileName){return assignedStudentFor({fileName:fileName||''})||''}
+function pronounsFor(fullName){
+  var st=CLASS_STUDENTS.find(function(x){return x.name===fullName}),g=st&&st.gender;
+  if(g==='boy')return{subject:'he',object:'him',possessive:'his'};
+  if(g==='girl')return{subject:'she',object:'her',possessive:'her'};
+  return{subject:'they',object:'them',possessive:'their'};
+}
 function assignedStudentFor(r){
   if(r.assignTo)return r.assignTo;
   // Match against BOTH the file name and any name the AI read off the work itself.
@@ -2959,17 +3125,34 @@ function assignResult(idx,name){if(results[idx]){results[idx].assignTo=name||'';
 // Write a dotted-path value (e.g. "improve.0.suggestion") into a result object.
 function setByPath(obj,path,val){var p=path.split('.'),o=obj;for(var i=0;i<p.length-1;i++){if(o[p[i]]==null)o[p[i]]=/^\d+$/.test(p[i+1])?[]:{};o=o[p[i]]}o[p[p.length-1]]=val}
 // Persist a single edited result to its session row (if the session is already saved).
+// Save result rows keyed by session + file name. Uses upsert when the database has that unique key; if it
+// doesn't (Postgres 42P10), falls back to update-or-insert per row so a teacher's edits are never silently lost.
+async function saveResultRows(rows){
+  var up=await sb.from('student_results').upsert(rows,{onConflict:'session_id,file_name'});
+  if(!up.error)return up;
+  if(!/42P10|no unique|on conflict/i.test((up.error.code||'')+' '+(up.error.message||'')))return up;
+  for(var k=0;k<rows.length;k++){
+    var row=rows[k];
+    var u=await sb.from('student_results').update(row).eq('session_id',row.session_id).eq('file_name',row.file_name).select('id');
+    if(u.error)return u;
+    if(!u.data||!u.data.length){var ins=await sb.from('student_results').insert(row);if(ins.error)return ins}
+  }
+  return{error:null};
+}
 function saveOneResult(idx){
   var r=results[idx];if(!r||r._error||!currentSessId||!sb||!USER)return;
-  sb.from('student_results').upsert({session_id:currentSessId,teacher_id:USER.id,file_name:resultSaveName(r),overall_score:r.overallScore,criteria_total:r.criteriaTotal,criteria:r.criteria,strengths:fbStrengthsSave(r),next_steps:fbStepsSave(r),nzc_reference:fbMetaSave(r)},{onConflict:'session_id,file_name'}).then(function(){}).catch(function(){});
+  saveResultRows([{session_id:currentSessId,teacher_id:USER.id,file_name:resultSaveName(r),overall_score:r.overallScore,criteria_total:r.criteriaTotal,criteria:r.criteria,strengths:fbStrengthsSave(r),next_steps:fbStepsSave(r),nzc_reference:fbMetaSave(r)}])
+    .then(function(res){if(res&&res.error)showToast('Couldn’t save that change to your account: '+res.error.message,'err',7000)})
+    .catch(function(e){showToast('Couldn’t save that change to your account: '+(e.message||e),'err',7000)});
 }
 // Delete a saved result row (and its stored file, if any) by session + file name.
 function deleteSavedResultRow(sessionId,fileName){
   if(!sb||!sessionId||!fileName)return Promise.resolve();
   return sb.from('student_results').select('pdf_path').eq('session_id',sessionId).eq('file_name',fileName).maybeSingle().then(function(ex){
     var pdfPath=ex&&ex.data&&ex.data.pdf_path;
-    return sb.from('student_results').delete().eq('session_id',sessionId).eq('file_name',fileName).then(function(){
-      if(pdfPath)sb.storage.from('student-pdfs').remove([pdfPath]).catch(function(){});
+    return sb.from('student_results').delete().eq('session_id',sessionId).eq('file_name',fileName).then(function(d){
+      if(d&&d.error)throw new Error(d.error.message);
+      if(pdfPath)return sb.storage.from('student-pdfs').remove([pdfPath]).then(function(rm){if(rm&&rm.error)console.warn('Stored file not removed:',rm.error.message)});
     });
   });
 }
@@ -2986,7 +3169,7 @@ function delResult(idx){
   var timer=setTimeout(function(){
     if(undone)return;
     var i=results.indexOf(r);if(i===-1)return;
-    files.splice(i,1);results.splice(i,1);
+    var fi=r._file?files.indexOf(r._file):-1;if(fi!==-1)files.splice(fi,1);results.splice(i,1);renderFiles();updMark();
     persistResults();renderResults(results);
     if(sessId)deleteSavedResultRow(sessId,savedName).catch(function(){});
   },4000);
@@ -3013,7 +3196,7 @@ function renderResults(res){
   }
   res.forEach(function(r,idx){
     if(r._error)return;
-    document.querySelectorAll('[data-ci][data-ri="'+idx+'"]').forEach(function(td){makeEditable(td,function(v){var ci=parseInt(td.dataset.ci),s=Math.max(1,Math.min(5,parseInt(v)||results[idx].criteria[ci].score));results[idx].criteria[ci].score=s;var tot=results[idx].criteria.map(function(c){return parseInt(c.score)||0}).reduce(function(a,b){return a+b},0);results[idx].criteriaTotal=tot+'/25';results[idx].overallScore=gradeBand(tot);renderResults(results)})});
+    document.querySelectorAll('[data-ci][data-ri="'+idx+'"]').forEach(function(td){makeEditable(td,function(v){var ci=parseInt(td.dataset.ci),s=Math.max(1,Math.min(5,parseInt(v)||results[idx].criteria[ci].score));results[idx].criteria[ci].score=s;var tot=results[idx].criteria.map(function(c){return parseInt(c.score)||0}).reduce(function(a,b){return a+b},0);var mx=(results[idx].criteria.length||5)*5;results[idx].criteriaTotal=tot+'/'+mx;results[idx].overallScore=gradeBand(tot,mx);renderResults(results);persistResults();saveOneResult(idx)})});
   });
 }
 function renderResultSet(res,container){container.innerHTML=res.map(function(r,i){return renderResultCard(r,i,false)}).join('')}
@@ -3147,7 +3330,7 @@ function delSession(id,name){
   var undone=false;
   var timer=setTimeout(function(){
     if(undone)return;
-    purgeResults({session_id:id}).then(function(){return sb.from('sessions').delete().eq('id',id)}).then(function(r){if(r&&r.error)throw new Error(r.error.message);loadHistory()}).catch(function(e){if(el)el.style.opacity='';showToast('Could not delete the session: '+(e.message||e),'err',7000)});
+    var nf=0;purgeResults({session_id:id}).then(function(f){nf=f||0;return sb.from('sessions').delete().eq('id',id)}).then(function(r){if(r&&r.error)throw new Error(r.error.message);loadHistory();if(nf)showToast(nf+' stored file'+(nf!==1?'s':'')+' could not be removed from storage.','warn',7000)}).catch(function(e){if(el)el.style.opacity='';showToast('Could not delete the session: '+(e.message||e),'err',7000)});
   },4000);
   showToast(ic('trash')+'Deleted "'+esc(name||'Session')+'"','',5000,'Undo',function(){undone=true;clearTimeout(timer);if(el)el.style.opacity='';});
 }
@@ -3179,8 +3362,9 @@ async function genComments(){
       if(sids.length){var wr;try{wr=await sb.from('student_results').select('*, sessions(id,name,learning_area,task)').eq('teacher_id',USER.id).in('session_id',sids)}catch(e){wr={data:[]}};allWeek=wr.data||[]}
     }
     var byStudent={};
-    allWeek.forEach(function(r){var fn=r.file_name?firstNameOf(r.file_name):'Unknown';if(!byStudent[fn])byStudent[fn]={name:fn,sessions:[]};byStudent[fn].sessions.push({subject:(r.sessions&&r.sessions.learning_area)||'Subject',task:(r.sessions&&r.sessions.task)||'',overallScore:r.overall_score||'',total:r.criteria_total||'',strengths:r.strengths||''})});
-    results.filter(function(r){return!r._error}).forEach(function(r){var fn=r.fileName?firstNameOf(r.fileName):'Unknown';if(!byStudent[fn])byStudent[fn]={name:fn,sessions:[]};byStudent[fn].sessions.push({subject:document.getElementById('la').value,task:document.getElementById('task').value||'',overallScore:r.overallScore||'',total:r.criteriaTotal||'',strengths:fbStrengthsSave(r)})});
+    allWeek.forEach(function(r){var full=studentForFile(r.file_name),fn=full||(r.file_name?firstNameOf(r.file_name):'Unknown');if(!byStudent[fn])byStudent[fn]={name:firstNameOf(fn),full:full,sessions:[]};byStudent[fn].sessions.push({subject:(r.sessions&&r.sessions.learning_area)||'Subject',task:(r.sessions&&r.sessions.task)||'',overallScore:r.overall_score||'',total:r.criteria_total||'',strengths:r.strengths||''})});
+    // Live results only when they haven't been saved yet — a saved current session is already in allWeek.
+    if(!currentSessId)results.filter(function(r){return!r._error}).forEach(function(r){var full=assignedStudentFor(r),fn=full||(r.fileName?firstNameOf(r.fileName):'Unknown');if(!byStudent[fn])byStudent[fn]={name:firstNameOf(fn),full:full,sessions:[]};byStudent[fn].sessions.push({subject:document.getElementById('la').value,task:document.getElementById('task').value||'',overallScore:r.overallScore||'',total:r.criteriaTotal||'',strengths:fbStrengthsSave(r)})});
     var stuList=Object.values(byStudent);
     if(!stuList.length){cprog.style.display='none';alert('No students found for this week.');return}
     cprog.innerHTML='<div style="font-size:13px;color:var(--text2);display:flex;align-items:center;gap:8px"><div class="spinner"></div>Generating weekly posts for '+stuList.length+' students…</div>';
@@ -3188,8 +3372,7 @@ async function genComments(){
     for(var b=0;b<stuList.length;b+=4){
       var br=await Promise.all(stuList.slice(b,b+4).map(async function(stu){
         try{
-          var pro={subject:'they',object:'them',possessive:'their'};
-          if(sb&&USER){var gr;try{gr=await sb.from('students').select('gender').eq('teacher_id',USER.id).ilike('name',stu.name+'%').maybeSingle()}catch(e){gr={data:null}};if(gr.data){if(gr.data.gender==='boy')pro={subject:'he',object:'him',possessive:'his'};else if(gr.data.gender==='girl')pro={subject:'she',object:'her',possessive:'her'}}}
+          var pro=pronounsFor(stu.full);
           var subSum=stu.sessions.map(function(s){return s.subject+(s.task?' ('+s.task+')':'')+': '+s.overallScore+' '+s.total+(s.strengths?' — '+s.strengths:'')}).join('\n');
           var txt=await gemini(key,[{text:['Write a short weekly learning post for a NZ primary/intermediate student (Years 3-8) named '+stu.name+' for sharing with parents/whānau.',ctx?'Week context: '+ctx:'','Use pronouns: '+pro.subject+'/'+pro.object+'/'+pro.possessive+'.','Match this teacher style:',style,'','This week '+stu.name+' was marked in '+stu.sessions.length+' subject'+(stu.sessions.length!==1?'s':'')+':\n'+subSum,'','3–4 sentences, third person, cover ALL subjects, specific and encouraging. Return ONLY the comment text.'].join('\n')}]);
           return{fileName:stu.name,comment:txt.trim()};
@@ -3204,8 +3387,12 @@ async function genComments(){
     cprog.style.display='none';renderCommentResults(out,'Weekly post');
   }else{
     var term=document.getElementById('rep-term').value.trim(),studSel=document.getElementById('rep-stu-sel').value,stuNames=[];
-    if(studSel==='all'&&sb&&USER){var cr;try{cr=await sb.from('students').select('name').eq('teacher_id',USER.id).order('name')}catch(e){cr={data:[]}};stuNames=(cr.data||[]).map(function(s){return firstNameOf(s.name)})}
-    if(!stuNames.length)stuNames=results.filter(function(r){return!r._error}).map(function(r){return firstNameOf(r.fileName)});
+    if(studSel==='all'&&sb&&USER){var cr;try{cr=await sb.from('students').select('name').eq('teacher_id',USER.id).order('name')}catch(e){cr={data:[]}};stuNames=(cr.data||[]).map(function(s){return s.name})}
+    if(!stuNames.length)stuNames=results.filter(function(r){return!r._error}).map(function(r){return assignedStudentFor(r)||firstNameOf(r.fileName)});
+    // One history fetch for the whole class, then each row is matched to its student with the shared rules
+    // (no more "Ana" picking up Hana's and Diana's results).
+    var allHist=[];
+    if(sb&&USER){for(var hf=0;;hf+=1000){var hr;try{hr=await sb.from('student_results').select('file_name,overall_score,criteria_total,strengths,next_steps,created_at,sessions(name,learning_area)').eq('teacher_id',USER.id).order('created_at',{ascending:true}).range(hf,hf+999)}catch(e){hr={data:[]}};var hd=(hr&&hr.data)||[];allHist=allHist.concat(hd);if(hd.length<1000)break}}
     if(!stuNames.length){cprog.style.display='none';alert('No students found.');return}
     cprog.innerHTML='<div style="font-size:13px;color:var(--text2);display:flex;align-items:center;gap:8px"><div class="spinner"></div>Generating report comments for '+stuNames.length+' students…</div>';
     var out=[];
@@ -3214,9 +3401,9 @@ async function genComments(){
       var br=await Promise.all(batch.map(async function(name){
         try{
           var hist='No prior results',latest=null;
-          if(sb&&USER){var ar;try{ar=await sb.from('student_results').select('overall_score,criteria_total,strengths,next_steps,sessions(name,learning_area)').eq('teacher_id',USER.id).ilike('file_name','%'+name+'%').order('created_at',{ascending:true})}catch(e){ar={data:[]}};if(ar.data&&ar.data.length){hist=ar.data.map(function(r){return((r.sessions&&r.sessions.name)||'Session')+': '+r.overall_score+' ('+r.criteria_total+')'}).join(' | ');latest=ar.data[ar.data.length-1]}}
-          var pro={subject:'they',object:'them',possessive:'their'};
-          if(sb&&USER){var gr2;try{gr2=await sb.from('students').select('gender').eq('teacher_id',USER.id).ilike('name',name+'%').maybeSingle()}catch(e){gr2={data:null}};if(gr2.data){if(gr2.data.gender==='boy')pro={subject:'he',object:'him',possessive:'his'};else if(gr2.data.gender==='girl')pro={subject:'she',object:'her',possessive:'her'}}}
+          var full=name;name=firstNameOf(full);
+          if(sb&&USER){var ar={data:allHist.filter(function(r){var who=studentForFile(r.file_name);return who?who===full:firstNameOf(r.file_name)===name&&!CLASS_STUDENTS.length})};if(ar.data&&ar.data.length){hist=ar.data.map(function(r){return((r.sessions&&r.sessions.name)||'Session')+': '+r.overall_score+' ('+r.criteria_total+')'}).join(' | ');latest=ar.data[ar.data.length-1]}}
+          var pro=pronounsFor(full);
           var txt=await gemini(key,[{text:['Write a full school report comment for a NZ primary/intermediate student (Years 3-8) named '+name+'. Single paragraph, 4–6 sentences, third person.','Use pronouns: '+pro.subject+'/'+pro.object+'/'+pro.possessive+'.',term?'Report context: '+term:'','Match this teacher style:',style,'','Assessment history:',hist,'','Most recent:'+(latest?JSON.stringify(latest):'Not available'),'','Use name, third person, reference growth, one next step, match teacher voice, 4–6 sentences. Return ONLY the paragraph.'].join('\n')}]);
           return{fileName:name,comment:txt.trim()};
         }catch(e){return{fileName:name,comment:'Error: '+e.message}}
@@ -3246,7 +3433,8 @@ function loadClassList(){
     if(!data.length){el.innerHTML=emptyState('users','No students yet. Pronouns and year levels power your comments and student hubs. Add your first student, or import a whole class from a CSV just below.','<button class="btn btn-p" onclick="openAddStu()">'+ic('plus')+'Add a student</button>');return}
     var gC={boy:'background:#e6f1fb;color:#185fa5',girl:'background:#fce8f3;color:#8b1a5e',nonbinary:'background:#f0ede8;color:#5a564e'};
     var gL={boy:'He/him',girl:'She/her',nonbinary:'They/them'};
-    el.innerHTML='<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+data.length+' students — click to open hub</div>'+data.map(function(s){var gb=s.gender&&gL[s.gender]?'<span style="font-size:10px;padding:2px 7px;border-radius:100px;font-weight:600;'+gC[s.gender]+'">'+gL[s.gender]+'</span>':'';var code=s.access_code||'';return'<div class="stu-item" id="stu-'+s.id+'" style="cursor:pointer" onclick="openHub(\''+s.id+'\',\''+escJs(s.name)+'\')"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0">'+esc(s.name[0].toUpperCase())+'</div><div style="flex:1;min-width:0"><div style="font-weight:500;font-size:14px">'+esc(s.name)+'</div><div style="font-size:12px;color:var(--text2);margin-top:1px">'+esc(s.year_level||'No year set')+'</div></div>'+gb+'<span class="code-chip" title="Student login code" onclick="event.stopPropagation();copyCode(\''+escJs(code)+'\',this)">'+(code?esc(code):'—')+'</span><button class="btn btn-sm" onclick="event.stopPropagation();regenCode(\''+s.id+'\')" aria-label="Generate new code for '+esc(s.name)+'">'+ic('refresh')+'</button><button class="btn btn-sm" onclick="event.stopPropagation();openHub(\''+s.id+'\',\''+escJs(s.name)+'\')" aria-label="Open hub for '+esc(s.name)+'">'+ic('external')+'Hub</button><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delStu(\''+s.id+'\',\''+escJs(s.name)+'\')" style="margin-left:4px" aria-label="Remove '+esc(s.name)+'">×</button></div>'}).join('');
+    var portalURL=new URL('student-login.html',location.href).href;
+    el.innerHTML='<div class="portal-tip">'+ic('users')+'<div><strong>Students log in at</strong> <a href="'+esc(portalURL)+'" target="_blank" rel="noopener">'+esc(portalURL)+'</a> with their code below. <button class="btn btn-sm" onclick="copyCode(\''+escJs(portalURL)+'\',this)">Copy link</button></div></div>'+'<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+data.length+' students — click to open hub</div>'+data.map(function(s){var gb=s.gender&&gL[s.gender]?'<span style="font-size:10px;padding:2px 7px;border-radius:100px;font-weight:600;'+gC[s.gender]+'">'+gL[s.gender]+'</span>':'';var code=s.access_code||'';return'<div class="stu-item" id="stu-'+s.id+'" style="cursor:pointer" onclick="openHub(\''+s.id+'\',\''+escJs(s.name)+'\')"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0">'+esc(s.name[0].toUpperCase())+'</div><div style="flex:1;min-width:0"><div style="font-weight:500;font-size:14px">'+esc(s.name)+'</div><div style="font-size:12px;color:var(--text2);margin-top:1px">'+esc(s.year_level||'No year set')+'</div></div>'+gb+'<span class="code-chip" title="Student login code" onclick="event.stopPropagation();copyCode(\''+escJs(code)+'\',this)">'+(code?esc(code):'—')+'</span><button class="btn btn-sm" onclick="event.stopPropagation();regenCode(\''+s.id+'\')" aria-label="Generate new code for '+esc(s.name)+'">'+ic('refresh')+'</button><button class="btn btn-sm" onclick="event.stopPropagation();openHub(\''+s.id+'\',\''+escJs(s.name)+'\')" aria-label="Open hub for '+esc(s.name)+'">'+ic('external')+'Hub</button><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delStu(\''+s.id+'\',\''+escJs(s.name)+'\')" style="margin-left:4px" aria-label="Remove '+esc(s.name)+'">×</button></div>'}).join('');
   }).catch(function(e){el.innerHTML='<div class="err">'+esc(e.message)+'</div>'});
 }
 function openHub(id,name){
@@ -3305,7 +3493,12 @@ function importClassCSV(){
     var gIdx=cols.findIndex(function(h){return h.includes('gender')});
     if(nameIdx===-1){showStatus('import-status','CSV must have a Name column.','err');return}
     var students=[];
-    lines.slice(1).forEach(function(line){var c=line.match(/"([^"]*)"|([^,]+)/g)||[];var name=(c[nameIdx]||'').replace(/"/g,'').trim();var year=yearIdx>=0?(c[yearIdx]||'').replace(/"/g,'').trim():'';var gender=gIdx>=0?(c[gIdx]||'').replace(/"/g,'').trim().toLowerCase():'';if(name)students.push({teacher_id:USER.id,name:name,year_level:year||null,gender:gender||null})});
+    // Proper CSV split: keeps empty fields (so "Aria,,girl" doesn't shift columns) and handles quoted commas.
+    function csvCells(line){var out=[],cur='',q=false;for(var i=0;i<line.length;i++){var ch=line[i];if(q){if(ch==='"'&&line[i+1]==='"'){cur+='"';i++}else if(ch==='"')q=false;else cur+=ch}else if(ch==='"')q=true;else if(ch===','){out.push(cur);cur=''}else cur+=ch}out.push(cur);return out.map(function(x){return x.replace(/\r$/,'').trim()})}
+    function normGender(g){g=String(g||'').toLowerCase().trim();if(/^(m|male|boy|he|he\/him)$/.test(g))return'boy';if(/^(f|female|girl|she|she\/her)$/.test(g))return'girl';if(/^(nb|non.?binary|they|they\/them|x)$/.test(g))return'nonbinary';return null}
+    function normYear(y){y=String(y||'').trim();var m=y.match(/\d{1,2}/);return m?'Year '+parseInt(m[0],10):(y||null)}
+    cols=csvCells(lines[0].toLowerCase());nameIdx=cols.findIndex(function(h){return h.includes('name')});yearIdx=cols.findIndex(function(h){return h.includes('year')});gIdx=cols.findIndex(function(h){return h.includes('gender')||h.includes('pronoun')||h.includes('sex')});
+    lines.slice(1).forEach(function(line){var c=csvCells(line);var name=(c[nameIdx]||'').trim();var year=yearIdx>=0?normYear(c[yearIdx]):null;var gender=gIdx>=0?normGender(c[gIdx]):null;if(name)students.push({teacher_id:USER.id,name:name,year_level:year,gender:gender})});
     if(!students.length){showStatus('import-status','No students found in CSV.','err');return}
     sb.from('students').insert(students).then(function(res){
       if(res.error){showStatus('import-status','Error: '+res.error.message,'err');return}
@@ -3321,15 +3514,18 @@ function loadCompareSessions(){
     (res.data||[]).forEach(function(s){if(s.id===currentSessId)return;var o=document.createElement('option');o.value=s.id;o.textContent=(s.name||'Session')+' — '+new Date(s.created_at).toLocaleDateString('en-NZ');sel.appendChild(o)});
   }).catch(function(){});
 }
+// Compare matches each student across sessions by WHO they are (class-list match), not the raw file name —
+// saved names carry a "Name — " prefix and a new assignment usually has a different file name.
+function cmpKey(fileName,r){var who=r?assignedStudentFor(r):studentForFile(fileName);return(who||firstNameOf(fileName||'')).toLowerCase()}
 document.getElementById('cmpbtn').onclick=async function(){
   if(!results.length){alert('Mark some students first.');return}
   var prev={},sessId=document.getElementById('cmp-sess-sel').value;
-  if(sessId&&sb&&USER){var r;try{r=await sb.from('student_results').select('file_name,criteria_total').eq('session_id',sessId)}catch(e){r={data:[]}};(r.data||[]).forEach(function(x){prev[x.file_name]=x.criteria_total||'0/25'})}
-  else{var f=document.getElementById('cmp-csv').files[0];if(!f){alert('Select a past session or upload a CSV.');return}var text=await new Promise(function(res){var r=new FileReader();r.onload=function(e){res(e.target.result)};r.readAsText(f)});text.split('\n').slice(1).forEach(function(line){var cols=line.match(/"([^"]*)"/g)||[];if(cols.length>=3)prev[cols[0].replace(/"/g,'')]=cols[2].replace(/"/g,'')})}
-  var v=results.filter(function(r){return!r._error&&prev[r.fileName]!==undefined});
+  if(sessId&&sb&&USER){var r;try{r=await sb.from('student_results').select('file_name,criteria_total').eq('session_id',sessId)}catch(e){r={data:[]}};(r.data||[]).forEach(function(x){prev[cmpKey(x.file_name)]=x.criteria_total||'0/25'})}
+  else{var f=document.getElementById('cmp-csv').files[0];if(!f){alert('Select a past session or upload a CSV.');return}var text=await new Promise(function(res){var r=new FileReader();r.onload=function(e){res(e.target.result)};r.readAsText(f)});text.split('\n').slice(1).forEach(function(line){var cols=line.match(/"([^"]*)"/g)||[];if(cols.length>=3)prev[cmpKey(cols[0].replace(/"/g,''))]=cols[2].replace(/"/g,'')})}
+  var v=results.filter(function(r){return!r._error&&prev[cmpKey(r.fileName,r)]!==undefined});
   var el=document.getElementById('cmp-results');
   if(!v.length){el.innerHTML='<div class="err" style="margin-top:1rem">No matching student names found.</div>';return}
-  var deltas=v.map(function(r){return(parseInt((r.criteriaTotal||'0').split('/')[0])||0)-(parseInt((prev[r.fileName]||'0').split('/')[0])||0)});
+  var deltas=v.map(function(r){return(parseInt((r.criteriaTotal||'0').split('/')[0])||0)-(parseInt((prev[cmpKey(r.fileName,r)]||'0').split('/')[0])||0)});
   var up=deltas.filter(function(d){return d>0}).length,dn=deltas.filter(function(d){return d<0}).length,eq=deltas.filter(function(d){return d===0}).length;
   var avgD=deltas.reduce(function(a,b){return a+b},0)/deltas.length;
   var avgStr=(avgD>0?'+':'')+avgD.toFixed(1);
@@ -3341,7 +3537,7 @@ document.getElementById('cmpbtn').onclick=async function(){
     +'<div class="stat-box"><div class="stat-num" style="color:var(--text3)">'+eq+'</div><div class="stat-lbl">No change</div></div>'
     +'<div class="stat-box"><div class="stat-num"><span class="delta '+avgCls+'" style="font-size:1.3rem">'+avgStr+'</span></div><div class="stat-lbl">Avg change /25</div></div>'
     +'</div></div>';
-  el.innerHTML=summary+'<div class="card" style="margin-top:1rem"><div style="display:flex;gap:20px;font-size:12px;color:var(--text2);margin-bottom:1rem"><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2d5a27;margin-right:4px"></span>Current</span><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#c8500a;margin-right:4px"></span>Previous</span></div>'+v.map(function(r){var cur=parseInt((r.criteriaTotal||'0').split('/')[0])||0,prv=parseInt((prev[r.fileName]||'0').split('/')[0])||0,d=cur-prv;var dh=d>0?'<span class="delta d-up">↑ +'+d+'</span>':d<0?'<span class="delta d-dn">↓ '+d+'</span>':'<span class="delta d-eq">no change</span>';return'<div class="cmp-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px"><span style="font-weight:600;font-size:14px">'+esc(stripExt(r.fileName))+'</span><div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;color:var(--text2)">'+prv+' → '+cur+' /25</span>'+dh+'</div></div><div style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:6px"><span style="width:64px;color:var(--text2)">Previous</span><div style="flex:1;height:7px;background:var(--bg2);border-radius:100px;overflow:hidden"><div style="width:'+Math.round(prv/25*100)+'%;height:100%;background:#c8500a;border-radius:100px"></div></div><span style="width:36px;text-align:right;font-weight:600">'+prv+'</span></div><div style="display:flex;align-items:center;gap:8px;font-size:12px"><span style="width:64px;color:var(--text2)">Current</span><div style="flex:1;height:7px;background:var(--bg2);border-radius:100px;overflow:hidden"><div style="width:'+Math.round(cur/25*100)+'%;height:100%;background:#2d5a27;border-radius:100px"></div></div><span style="width:36px;text-align:right;font-weight:600">'+cur+'</span></div></div>'}).join('')+'</div>';
+  el.innerHTML=summary+'<div class="card" style="margin-top:1rem"><div style="display:flex;gap:20px;font-size:12px;color:var(--text2);margin-bottom:1rem"><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2d5a27;margin-right:4px"></span>Current</span><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#c8500a;margin-right:4px"></span>Previous</span></div>'+v.map(function(r){var cur=parseInt((r.criteriaTotal||'0').split('/')[0])||0,prv=parseInt((prev[cmpKey(r.fileName,r)]||'0').split('/')[0])||0,d=cur-prv;var dh=d>0?'<span class="delta d-up">↑ +'+d+'</span>':d<0?'<span class="delta d-dn">↓ '+d+'</span>':'<span class="delta d-eq">no change</span>';return'<div class="cmp-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px"><span style="font-weight:600;font-size:14px">'+esc(stripExt(r.fileName))+'</span><div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;color:var(--text2)">'+prv+' → '+cur+' /25</span>'+dh+'</div></div><div style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:6px"><span style="width:64px;color:var(--text2)">Previous</span><div style="flex:1;height:7px;background:var(--bg2);border-radius:100px;overflow:hidden"><div style="width:'+Math.round(prv/25*100)+'%;height:100%;background:#c8500a;border-radius:100px"></div></div><span style="width:36px;text-align:right;font-weight:600">'+prv+'</span></div><div style="display:flex;align-items:center;gap:8px;font-size:12px"><span style="width:64px;color:var(--text2)">Current</span><div style="flex:1;height:7px;background:var(--bg2);border-radius:100px;overflow:hidden"><div style="width:'+Math.round(cur/25*100)+'%;height:100%;background:#2d5a27;border-radius:100px"></div></div><span style="width:36px;text-align:right;font-weight:600">'+cur+'</span></div></div>'}).join('')+'</div>';
 };
 
 function printTestSheet(r,i,arr,task){
@@ -3399,6 +3595,41 @@ function exportCSV(){
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(function(r){return r.map(function(v){return'"'+String(v).replace(/"/g,'""')+'"'}).join(',')}).join('\n')],{type:'text/csv'}));a.download='marking_results.csv';a.click();
 }
 // ── Bulk PDF export: one report card per student, all in one file ─────────────
+// A drop-in stand-in for the bits of jsPDF the report-card export uses, that draws with the BROWSER's fonts on
+// canvas pages and only uses jsPDF to package them. jsPDF's built-in fonts can't draw macrons (Māka, Tāne, whānau)
+// or curly quotes — they came out as garbage.
+function CanvasPDF(JSP){
+  var PW=595.28,PH=841.89,S=2.2,self=this,pages=[],cv,cx,font={style:'normal',size:10},color='#000',draw='#000';
+  function applyFont(){cx.font=(/bold/.test(font.style)?'700 ':'400 ')+(/italic/.test(font.style)?'italic ':'')+font.size+'px "DM Sans","Segoe UI",Roboto,"Noto Sans",Arial,sans-serif'}
+  function newPage(){cv=document.createElement('canvas');cv.width=Math.round(PW*S);cv.height=Math.round(PH*S);cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height);cx.setTransform(S,0,0,S,0,0);pages.push(cv);applyFont()}
+  function rgb(r,g,b){return typeof r==='string'?r:'rgb('+r+','+(g==null?r:g)+','+(b==null?r:b)+')'}
+  this.internal={pageSize:{getWidth:function(){return PW},getHeight:function(){return PH}}};
+  this.setFont=function(f,st){font.style=st||'normal';applyFont();return self};
+  this.setFontSize=function(n){font.size=n;applyFont();return self};
+  this.setTextColor=function(r,g,b){color=rgb(r,g,b);return self};
+  this.setDrawColor=function(r,g,b){draw=rgb(r,g,b);return self};
+  this.line=function(x1,y1,x2,y2){cx.strokeStyle=draw;cx.lineWidth=0.75;cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.stroke();return self};
+  this.text=function(t,x,y,o){
+    var arr=Array.isArray(t)?t:[t],lh=font.size*1.15;
+    cx.fillStyle=color;cx.textBaseline='alphabetic';cx.textAlign=o&&o.align==='right'?'right':o&&o.align==='center'?'center':'left';
+    arr.forEach(function(l,i){cx.fillText(String(l),x,y+i*lh)});cx.textAlign='left';return self;
+  };
+  this.splitTextToSize=function(text,maxW){
+    var out=[];String(text==null?'':text).replace(/\r\n?/g,'\n').split('\n').forEach(function(par){
+      var words=par.split(/\s+/),cur='';
+      words.forEach(function(w){if(!w)return;var t=cur?cur+' '+w:w;if(cx.measureText(t).width>maxW&&cur){out.push(cur);cur=w}else cur=t});
+      out.push(cur);
+    });
+    return out;
+  };
+  this.addPage=function(){newPage();return self};
+  this.save=function(name){
+    var doc=new JSP({unit:'pt',format:'a4'});
+    pages.forEach(function(c,i){if(i>0)doc.addPage();doc.addImage(c.toDataURL('image/jpeg',0.88),'JPEG',0,0,PW,PH)});
+    doc.save(name);
+  };
+  newPage();
+}
 function exportAllReportCards(){
   var v=DASH_VIEW||[];
   if(!v.length){showToast('No results to export — mark some work first','warn');return}
@@ -3407,7 +3638,7 @@ function exportAllReportCards(){
   var btn=document.getElementById('dash-export-btn');
   if(btn){btn.disabled=true;btn.innerHTML=ic('download')+'Building PDF…'}
   try{
-    var doc=new JSP({unit:'pt',format:'a4'});
+    var doc=new CanvasPDF(JSP);
     var pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight(),m=48;
     var gold=[200,132,10],ink=[26,26,26],grey=[107,107,107],green=[45,90,39];
     var sessLabel=document.getElementById('dash-sess-label').textContent||'Marking session';
@@ -3426,7 +3657,7 @@ function exportAllReportCards(){
       doc.setFont('helvetica','bold');doc.setFontSize(18);doc.setTextColor(ink[0],ink[1],ink[2]);
       doc.text(firstNameOf(r.fileName||r.file_name||'Student'),m,y);
       doc.setTextColor(green[0],green[1],green[2]);
-      doc.text(tot+'/25',pw-m,y,{align:'right'});y+=18;
+      doc.text(tot+'/'+(((r.criteria||[]).length||5)*5),pw-m,y,{align:'right'});y+=18;
       doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(grey[0],grey[1],grey[2]);
       var meta=[r.overallScore||r.overall_score||'',sessLabel,task].filter(Boolean).join('  ·  ');
       var ml=doc.splitTextToSize(meta,pw-m*2);doc.text(ml,m,y);y+=ml.length*12+6;
