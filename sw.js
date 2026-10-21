@@ -4,7 +4,7 @@
 // on the next normal load, no hard-refresh needed. Static assets are cached.
 // Pages are cached under their path only (no query string), so URLs such as
 // student.html?name=... never put a student's name into Cache Storage.
-var VERSION = '2026-10-20-1';
+var VERSION = '2026-10-21-1';
 var CACHE = 'maka-' + VERSION;
 var ASSETS = ['/manifest.json', '/icon-192.svg', '/icon-512.svg'];
 

@@ -81,6 +81,7 @@ nav.scrolled{box-shadow:0 8px 30px -12px rgba(15,14,12,0.12)}
 @keyframes ddOpen{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
 .dd-name{font-size:13px;font-weight:600;padding:8px 12px 4px;color:var(--text)}
 .dd-email{color:var(--text2)}
+.dd-ver{font-size:11px;color:var(--text3);padding:0 12px 8px;font-variant-numeric:tabular-nums}
 .dd-email{font-size:11px;color:var(--text2);padding:0 12px 8px}
 .dd-sep{height:.5px;background:var(--border);margin:4px 0}
 .dd-btn{display:block;width:100%;padding:8px 12px;border-radius:6px;border:none;background:none;font-size:13px;cursor:pointer;text-align:left;font-family:'DM Sans',sans-serif;color:var(--text2);transition:background .2s var(--ease),padding-left .2s var(--ease)}
@@ -670,6 +671,7 @@ html.tour-on .main{padding-bottom:calc(var(--tour-pad,0px) + 1.5rem)}
       <div class="dropdown" id="dropdown" role="menu">
         <div class="dd-name" id="dd-name">Teacher</div>
         <div class="dd-email" id="dd-email"></div>
+        <div class="dd-ver" id="dd-ver">Version 2026-10-21</div>
         <div class="dd-sep"></div>
         <button class="dd-btn" onclick="showTab('settings');toggleDD()"><span data-ic="settings"></span>Settings</button>
         <button class="dd-btn" id="theme-btn" onclick="toggleTheme()" aria-label="Toggle dark mode"><span data-ic="moon"></span>Dark mode</button>
@@ -1775,6 +1777,8 @@ function friendlyGeminiError(status,msg){
 }
 // Send the API key in a request header (not the URL, which ends up in logs/histories). If the browser
 // blocks the custom header for any reason, fall back once to the URL form so marking never breaks.
+// Shown in the account menu and on Test key so it's easy to confirm which build is live.
+var MAKA_BUILD='2026-10-21';
 var GEMINI_HDR_OK=true;
 // Model chain. Google counts quotas and outages PER MODEL, so when one model is rate-limited, out of daily quota,
 // overloaded or retired, the next one usually still works. The "-latest" aliases always point at a current model.
@@ -4188,9 +4192,9 @@ async function testKey(inputId,outId,btnId){
     // One short question, two real attempts (plus a lighter-model fallback), so the button never spins for long
     // and any failure reports what Google actually said instead of a generic 'busy'.
     var reply=await gemini(key,[{text:'Reply with the single word: OK'}],null,{maxTries:2,delay:1500,maxWait:10000});
-    show(true,'Your key works.','Gemini answered, so you are ready to mark.');
+    show(true,'Your key works.','Gemini answered, so you are ready to mark. (Māka version '+(window.MAKA_BUILD||'?')+')');
   }catch(e){
-    var p=keyProblem(e&&e.message);show(false,p.head,p.fix);
+    var p=keyProblem(e&&e.message);show(false,p.head,p.fix+' (Māka version '+(window.MAKA_BUILD||'?')+')');
   }finally{
     testing=false;
     if(btn){btn.disabled=false;btn.removeAttribute('aria-busy');btn.innerHTML=html}
